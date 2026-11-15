@@ -18,19 +18,17 @@ def test_2fa_ablauf_ohne_admin_vor_code():
             assert "escola/login" in req.headers["referer"]
             return httpx.Response(200, json={"success": True, "twoFactorRequired": True,
                                              "twoFactorSetupRequired": False, "passwordUpdateRequired": False,
-                                             "redirectUrl": "escola/login/104"})
-        if p == "/escola/login/104":
-            return httpx.Response(200, text="<title>Escola - Login</title>")
+                                             "redirectUrl": "admin.php?page_request=5&fromLogin=1"})
         if p.endswith("/login-infos"):
-            assert req.headers["referer"].endswith("escola/login/104")
+            assert req.headers["referer"].endswith("escola/login")
             return httpx.Response(200, json={"data": {"twoFactorMethods": [{"id": "totp", "label": "App"}]}})
         if p.endswith("/verification"):
-            assert req.headers["referer"].endswith("escola/login/104")
+            assert req.headers["referer"].endswith("escola/login")
             assert b'"123456"' in req.content
             angemeldet["ok"] = True
             return httpx.Response(200, json={"data": {"success": True}})
         if p == "/admin.php":
-            assert angemeldet["ok"], "admin.php vor dem 2FA-Code aufgerufen"
+            assert angemeldet["ok"], "admin.php vor dem 2FA-Code aufgerufen – beendet die halbe Anmeldung"
             return httpx.Response(200, text="<div class='unifiedClassOrWorkgroupChooser'></div>")
         return httpx.Response(404)
 

@@ -41,7 +41,7 @@ def _log(schritt: str, r: httpx.Response) -> None:
         if r.headers.get("location"):
             info += f", weiter nach {r.headers['location']}"
         gesendet = sorted({x.split("=", 1)[0].strip() for x in r.request.headers.get("cookie", "").split(";") if "=" in x})
-        info += f", Cookies gesendet: {gesendet or '-'}, neu: {sorted(c for c in r.cookies.keys()) or '-'}"
+        info += f", Cookies gesendet: {gesendet or '-'}, neu: {sorted(x.split("=", 1)[0] + ("(gelöscht)" if "deleted" in x or "1970" in x or "max-age=0" in x.lower() else "") for x in r.headers.get_list("set-cookie")) or '-'}"
         if r.request.headers.get("referer"):
             info += f", Referer: {r.request.headers['referer']}"
         if "json" in ct:
@@ -144,12 +144,10 @@ def login_schritt1(c: EscolaClient, benutzername: str, passwort: str, dauer_stun
         return {"status": "passwort_aenderung_noetig",
                 "meldung": "Escola verlangt eine Passwortänderung – bitte einmal im Browser anmelden und ändern."}
     if flags.get("twoFactorRequired"):
-        # Wie der Browser: zuerst die 2FA-Seite öffnen (NICHT admin.php – das verwirft den 2FA-Zustand),
-        # danach laufen alle 2FA-Aufrufe mit dieser Seite als Referer.
-        if ziel:
-            url = ziel if "://" in ziel else str(c._http.base_url) + ziel.lstrip("/")
-            c._login_referer = url
-            _log("2FA-Seite", c._http.get(url, headers={"Referer": str(c._http.base_url) + "escola/login"}))
+        # Wie der Browser: der 2FA-Schritt läuft auf der Loginseite. redirectUrl (admin.php…) ist das Ziel
+        # NACH dem Code – vorher öffnen beendet die halbe Anmeldung (PHPSESSID wird verworfen).
+        c._login_referer = str(c._http.base_url) + "escola/login"
+        c._nach_login = (ziel if "://" in ziel else str(c._http.base_url) + ziel.lstrip("/")) if ziel else None
         infos = _zwei_faktor_infos(c)
         return {"status": "2fa_erforderlich", "methoden": _methoden(infos)}
     if _ist_angemeldet(c):
@@ -183,6 +181,9 @@ def zwei_faktor_code(c: EscolaClient, code: str) -> dict:
         raise LoginFehler(j.get("message") or j.get("msg") or "Code falsch oder abgelaufen")
     if isinstance(d, dict) and d.get("success") is False:
         raise LoginFehler(d.get("errorMessage") or "Code falsch oder abgelaufen")
+    ziel = getattr(c, "_nach_login", None)
+    if ziel:  # wie der Browser nach erfolgreichem Code
+        _log("Nach Login", c._http.get(ziel, headers={"Referer": getattr(c, "_login_referer", ziel)}))
     if _ist_angemeldet(c):
         return {"status": "angemeldet"}
     raise LoginFehler("Code angenommen, aber keine gültige Escola-Session – bitte neu anmelden")
@@ -200,9 +201,18 @@ def app_anfrage(c: EscolaClient) -> dict:
 
 def app_status(c: EscolaClient, token: str) -> dict:
     r = c._http.get(API + "login/two-factor/state", params={"token": token}, headers=_h2fa(c))
+    _log("App-Status", r)
     d = _data(_json(r)) if r.status_code == 200 else {}
-    if _ist_angemeldet(c):
-        return {"status": "angemeldet"}
+    # Escola liefert "pending" | "accepted" | "declined"; admin.php erst NACH "accepted" aufrufen
+    if d == "accepted":
+        ziel = getattr(c, "_nach_login", None)
+        if ziel:
+            _log("Nach Login", c._http.get(ziel, headers={"Referer": getattr(c, "_login_referer", ziel)}))
+        if _ist_angemeldet(c):
+            return {"status": "angemeldet"}
+        raise LoginFehler("In der App bestätigt, aber keine gültige Escola-Session – bitte neu anmelden")
+    if d == "declined":
+        raise LoginFehler("Die Anfrage wurde in der Escola-App abgelehnt")
     return {"status": "ausstehend", "escola": d if isinstance(d, (dict, str)) else None}
 
 

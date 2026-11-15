@@ -317,7 +317,10 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
     @app.get("/auth/2fa/app/{app_token}", dependencies=deps, tags=["Anmeldung"])
     def auth_app_status(app_token: str, x_escola_session: str = Header(...)):
         s = _sitzung(x_escola_session)
-        res = A.app_status(s.client, app_token)
+        try:
+            res = A.app_status(s.client, app_token)
+        except (A.LoginFehler, httpx.HTTPError) as e:
+            return _fehler(e, x_escola_session, behalten=True)
         if res["status"] == "angemeldet":
             s.status = "angemeldet"
         return res
