@@ -24,8 +24,18 @@ Listen-Endpunkte liefern mit `?format=csv` eine CSV-Tabelle.
 
 ### Testseite
 
-`http://127.0.0.1:8080/testseite` (bzw. die Server-Adresse der API). Zuerst unter `/login` anmelden – die
-Testseite übernimmt das Session-Token aus demselben Browser-Tab; API-Key oben rechts eintragen.
+`http://127.0.0.1:8080/testseite` (bzw. die Server-Adresse der API). Das Startskript öffnet
+`/login?weiter=/testseite`: anmelden, danach geht es im **selben Tab** zur Testseite (das Session-Token gilt
+nur pro Tab). API-Key oben rechts eintragen.
+
+**Daten lesen** (oberste Menügruppe, ändert nichts): Schüler:innen (mit/ohne Klasse, zukünftig, ehemalig),
+Eltern/Bezugspersonen, Lehrpersonen, Personen nach Rolle (inkl. inaktive), Rollen, Klassen, Arbeitsgruppen,
+Fächer, Lektionen/Zeiten, Schultage, Räume, Ressourcen, Stundenpläne, Zuteilungen und Klassenlehrpersonen
+einer Klasse, Eltern einer Schülerin, Komplett-Export. Ergebnis als Tabelle mit Anzahl, Filter und
+„Als CSV herunterladen“. Während des Ladens zählt die Seite die Einzelabfragen an Escola mit
+(„läuft … 12 s · 37 Escola-Abfragen“, über `GET /fortschritt`).
+
+**Schreib-Testfälle:**
 
 Jeder Testfall läuft in fünf Schritten: **1 lesen → 2 schreiben/anlegen → 3 lesen → 4 rückgängig/löschen →
 5 lesen**. Oben steht ein Vergleich der drei Lesestände; am Ende muss „Zurückgesetzt – Endstand entspricht dem
@@ -75,6 +85,7 @@ docker run -p 8080:8080 --env-file apis/escola/.env escola-api
 | GET | `/auth/status` | Session | Status der Session (angemeldet, 2FA offen, abgelaufen) |
 | POST | `/auth/logout` | Session | Bei Escola abmelden und Session löschen |
 | GET | `/status` | 🔑 | Prüfen, ob der Escola-Zugang funktioniert |
+| GET | `/fortschritt` | 🔑 | Anzahl bisheriger Escola-Abfragen dieser Session (für Fortschrittsanzeige bei langen Listen) |
 
 ### Stammdaten und Raster
 
@@ -205,7 +216,18 @@ bekommt ein zufälliges Session-Token, das er bei jedem Aufruf als Header `X-Esc
    Methodenwahl und Alternative „in der Escola-App bestätigen“
 3. Anzeige des Session-Tokens (kopieren) und Abmelden
 
-Das Token liegt nur im `sessionStorage` des Browser-Tabs.
+Das Token liegt nur im `sessionStorage` des Browser-Tabs. Mit `?weiter=/testseite` geht es nach dem Login
+im selben Tab weiter. Die Felder heissen `username`, `password`, `api-key`, `one-time-code` – Passwort-Manager
+wie 1Password füllen sie aus (im Eintrag die URL `http://127.0.0.1:8080` ergänzen).
+
+**Ablauf gegenüber Escola** (live bestätigt 15.11.2026, Details in `escola_api/auth.py`):
+`POST login.php` mit Referer (sonst 403 „Referrer check failed“) → `GET escola/api/logged-in-person`
+(2FA-Methoden) → `PATCH …/two-factor/method` → `POST …/two-factor/verification` → erst dann
+`redirectUrl` (`admin.php?page_request=5&fromLogin=1`). Vor dem Code weder `admin.php` noch
+`…/two-factor/login-infos` aufrufen – beides beendet die halbe Anmeldung.
+
+**Protokoll:** Jeder Login-Schritt erscheint im Startfenster (Status, Cookie-Namen, Escola-Meldung) –
+Passwort und Code nie, nur ihre Länge. Abgelehnte API-Keys werden mit Grund protokolliert.
 
 ### Endpunkte
 
@@ -639,6 +661,10 @@ uvicorn escola_api.app:app --host 127.0.0.1 --port 8080
 
 Dann `http://127.0.0.1:8080/login` öffnen oder direkt `/docs` (interaktive Doku).
 
+`start_lokal.py` (von den Startdateien aufgerufen) legt beim ersten Start `.env` mit API-Key an, lädt `.env`
+selbst, zeigt den geladenen Key maskiert an und öffnet die Anmeldung. Zusätzliche Variablen:
+`ESCOLA_PORT` (Standard 8080), `ESCOLA_LOG` (`INFO` oder `DEBUG`).
+
 Die API verarbeitet Personendaten von Schüler:innen und Mitarbeitenden. Nur lokal bzw. im internen
 Netz betreiben, `ESCOLA_API_KEY` setzen und für Produktivbetrieb hinter HTTPS stellen.
 
@@ -656,8 +682,8 @@ Felder abgewiesen werden und dass das Passwort nirgends gespeichert wird.
 
 | Zweck | Aufruf |
 |---|---|
-| Login | `POST login.php` (multipart `username`, `password`) |
-| 2FA | `GET/PATCH escola/api/login/two-factor/login-infos` / `method`, `POST …/verification` `{code}`, `POST …/resend`, `POST …/request` + `GET …/state` |
+| Login | `GET escola/login`, `POST login.php` (multipart `username`, `password`, Header `Referer`) |
+| 2FA | `GET escola/api/logged-in-person` (Methoden), `PATCH escola/api/login/two-factor/method`, `POST …/verification` `{code}`, `POST …/resend`, `POST …/request` + `GET …/state` (Escola-App); danach `redirectUrl` |
 | Logout / Keep-alive | `GET admin.php?action=logout&newLogout=true` / `GET escola/api/session/keep-alive` |
 | Klassenliste | `GET admin.php?page_request=6` → `#unifiedClassOrWorkgroupChooser` |
 | Stundenplan | `GET admin.php?page_request=6&klassen_id=<ID>`, `POST inc/ajax/timetable/application_class.php` `mode=0` |
@@ -686,3 +712,10 @@ Felder abgewiesen werden und dass das Passwort nirgends gespeichert wird.
 | Fächer-Zuteilung Arbeitsgruppe / kommendes SJ | aktivieren `admin.php?page_request=6&workgroup_id=<id>`; Matrix `lehrpersonen_faecher.php mode=0&school_year=0\|1`; `zeige_faecher.php`/`ajax_functions_lehrpersonen.php` mit `class_id=0&workgroup_id=<id>` bzw. `schoolYear=1` |
 | Bezugspersonen | `POST rpc/collections/PersonReferenceAdministrationAdmin/<methode>.php` JSON `{parameters, rpcContext: {otherPersonId}}`: `getGuardianReferenceStructsRpc`, `getGuardianReferenceStructsAtGuardianSideRpc`, `getConfigRpc`, `getContextPersonRpc`, `createGuardianRelationshipRpc {guardRelStruct, sideOfRel: "Student"}`, `createNewPersonAndRelationshipRpc {newGuardAndRelStruct: {newPerson, guardianRelationship}}`, `editCustodianTypeRpc {relationshipId, newCustodianType, typeOfRelationship: "guardian_relationship", sideOfRel}`, `deleteGuardianRelationshipRpc {id, deleteOption: delete_only_relationship\|delete_relationship_deactivate_guardian}` |
 | Personenverwaltung öffnen | `GET admin.php?page_request=154`, `POST inc/ajax/persons/personManagement.php?pageRequest=154`, `show_persons_of_group.php` |
+
+## Versionen
+
+| Version | Datum | Änderungen |
+|---|---|---|
+| 1.13.0 | 15.11.2026 | Startdateien (`start-escola.bat`/`.command`), Login an Escola angepasst (Referer, 2FA-Ablauf wie Escola-Loginseite) und live bestätigt, Login-Protokoll, Loginseite für Passwort-Manager, Testseite: „Daten lesen“ mit Tabelle/Filter/CSV und Abfragezähler (`GET /fortschritt`), alles im selben Tab |
+| 1.12.0 | 15.11.2026 | Testseite (lesen → schreiben → lesen → zurück → lesen), Repo EduKSX-Connectors |

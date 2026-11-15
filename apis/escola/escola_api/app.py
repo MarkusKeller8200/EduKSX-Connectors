@@ -177,7 +177,7 @@ def _config_from_env() -> EscolaConfig:
 def create_app(client: EscolaClient | None = None, transport: httpx.BaseTransport | None = None) -> FastAPI:
     app = FastAPI(
         title="Escola-API",
-        version="1.12.0",
+        version="1.13.0",
         description="Liest Klassen, Fächer, Lehrpersonen, Räume, Tage, Lektionen und alle "
                     "Stundenplan-Einträge aus Escola (sekbuelach.ch). Alle Endpunkte liefern JSON "
                     "oder mit `?format=csv` eine CSV-Tabelle (Semikolon, UTF-8 mit BOM für Excel).",

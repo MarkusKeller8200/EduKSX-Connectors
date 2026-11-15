@@ -18,6 +18,11 @@
   nav { background:var(--karte); border:1px solid var(--linie); border-radius:10px; padding:8px; align-self:start; position:sticky; top:12px; }
   nav h3 { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--leise); margin:12px 8px 4px; }
   nav button { display:block; width:100%; text-align:left; border:0; background:none; padding:7px 9px; border-radius:7px; cursor:pointer; font:inherit; color:var(--text); }
+  nav h3.klapp { cursor:pointer; display:flex; align-items:center; gap:6px; padding:5px 8px; margin:8px 0 2px; border-radius:7px; user-select:none; }
+  nav h3.klapp:hover { background:#f0f3f8; color:var(--text); }
+  nav h3 .pfeil { width:10px; font-size:10px; } nav h3 .anz { margin-left:auto; font-weight:400; letter-spacing:0; }
+  .nav-alle { display:flex; gap:6px; justify-content:flex-end; padding:2px 4px 0; }
+  .nav-alle button { width:auto; font-size:11px; color:var(--leise); padding:2px 6px; }
   nav button:hover { background:#f0f3f8; } nav button.aktiv { background:#e6eefb; color:var(--blau); font-weight:600; }
   section.karte { background:var(--karte); border:1px solid var(--linie); border-radius:10px; padding:16px 18px; margin-bottom:16px; }
   h2 { font-size:17px; margin:0 0 4px; } .hinweis { color:var(--leise); margin:0 0 12px; }
@@ -303,14 +308,28 @@ const SCHRITTE = [
   { k: "lesen", titel: "Lesen (nachher)", art: "lesen" },
 ];
 
+// Menügruppen ein-/ausklappen. Zustand bleibt im Tab erhalten (auch nach Neuladen).
+let offen = (() => { try { return JSON.parse(sessionStorage.getItem("escolaNavOffen")) || null; } catch { return null; } })();
+function navMerken() { try { sessionStorage.setItem("escolaNavOffen", JSON.stringify(offen)); } catch {} }
 function nav() {
-  let html = "", gruppe = "";
-  for (const f of FAELLE) {
-    if (f.gruppe !== gruppe) { gruppe = f.gruppe; html += `<h3>${esc(gruppe)}</h3>`; }
-    html += `<button data-id="${f.id}" class="${fall?.id === f.id ? "aktiv" : ""}">${esc(f.titel)}</button>`;
-  }
-  $("nav").innerHTML = html;
-  $("nav").querySelectorAll("button").forEach(b => b.onclick = () => waehle(b.dataset.id));
+  const gruppen = [...new Set(FAELLE.map(f => f.gruppe))];
+  if (!offen) offen = Object.fromEntries(gruppen.map((g, i) => [g, i === 0]));  // anfangs nur „Daten lesen“ offen
+  $("nav").innerHTML = `<div class="nav-alle"><button type="button" id="n-auf">alle auf</button><button type="button" id="n-zu">alle zu</button></div>`
+    + gruppen.map(g => {
+      const fs = FAELLE.filter(f => f.gruppe === g), auf = !!offen[g];
+      return `<h3 class="klapp" data-g="${esc(g)}" role="button" tabindex="0" aria-expanded="${auf}">
+          <span class="pfeil">${auf ? "▾" : "▸"}</span>${esc(g)}<span class="anz">${fs.length}</span></h3>
+        <div class="gruppe" ${auf ? "" : "hidden"}>${fs.map(f =>
+          `<button data-id="${f.id}" class="${fall?.id === f.id ? "aktiv" : ""}">${esc(f.titel)}</button>`).join("")}</div>`;
+    }).join("");
+  $("nav").querySelectorAll("button[data-id]").forEach(b => b.onclick = () => waehle(b.dataset.id));
+  $("nav").querySelectorAll("h3.klapp").forEach(h => {
+    const umschalten = () => { offen[h.dataset.g] = !offen[h.dataset.g]; navMerken(); nav(); };
+    h.onclick = umschalten;
+    h.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); umschalten(); } };
+  });
+  $("n-auf").onclick = () => { gruppen.forEach(g => offen[g] = true); navMerken(); nav(); };
+  $("n-zu").onclick = () => { gruppen.forEach(g => offen[g] = false); navMerken(); nav(); };
 }
 
 function params() {
@@ -327,7 +346,7 @@ function waehle(id) {
     ${fall.hinweis ? `<p class="hinweis">${esc(fall.hinweis)}</p>` : ""}
     ${fall.warn ? `<div class="warn">${esc(fall.warn)}</div>` : ""}
     <div class="params">${fall.params.map(([k, l, d, opt]) => `<label>${esc(l)}${opt
-        ? `<select id="p-${k}">${opt.map(o => `<option ${o == d ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`
+        ? `<select id="p-${k}">${opt.map(o => `<option value="${esc(o)}" ${o == d ? "selected" : ""}>${esc(o === "" ? "(alle)" : o)}</option>`).join("")}</select>`
         : `<input id="p-${k}" value="${esc(d)}">`}</label>`).join("")}</div>
     ${fall.nurLesen ? "" : `<div class="schalter">
       <label><input type="checkbox" id="frei"> Schreiben in Escola freigeben</label>
