@@ -34,26 +34,26 @@
   <p class="sub">Anmeldung mit deinem Escola-Konto. Benutzername und Passwort werden nur an Escola weitergegeben und nicht gespeichert.</p>
 
   <!-- Schritt 1 -->
-  <form id="f-login" autocomplete="on">
-    <label for="user">Benutzername</label>
-    <input id="user" name="username" autocomplete="username" required>
-    <label for="pw">Passwort</label>
-    <input id="pw" name="password" type="password" autocomplete="current-password" required>
-    <div id="key-wrap" hidden>
-      <label for="apikey">API-Schlüssel</label>
-      <input id="apikey" type="password" autocomplete="off">
+  <form id="f-login" action="/auth/login" method="post" autocomplete="on">
+    <label for="username">Benutzername</label>
+    <input id="username" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+    <label for="password">Passwort</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
+    <div id="key-wrap">
+      <label for="api-key">API-Schlüssel</label>
+      <input id="api-key" name="api-key" type="password" autocomplete="off" spellcheck="false">
     </div>
     <button type="submit">Anmelden</button>
   </form>
 
   <!-- Schritt 2: 2FA -->
-  <form id="f-2fa" hidden autocomplete="off">
+  <form id="f-2fa" action="/auth/2fa" method="post" hidden autocomplete="on">
     <div id="methode-wrap" hidden>
       <label for="methode">Methode</label>
       <select id="methode"></select>
     </div>
     <label for="code">Bestätigungscode</label>
-    <input id="code" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="8" required>
+    <input id="code" name="one-time-code" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="8" required>
     <button type="submit">Bestätigen</button>
     <button type="button" class="link" id="b-resend">Code erneut senden</button>
     <button type="button" class="link" id="b-app">Stattdessen in der Escola-App bestätigen</button>
@@ -104,20 +104,20 @@ function busy(form, on) { form.querySelectorAll('button').forEach(b => b.disable
 
 $('f-login').addEventListener('submit', async e => {
   e.preventDefault(); msg('');
-  apiKey = $('apikey').value || apiKey; store.set('escolaApiKey', apiKey || null);
+  apiKey = $('api-key').value || apiKey; store.set('escolaApiKey', apiKey || null);
   busy(e.target, true);
   try {
     session = null;
-    const j = await call('POST', '/auth/login', { benutzername: $('user').value.trim(), passwort: $('pw').value });
+    const j = await call('POST', '/auth/login', { benutzername: $('username').value.trim(), passwort: $('password').value });
     session = j.session; store.set('escolaSession', session);
-    $('pw').value = '';
+    $('password').value = '';
     if (j.status === 'angemeldet') return show('ok');
     const sel = $('methode'); sel.innerHTML = '';
     (j.methoden || []).forEach(m => { const o = document.createElement('option'); o.value = m.method || m.type || m.id; o.textContent = m.label || m.name || o.value; sel.appendChild(o); });
     $('methode-wrap').hidden = sel.options.length < 2;
     show('2fa');
   } catch (err) { msg(err.message); }
-  finally { busy(e.target, false); $('pw').value = ''; }
+  finally { busy(e.target, false); $('password').value = ''; }
 });
 
 $('methode').addEventListener('change', async () => {
@@ -153,6 +153,8 @@ $('b-logout').onclick = async () => {
   try { await call('POST', '/auth/logout'); } catch {}
   session = null; store.set('escolaSession', null); msg('Abgemeldet.', 'ok'); show('login');
 };
+
+if (apiKey) $('api-key').value = apiKey;
 
 (async () => {
   if (!session) return show('login');
