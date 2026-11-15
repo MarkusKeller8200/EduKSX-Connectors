@@ -26,7 +26,8 @@ Listen-Endpunkte liefern mit `?format=csv` eine CSV-Tabelle.
 
 `http://127.0.0.1:8080/testseite` (bzw. die Server-Adresse der API). Das Startskript öffnet
 `/login?weiter=/testseite`: anmelden, danach geht es im **selben Tab** zur Testseite (das Session-Token gilt
-nur pro Tab). API-Key oben rechts eintragen.
+nur pro Tab). API-Key oben rechts eintragen. Die Menügruppen links lassen sich auf- und zuklappen
+(„alle auf / alle zu“); der Zustand bleibt im Tab erhalten.
 
 **Daten lesen** (oberste Menügruppe, ändert nichts): Schüler:innen (mit/ohne Klasse, zukünftig, ehemalig),
 Eltern/Bezugspersonen, Lehrpersonen, Personen nach Rolle (inkl. inaktive), Rollen, Klassen, Arbeitsgruppen,
@@ -717,5 +718,5 @@ Felder abgewiesen werden und dass das Passwort nirgends gespeichert wird.
 
 | Version | Datum | Änderungen |
 |---|---|---|
-| 1.13.0 | 15.11.2026 | Startdateien (`start-escola.bat`/`.command`), Login an Escola angepasst (Referer, 2FA-Ablauf wie Escola-Loginseite) und live bestätigt, Login-Protokoll, Loginseite für Passwort-Manager, Testseite: „Daten lesen“ mit Tabelle/Filter/CSV und Abfragezähler (`GET /fortschritt`), alles im selben Tab |
+| 1.13.0 | 15.11.2026 | Startdateien (`start-escola.bat`/`.command`), Login an Escola angepasst (Referer, 2FA-Ablauf wie Escola-Loginseite) und live bestätigt, Login-Protokoll, Loginseite für Passwort-Manager, Testseite: „Daten lesen“ mit Tabelle/Filter/CSV und Abfragezähler (`GET /fortschritt`), Menügruppen ein-/ausklappbar, alles im selben Tab |
 | 1.12.0 | 15.11.2026 | Testseite (lesen → schreiben → lesen → zurück → lesen), Repo EduKSX-Connectors |
