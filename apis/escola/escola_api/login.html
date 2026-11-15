@@ -65,6 +65,7 @@
     <div class="msg ok">Angemeldet. Die Session gilt, bis du dich abmeldest oder sie abläuft.</div>
     <label>Session-Token (Header <code>X-Escola-Session</code>)</label>
     <div class="token" id="token"></div>
+    <button type="button" id="b-weiter" hidden>Weiter zur Testseite</button>
     <button type="button" id="b-copy">Token kopieren</button>
     <button type="button" class="link" id="b-docs">API-Dokumentation öffnen</button>
     <button type="button" class="link" id="b-logout">Abmelden</button>
@@ -81,11 +82,17 @@ const store = { get: k => { try { return sessionStorage.getItem(k); } catch { re
 let session = store.get('escolaSession');
 let apiKey = store.get('escolaApiKey') || '';
 
+const weiter = (() => { const w = new URLSearchParams(location.search).get('weiter') || '';
+  return /^\/[a-z]/i.test(w) && !w.startsWith('//') ? w : ''; })();
 function show(step) {
   $('f-login').hidden = step !== 'login';
   $('f-2fa').hidden = step !== '2fa';
   $('s-ok').hidden = step !== 'ok';
-  if (step === 'ok') $('token').textContent = session;
+  if (step === 'ok') {
+    $('token').textContent = session;
+    // Im selben Tab weiter (sessionStorage gilt nur pro Tab)
+    if (weiter) { $('b-weiter').hidden = false; setTimeout(() => location.assign(weiter), 1200); }
+  }
   if (step === '2fa') setTimeout(() => $('code').focus(), 0);
 }
 function msg(text, kind = 'err') { const m = $('msg'); m.textContent = text || ''; m.className = 'msg ' + (text ? kind : ''); }
@@ -148,6 +155,7 @@ $('b-app').onclick = async () => {
 
 $('b-back').onclick = () => { session = null; store.set('escolaSession', null); msg(''); show('login'); };
 $('b-copy').onclick = async () => { try { await navigator.clipboard.writeText(session); msg('Token kopiert.', 'ok'); } catch { msg('Kopieren nicht möglich – Token bitte markieren.'); } };
+$('b-weiter').onclick = () => location.assign(weiter);
 $('b-docs').onclick = () => window.open('/docs', '_blank', 'noopener');
 $('b-logout').onclick = async () => {
   try { await call('POST', '/auth/logout'); } catch {}

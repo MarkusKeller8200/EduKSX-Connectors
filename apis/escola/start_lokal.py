@@ -86,8 +86,8 @@ def main() -> None:
     if "--ohne-browser" not in sys.argv:
         def oeffnen():
             time.sleep(2.5)
-            webbrowser.open(basis + "/login")
-            webbrowser.open(basis + "/testseite")
+            # Nur EIN Tab: Anmeldung, danach im selben Tab weiter zur Testseite
+            webbrowser.open(basis + "/login?weiter=/testseite")
         threading.Thread(target=oeffnen, daemon=True).start()
     logging.basicConfig(level=os.environ.get("ESCOLA_LOG", "INFO").upper(),
                         format="%(asctime)s %(levelname)-7s %(name)s: %(message)s", datefmt="%H:%M:%S")
