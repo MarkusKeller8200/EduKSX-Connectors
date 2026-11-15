@@ -28,7 +28,7 @@ Test-Arbeitsgruppe TEST 3).
 | WF-13 | Klasseneinteilung durch die Schulleitung, Kontrolle | ✅ | 🧪 | Einteilung im Escola-Tool; Kontrolle `GET /klassenlisten` |
 | WF-14 | App-Zugang für Eltern, Nachfassen | ⚠️ | 🧪 | Eltern je Klasse ✅ `GET /klassen/{id}/eltern`; App-Status ([#4](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/4)) |
 | WF-15 | Zuteilungsbrief, Rekurs, Zuteilung definitiv | ⚠️ | 🧪 | Umteilung ✅ (WF-08); Brief ([#5](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/5)), Sichtbarkeit App ([#7](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/7)) |
-| WF-16 | Stundenpläne aus dem Stundenplaner einspielen | ⚠️ | ◐ | Einzelschreiben ✅; Abgleich/Import ([#6](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/6)) |
+| WF-16 | Stundenpläne aus dem Stundenplaner einspielen | ⚠️ | ◐ | Einzelschreiben ✅, Abgleich ✅ (nicht live) ([#6](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/6)) |
 | WF-17 | ICT: Klassenlisten, Zugänge, Geräte, Nutzungsvereinbarung | ⚠️ | 🧪 | Klassenlisten ✅; Vereinbarung + Rücklauf ([#5](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/5)), Ablage ([#3](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/3)) |
 | WF-18 | Arzt- und Zahnarztkontrollen | ❌ | – | Gutscheine ([#5](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/5)), Rückmeldung ablegen ([#3](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/3)), Status/Liste ([#8](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/8)) |
 | WF-19 | Prüfungen mit Note an Eltern | ❌ | – | ([#10](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/10)), hängt an [#3](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/3), [#9](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/9) |
@@ -51,9 +51,9 @@ Test-Arbeitsgruppe TEST 3).
 | L11 | Dokumente im Schülerdossier lesen und ablegen | offen ([#3](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/3)) |
 | L12 | Eltern-App: Aktivierungsstatus, Zugänge | offen ([#4](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/4)) |
 | L13 | Mitteilungen über Escola senden, Rücklauf lesen | offen ([#5](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/5)) |
-| L14 | Stundenplan-Abgleich mit dem Stundenplaner | offen ([#6](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/6)) |
+| L14 | Stundenplan-Abgleich mit dem Stundenplaner | ✅ eingebaut `POST /klassen/{id}/stundenplan/abgleich` (neutrales Format; Umwandlung des Stundenplaner-Exports in IDA/CONNECT), nicht live ([#6](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/6)) |
 | L15 | Sichtbarkeit in der Eltern-App pro Phase | offen, mit Escola klären ([#7](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/7)) |
-| L16 | Arzt-/Zahnarztkontrollen: Status, Liste der offenen | offen, Entscheid Escola/CMI/eigene Anwendung ([#8](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/8)) |
+| L16 | Arzt-/Zahnarztkontrollen: Status, Liste der offenen | Lesen ✅ `GET /klassen/{id}/felder?nur_leer=true` (falls Escola-Feld); Entscheid Escola/CMI/eigene Anwendung offen ([#8](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/8)) |
 | L17 | Absenzen, Verhalten, Prüfungsresultate lesen | offen ([#9](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/9)) |
 | L18 | Prüfungen mit Note an Eltern | offen ([#10](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/10)) |
 
@@ -304,7 +304,7 @@ Erhoben am 15.11.2026 aus dem Gesamtablauf (siehe `docs/workflows-escola.md`). T
 ### WF-16: Stundenpläne aus dem Stundenplaner einspielen
 
 - **Ziel:** Finaler Stundenplan als Export aus dem Stundenplaner nach Escola; ab dann sichtbar für Eltern.
-- **Status:** ⚠️ – Einzelschreiben ✅ (`POST/PATCH/DELETE /klassen/{id}/stundenplan/…`); Abgleich Soll/Ist mit Probelauf (L14); Voraussetzung: Fächer-Zuteilung vollständig.
+- **Status:** ⚠️ – Einzelschreiben ✅; Abgleich ✅ `POST /klassen/{id}/stundenplan/abgleich` `{eintraege: [{tag, lektion_id, fach_id, raum_ids?, lehrperson_ids?}], loeschen}` – Standard Probelauf, Fehler (Fach nicht zugeteilt) → nichts geschrieben. Offen: Exportformat des Stundenplaners → IDA/CONNECT wandelt um; Live-Test mit TEST_A1a.
 
 ### WF-17: ICT – Klassenlisten, Zugänge, Geräte, Nutzungsvereinbarung
 
@@ -321,7 +321,7 @@ Erhoben am 15.11.2026 aus dem Gesamtablauf (siehe `docs/workflows-escola.md`). T
 ### WF-18: Arzt- und Zahnarztkontrollen
 
 - **Ziel:** Gutscheine einmal jährlich bzw. einmal im Sekundarschulzyklus per Escola; Rückmeldungen der Ärzt:innen über unsere Plattform ins Dossier, Erhalt markieren; Liste der offenen für die Fachstelle.
-- **Status:** ❌ – Gutscheine senden (L13), Rückmeldung ablegen (L11), Status und Liste (L16).
+- **Status:** ❌/⚠️ – Gutscheine senden (L13), Rückmeldung ablegen (L11); Liste der offenen ✅ über `GET /klassen/{id}/felder?namen=<feld>&nur_leer=true`, sobald das Feld in Escola existiert (L16).
 
 ### WF-19: Prüfungen mit Note an Eltern
 

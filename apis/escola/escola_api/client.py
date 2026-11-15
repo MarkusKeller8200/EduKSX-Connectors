@@ -1476,6 +1476,109 @@ class EscolaClient:
         return {"klasse_id": int(klasse_id), "tag": tag, "lektion_id": int(lektion_id),
                 "eintrag": eintrag, "geloescht": bool(loeschen), "hinweise": hinweise, "zelle": nachher}
 
+    # ------------------------------------------------------------------ Stundenplan-Abgleich (L14, Issue #6)
+    def _belegte_zellen(self, klasse_id: int) -> set[tuple[str, int]]:
+        k = next((x for x in self._klassen_nur() if x["id"] == int(klasse_id)), None)
+        if k is None:
+            raise KeyError(f"Klasse {klasse_id} nicht gefunden")
+        with self._lock:
+            return {(e["tag_code"], int(e["lektion_id"])) for e in P.parse_stundenplan(self._stundenplan_html(k))}
+
+    def stundenplan_abgleich(self, klasse_id: int, soll: list[dict], loeschen: bool = False,
+                             probelauf: bool = True) -> dict:
+        """Soll-Stundenplan einer Klasse (z. B. aus dem Stundenplaner-Export, von IDA/CONNECT ins neutrale Format
+        gebracht) gegen Escola abgleichen. `soll`: [{tag, lektion_id, fach_id, raum_ids?, lehrperson_ids?}].
+        Pro Zelle werden Einträge über das Fach zugeordnet; fehlende werden angelegt, abweichende Räume/Lehrpersonen
+        geändert, überzählige nur mit `loeschen=True` gelöscht (sonst als `bleibt` gemeldet).
+        Mit Fehlern (z. B. Fach der Klasse nicht zugeteilt) wird nichts geschrieben."""
+        fehler, plan = [], {"neu": [], "aendern": [], "loeschen": [], "bleibt": [], "unveraendert": 0}
+        zellen: dict[tuple[str, int], list[dict]] = {}
+        for i, e in enumerate(soll):
+            tag, lid = str(e.get("tag", "")).upper(), e.get("lektion_id")
+            if tag not in self.TAGE or not isinstance(lid, int) or not isinstance(e.get("fach_id"), int):
+                fehler.append({"zeile": i, "fehler": "tag (A–E), lektion_id und fach_id sind Pflicht"})
+                continue
+            zellen.setdefault((tag, lid), []).append({**e, "tag": tag, "zeile": i})
+        erlaubt = self._faecher_klasse(klasse_id)
+        for (tag, lid), es in zellen.items():
+            for e in es:
+                if e["fach_id"] not in erlaubt:
+                    fehler.append({"zeile": e["zeile"], "fehler": f"Fach {e['fach_id']} ist der Klasse nicht zugeteilt (zuerst Fächer-Zuteilung)"})
+        alle = set(zellen) | self._belegte_zellen(klasse_id)
+        for tag, lid in sorted(alle):
+            ist = list(self.stundenplan_zelle(klasse_id, tag, lid)["eintraege"])
+            for e in zellen.get((tag, lid), []):
+                treffer = next((x for x in ist if x.get("fach_id") == e["fach_id"]), None)
+                ziel = {"tag": tag, "lektion_id": lid, "fach_id": e["fach_id"],
+                        "raum_ids": e.get("raum_ids"), "lehrperson_ids": e.get("lehrperson_ids")}
+                if treffer is None:
+                    plan["neu"].append(ziel)
+                    continue
+                ist.remove(treffer)
+                diff = {}
+                if e.get("raum_ids") is not None and sorted(e["raum_ids"]) != sorted(treffer.get("raum_ids") or []):
+                    diff["raum_ids"] = e["raum_ids"]
+                lp_ist = sorted(treffer.get("lehrperson_ids") or [])
+                if e.get("lehrperson_ids") is not None and sorted(e["lehrperson_ids"]) != lp_ist:
+                    diff["lehrperson_ids"] = e["lehrperson_ids"]
+                if diff:
+                    plan["aendern"].append({"tag": tag, "lektion_id": lid, "eintrag_id": treffer["eintrag_id"],
+                                            "fach_id": e["fach_id"], **diff})
+                else:
+                    plan["unveraendert"] += 1
+            for rest in ist:
+                eintrag = {"tag": tag, "lektion_id": lid, "eintrag_id": rest["eintrag_id"], "fach_id": rest.get("fach_id")}
+                plan["loeschen" if loeschen else "bleibt"].append(eintrag)
+        res = {"klasse_id": int(klasse_id), "probelauf": probelauf or bool(fehler), "plan": plan, "fehler": fehler}
+        if probelauf or fehler:
+            return res
+        schritte = []
+        for x in plan["neu"]:
+            try:
+                self.stundenplan_schreiben(klasse_id, x["tag"], x["lektion_id"], None, x["fach_id"], x["raum_ids"], x["lehrperson_ids"])
+                schritte.append({**x, "aktion": "neu", "ok": True})
+            except (ValueError, RuntimeError) as err:
+                schritte.append({**x, "aktion": "neu", "ok": False, "fehler": str(err)})
+        for x in plan["aendern"]:
+            try:
+                self.stundenplan_schreiben(klasse_id, x["tag"], x["lektion_id"], x["eintrag_id"], None,
+                                           x.get("raum_ids"), x.get("lehrperson_ids"))
+                schritte.append({**x, "aktion": "aendern", "ok": True})
+            except (ValueError, RuntimeError) as err:
+                schritte.append({**x, "aktion": "aendern", "ok": False, "fehler": str(err)})
+        for x in plan["loeschen"]:
+            try:
+                self.stundenplan_schreiben(klasse_id, x["tag"], x["lektion_id"], x["eintrag_id"], loeschen=True)
+                schritte.append({**x, "aktion": "loeschen", "ok": True})
+            except (ValueError, RuntimeError) as err:
+                schritte.append({**x, "aktion": "loeschen", "ok": False, "fehler": str(err)})
+        self._cache.pop("stundenplaene", None)
+        return {**res, "schritte": schritte, "vollstaendig": all(x["ok"] for x in schritte)}
+
+    # ------------------------------------------------------------------ Felder pro Klasse (L16, Issue #8)
+    def klasse_felder(self, klasse_id: int, felder: list[str], abschnitte: list[str] | None = None,
+                      nur_leer: bool = False, schuljahr: int = 0) -> list[dict]:
+        """Ausgewählte Felder aller Schüler:innen einer Klasse lesen, z. B. ein benutzerdefiniertes Feld
+        „Kontrolle Zahnarzt“. `nur_leer=True` liefert nur die, bei denen mindestens ein Feld leer ist
+        (Liste der offenen). Liest jede Person einzeln – mit `abschnitte` auf die nötigen Reiter begrenzen."""
+        if not felder:
+            raise ValueError("Mindestens ein Feld angeben")
+        kinder = [x for x in self.schueler(schuljahr=schuljahr) if x.get("klasse_id") == int(klasse_id)]
+        out = []
+        for k in kinder:
+            try:
+                p = self.person(k["id"], "schueler", abschnitte)
+                werte = {f: p.get("felder", {}).get(f) for f in felder}
+                unbekannt = [f for f in felder if f not in p.get("felder", {})]
+                row = {"schueler_id": k["id"], "nachname": k.get("nachname"), "vorname": k.get("vorname"), **werte,
+                       "unbekannte_felder": ", ".join(unbekannt)}
+            except (KeyError, ValueError, RuntimeError) as err:
+                row = {"schueler_id": k["id"], "nachname": k.get("nachname"), "vorname": k.get("vorname"),
+                       **{f: None for f in felder}, "unbekannte_felder": "", "fehler": str(err)}
+            if not nur_leer or any(row.get(f) in (None, "") for f in felder):
+                out.append(row)
+        return out
+
     def _faecher_klasse(self, klasse_id: int) -> set[int]:
         return {z["fach_id"] for z in self._matrix({"typ": "Klasse", "id": int(klasse_id)}, 0)}
 

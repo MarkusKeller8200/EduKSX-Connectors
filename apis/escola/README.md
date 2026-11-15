@@ -113,6 +113,7 @@ docker run -p 8080:8080 --env-file apis/escola/.env escola-api
 | POST | `/klassen/{id}/stundenplan/{tag}/{lektion_id}` | 🔑 ✏️ | Eintrag anlegen (`fach_id`, optional `raum_ids`, `lehrperson_ids`) |
 | PATCH | `/klassen/{id}/stundenplan/{tag}/{lektion_id}/{eintrag_id}` | 🔑 ✏️ | Fach, Räume, Lehrpersonen eines Eintrags ändern |
 | DELETE | `/klassen/{id}/stundenplan/{tag}/{lektion_id}/{eintrag_id}` | 🔑 ✏️ | Einen Eintrag löschen |
+| POST | `/klassen/{id}/stundenplan/abgleich` | 🔑 ✏️ | Soll-Stundenplan (z. B. aus dem Stundenplaner) abgleichen: Standard Probelauf mit Plan (neu/ändern/bleibt), dann anwenden; löschen nur mit `loeschen: true` (WF-16) |
 | POST | `/lehrpersonen/{id}/ersetzen` | 🔑 ✏️ | Nachfolge: Fächer, Klassenlehrperson-Plätze und Lektionen an eine andere Lehrperson übergeben |
 
 ### Schüler:innen
@@ -140,6 +141,7 @@ docker run -p 8080:8080 --env-file apis/escola/.env escola-api
 |---|---|---|---|
 | GET | `/klassenlisten?schuljahr=0\|1&schulhaus=…` | 🔑 | Eine Zeile pro Schüler:in mit Klasse, Schulhaus und Klassenlehrperson(en) – für ICT-Zugänge, Drucklisten, Abgleich (WF-13, WF-17) |
 | GET | `/klassen/{id}/eltern` | 🔑 | Alle Bezugspersonen der Kinder einer Klasse, Kinder ohne Eltern mit leeren Feldern – für App-Onboarding und Zuteilungsbrief (WF-14, WF-15) |
+| GET | `/klassen/{id}/felder?namen=…&nur_leer=true` | 🔑 | Ausgewählte Felder aller SuS einer Klasse, z. B. Kontrollen Arzt/Zahnarzt; `nur_leer` = Liste der offenen (WF-18) |
 | POST | `/import/pruefen` | 🔑 | Importliste (Schüler:innen, Eltern) mit der Escola-Duplikatprüfung vorprüfen, legt nichts an (WF-11) |
 
 ### Personen (Lehrpersonen, Mitarbeitende, weitere)
@@ -727,6 +729,7 @@ Felder abgewiesen werden und dass das Passwort nirgends gespeichert wird.
 
 | Version | Datum | Änderungen |
 |---|---|---|
+| 1.15.0 | 15.11.2026 | `POST /klassen/{id}/stundenplan/abgleich` (Issue #6), `GET /klassen/{id}/felder` (Issue #8) |
 | 1.14.0 | 15.11.2026 | Schuljahr vorbereiten: `/klassenlisten`, `/klassen/{id}/eltern`, `/import/pruefen`; Workflows WF-11 bis WF-20 aufgenommen |
 | 1.13.0 | 15.11.2026 | Startdateien (`start-escola.bat`/`.command`), Login an Escola angepasst (Referer, 2FA-Ablauf wie Escola-Loginseite) und live bestätigt, Login-Protokoll, Loginseite für Passwort-Manager, Testseite: „Daten lesen“ mit Tabelle/Filter/CSV und Abfragezähler (`GET /fortschritt`), Menügruppen ein-/ausklappbar, alles im selben Tab |
 | 1.12.0 | 15.11.2026 | Testseite (lesen → schreiben → lesen → zurück → lesen), Repo EduKSX-Connectors |

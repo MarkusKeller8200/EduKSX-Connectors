@@ -45,6 +45,19 @@ class ImportListe(BaseModel):
     personen: list[ImportPerson] = Field(..., max_length=1000)
 
 
+class SollEintrag(BaseModel):
+    tag: str = Field(..., description="A–E (A = Montag)")
+    lektion_id: int
+    fach_id: int
+    raum_ids: list[int] | None = None
+    lehrperson_ids: list[int] | None = None
+
+
+class StundenplanAbgleich(BaseModel):
+    eintraege: list[SollEintrag] = Field(..., max_length=500)
+    loeschen: bool = Field(False, description="überzählige Einträge löschen (sonst nur melden)")
+
+
 class Code(BaseModel):
     code: str
 
@@ -189,7 +202,7 @@ def _config_from_env() -> EscolaConfig:
 def create_app(client: EscolaClient | None = None, transport: httpx.BaseTransport | None = None) -> FastAPI:
     app = FastAPI(
         title="Escola-API",
-        version="1.14.0",
+        version="1.15.0",
         description="Liest Klassen, Fächer, Lehrpersonen, Räume, Tage, Lektionen und alle "
                     "Stundenplan-Einträge aus Escola (sekbuelach.ch). Alle Endpunkte liefern JSON "
                     "oder mit `?format=csv` eine CSV-Tabelle (Semikolon, UTF-8 mit BOM für Excel).",
@@ -768,6 +781,16 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
         return _st(lambda: c.stundenplan_schreiben(klasse_id, tag, lektion_id, eintrag_id, loeschen=True,
                                                    probelauf=probelauf))
 
+    @app.post("/klassen/{klasse_id}/stundenplan/abgleich", dependencies=deps, tags=["Stundenplan"])
+    def stundenplan_abgleich(klasse_id: int, body: StundenplanAbgleich, probelauf: bool = Query(True),
+                             c: EscolaClient = Depends(get_client)):
+        """Soll-Stundenplan einer Klasse (z. B. aus dem Stundenplaner-Export) gegen Escola abgleichen.
+        Standard ist **Probelauf** (nur Plan). Mit `probelauf=false` werden fehlende Einträge angelegt,
+        abweichende geändert und – nur mit `loeschen: true` – überzählige gelöscht. Fehler → nichts geschrieben."""
+        _schreib_check(probelauf)
+        return _st(lambda: c.stundenplan_abgleich(klasse_id, [e.model_dump() for e in body.eintraege],
+                                                  body.loeschen, probelauf))
+
     @app.post("/lehrpersonen/{lp_id}/ersetzen", dependencies=deps, tags=["Stundenplan"])
     def lehrperson_ersetzen(lp_id: int, body: Ersetzen, probelauf: bool = Query(False),
                             c: EscolaClient = Depends(get_client)):
@@ -789,6 +812,21 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
         """Klassenlisten: eine Zeile pro Schüler:in mit Klasse, Schulhaus und Klassenlehrperson(en).
         Für ICT (Zugänge), Drucklisten und den Abgleich nach der Einteilung."""
         return out(c.klassenlisten(schuljahr, schulhaus, refresh), format, f"klassenlisten_sj{schuljahr}")
+
+    @app.get("/klassen/{klasse_id}/felder", dependencies=deps, tags=["Schuljahr vorbereiten"])
+    def klasse_felder(klasse_id: int, namen: str = Query(..., description="Feldnamen, kommagetrennt (siehe GET /schueler/{id})"),
+                      abschnitte: str | None = Query(None, description="Reiter, kommagetrennt – beschleunigt das Lesen"),
+                      nur_leer: bool = Query(False, description="nur SuS mit leerem Feld (Liste der offenen)"),
+                      schuljahr: int = Query(0, ge=0, le=1), format: Format = F, c: EscolaClient = Depends(get_client)):
+        """Ausgewählte Felder aller Schüler:innen einer Klasse, z. B. Kontrollen Arzt/Zahnarzt in
+        benutzerdefinierten Feldern. Liest jede Person einzeln (Fortschritt über GET /fortschritt)."""
+        felder = [f.strip() for f in namen.split(",") if f.strip()]
+        abs_ = [a.strip() for a in abschnitte.split(",") if a.strip()] if abschnitte else None
+        try:
+            rows = c.klasse_felder(klasse_id, felder, abs_, nur_leer, schuljahr)
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+        return out(rows, format, f"felder_klasse_{klasse_id}")
 
     @app.get("/klassen/{klasse_id}/eltern", dependencies=deps, tags=["Schuljahr vorbereiten"])
     def klasse_eltern(klasse_id: int, schuljahr: int = Query(0, ge=0, le=1), format: Format = F,
