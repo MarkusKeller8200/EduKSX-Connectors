@@ -10,6 +10,7 @@ REST-API für **Escola (sekbuelach.ch)** zur Weiterverwendung in anderen Projekt
 - **Stundenplan schreiben**: Einträge anlegen, ändern, löschen; Lehrperson ersetzen (Nachfolge)
 - **Eltern/Bezugspersonen** lesen, anlegen, verknüpfen, Sorgerecht setzen, entfernen
 - **Schüler:innen & Personen** lesen, anlegen (auch ohne Klasse), einer Klasse zuordnen und (optional) schreiben
+- **Schuljahr vorbereiten:** Klassenlisten, Eltern je Klasse, Vorprüfung von Importlisten auf Duplikate
 - **Dokumente** als Platzhalter vorbereitet
 
 Escola hat keine offizielle API. Diese Schnittstelle nutzt dieselben internen Aufrufe wie die

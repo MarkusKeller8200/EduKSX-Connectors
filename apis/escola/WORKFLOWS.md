@@ -47,7 +47,6 @@ Test-Arbeitsgruppe TEST 3).
 | L7 | Neue Bezugsperson anlegen (`createNewPersonAndRelationshipRpc`) | eingebaut, nicht live getestet (legt eine nicht löschbare Person an) – im ersten Testlauf prüfen ([#12](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/12)) |
 | L8 | Stundenplan von Arbeitsgruppen | offen – Escola-Aufruf unbekannt (Anzeige liefert keine Zellen) ([#13](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/13)) |
 | L9 | Lehrpersonen-Schalter im Stundenplan bei mehreren Lehrpersonen pro Fach | eingebaut, live nur gelesen (H_A1a), nicht geschaltet ([#14](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/14)) |
-
 | L10 | Escola-Importformat und Upload | offen ([#2](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/2)) |
 | L11 | Dokumente im Schülerdossier lesen und ablegen | offen ([#3](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/3)) |
 | L12 | Eltern-App: Aktivierungsstatus, Zugänge | offen ([#4](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/4)) |
