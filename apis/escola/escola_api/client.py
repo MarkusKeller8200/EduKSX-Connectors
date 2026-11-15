@@ -54,6 +54,9 @@ class EscolaClient:
                 "Cookie": cfg.cookie,
                 "User-Agent": "escola-api/1.1",
                 "X-Requested-With": "XMLHttpRequest",
+                # Escola prüft bei login.php (und evtl. weiteren POSTs) den Referer ("Referrer check failed")
+                "Referer": cfg.base_url.rstrip("/") + "/admin.php",
+                "Origin": cfg.base_url.rstrip("/").split("/", 3)[0] + "//" + cfg.base_url.split("/")[2] if "://" in cfg.base_url else None,
             }.items() if v},
             timeout=cfg.timeout,
             follow_redirects=False,

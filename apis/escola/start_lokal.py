@@ -7,6 +7,7 @@ Zugangsdaten zu Escola werden hier NICHT gespeichert – die Anmeldung läuft ü
 """
 from __future__ import annotations
 
+import logging
 import os
 import secrets
 import sys
@@ -88,6 +89,9 @@ def main() -> None:
             webbrowser.open(basis + "/login")
             webbrowser.open(basis + "/testseite")
         threading.Thread(target=oeffnen, daemon=True).start()
+    logging.basicConfig(level=os.environ.get("ESCOLA_LOG", "INFO").upper(),
+                        format="%(asctime)s %(levelname)-7s %(name)s: %(message)s", datefmt="%H:%M:%S")
+    logging.getLogger("httpx").setLevel(logging.WARNING)
     sys.path.insert(0, str(HIER))
     import uvicorn
     uvicorn.run("escola_api.app:app", host="127.0.0.1", port=port, log_level="info")

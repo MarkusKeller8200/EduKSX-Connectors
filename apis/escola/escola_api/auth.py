@@ -19,6 +19,7 @@ Escola-Ablauf (aus dem Escola-Frontend ermittelt, 14.11.2026):
 """
 from __future__ import annotations
 
+import logging
 import secrets
 import threading
 import time
@@ -29,6 +30,32 @@ import httpx
 from .client import EscolaClient, EscolaConfig
 
 API = "escola/api/"
+log = logging.getLogger("escola_api.auth")
+
+
+def _log(schritt: str, r: httpx.Response) -> None:
+    """Protokolliert eine Escola-Antwort ohne Inhalte, die Zugangsdaten verraten könnten."""
+    try:
+        ct = r.headers.get("content-type", "")
+        info = f"{schritt}: {r.request.method} {r.request.url.path} -> HTTP {r.status_code}, {ct.split(';')[0] or '-'}, {len(r.content)} B"
+        if r.headers.get("location"):
+            info += f", weiter nach {r.headers['location']}"
+        info += f", Cookies: {sorted(c for c in r.cookies.keys()) or '-'}"
+        if "json" in ct:
+            j = _json(r)
+            sicher = {k: j[k] for k in ("success", "errorMessage", "message", "msg", "twoFactorRequired",
+                                         "twoFactorSetupRequired", "passwordUpdateRequired",
+                                         "emailAddressUpdateRequired") if k in j}
+            info += f", JSON-Felder: {sorted(j.keys())}, Werte: {sicher}"
+        elif "html" in ct:
+            import re
+            m = re.search(r"<title>(.*?)</title>", r.text, re.S | re.I)
+            info += f", Titel: {m.group(1).strip() if m else '-'}"
+            if not m and len(r.content) < 300:
+                info += f", Text: {r.text.strip()!r}"
+        log.info(info)
+    except Exception as e:  # Logging darf den Ablauf nie stören
+        log.debug("Log-Fehler: %s", e)
 
 
 class LoginFehler(RuntimeError):
@@ -49,6 +76,7 @@ def _data(j: dict):
 
 def _ist_angemeldet(c: EscolaClient) -> bool:
     r = c._http.get("admin.php?page_request=6")
+    _log("Prüfe Anmeldung", r)
     if r.status_code in (301, 302, 303) and "login" in r.headers.get("location", "").lower():
         return False
     return r.status_code == 200 and "<title>Escola - Login</title>" not in r.text and "unifiedClassOrWorkgroupChooser" in r.text
@@ -56,6 +84,7 @@ def _ist_angemeldet(c: EscolaClient) -> bool:
 
 def _zwei_faktor_infos(c: EscolaClient) -> dict | None:
     r = c._http.get(API + "login/two-factor/login-infos", headers={"Accept": "application/json"})
+    _log("2FA-Infos", r)
     if r.status_code != 200:
         return None
     d = _data(_json(r))
@@ -76,14 +105,19 @@ def _methoden(infos: dict | None) -> list:
 
 
 def login_schritt1(c: EscolaClient, benutzername: str, passwort: str, dauer_stunden: int | None = None) -> dict:
-    c._http.get("escola/login")  # frische Escola-Session (Cookie) wie beim Öffnen der Loginseite
+    log.info("Login gestartet für Benutzer '%s' an %s (Passwort: %d Zeichen)", benutzername, c._http.base_url, len(passwort))
+    r0 = c._http.get("escola/login")  # frische Escola-Session (Cookie) wie beim Öffnen der Loginseite
+    _log("Loginseite", r0)
     files = {"username": (None, benutzername), "password": (None, passwort)}
     if dauer_stunden:
         files["loginDurationInHours"] = (None, str(dauer_stunden))
-    r = c._http.post("login.php", files=files, headers={"Accept": "application/json"})
+    r = c._http.post("login.php", files=files, headers={
+        "Accept": "application/json", "Referer": str(c._http.base_url) + "escola/login"})
+    _log("login.php", r)
     j = _json(r)
     if r.status_code >= 400 or j.get("success") is False:
-        raise LoginFehler(j.get("errorMessage") or f"Login fehlgeschlagen (HTTP {r.status_code})")
+        kurz = r.text.strip() if not j and len(r.content) < 300 else ""
+        raise LoginFehler(j.get("errorMessage") or f"Login fehlgeschlagen (HTTP {r.status_code}{': ' + kurz if kurz else ''})")
     # Weitere Schritte, die Escola verlangen kann
     flags = {k: bool(j.get(k)) for k in ("twoFactorRequired", "twoFactorSetupRequired",
                                          "passwordUpdateRequired", "emailAddressUpdateRequired") if k in j}
@@ -103,12 +137,14 @@ def login_schritt1(c: EscolaClient, benutzername: str, passwort: str, dauer_stun
 
 def zwei_faktor_methode(c: EscolaClient, methode: str) -> None:
     r = c._http.patch(API + "login/two-factor/method", json={"method": methode})
+    _log("2FA", r)
     if r.status_code >= 400:
         raise LoginFehler(_json(r).get("message") or f"Methode konnte nicht gewählt werden (HTTP {r.status_code})")
 
 
 def zwei_faktor_erneut(c: EscolaClient) -> dict:
     r = c._http.post(API + "login/two-factor/resend")
+    _log("2FA", r)
     if r.status_code >= 400:
         raise LoginFehler(_json(r).get("message") or "Code konnte nicht erneut gesendet werden")
     return {"status": "gesendet"}
@@ -116,6 +152,7 @@ def zwei_faktor_erneut(c: EscolaClient) -> dict:
 
 def zwei_faktor_code(c: EscolaClient, code: str) -> dict:
     r = c._http.post(API + "login/two-factor/verification", json={"code": str(code).strip()})
+    _log("2FA", r)
     j = _json(r)
     if r.status_code >= 400:
         raise LoginFehler(j.get("message") or j.get("msg") or "Code falsch oder abgelaufen")

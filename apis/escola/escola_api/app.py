@@ -209,6 +209,8 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
 
     def auth(x_api_key: str = Header(default="")):
         if api_key and x_api_key != api_key:
+            A.log.warning("API-Key abgelehnt: %s", "kein X-API-Key mitgeschickt" if not x_api_key
+                          else f"falscher Key ({len(x_api_key)} statt {len(api_key)} Zeichen)")
             raise HTTPException(401, "X-API-Key fehlt oder ist falsch")
 
     @app.exception_handler(SessionAbgelaufen)
@@ -240,6 +242,7 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
         return s
 
     def _fehler(e: Exception, token: str | None = None, behalten=False):
+        A.log.warning("Anmeldung fehlgeschlagen: %s: %s", type(e).__name__, e)
         if token and not behalten:
             sessions.entfernen(token)
         return JSONResponse(status_code=401, content={"status": "fehler", "meldung": str(e)})
@@ -262,6 +265,7 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
             res = A.login_schritt1(s.client, body.benutzername, body.passwort, body.dauer_stunden)
         except (A.LoginFehler, httpx.HTTPError) as e:
             return _fehler(e, token)
+        A.log.info("Login-Ergebnis: %s", res.get("status"))
         if res["status"] not in ("angemeldet", "2fa_erforderlich"):
             sessions.entfernen(token)
             return JSONResponse(status_code=409, content=res)
