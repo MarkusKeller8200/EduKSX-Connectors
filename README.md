@@ -15,13 +15,20 @@ gehören nie ins Repo (nur `.env.example`).
 
 Neue APIs entstehen aus [`apis/_vorlage`](apis/_vorlage).
 
+- **Workflows aller Systeme:** [docs/workflows.md](docs/workflows.md) – erweiterbare Liste der Geschäftsfälle
+- **Testseite:** jede API bringt `/testseite` mit (Escola: lesen → schreiben → lesen → rückgängig → lesen)
+- **Einsatz in Webanwendungen:** [docs/betrieb-webanwendung.md](docs/betrieb-webanwendung.md) – die APIs laufen als
+  Server-Dienst (z. B. Docker), Webanwendungen rufen sie per HTTP auf
+- **Archiv:** [`_old/`](_old) – Stände vor dem Umzug ins Repo (nur zum Nachschlagen)
+
 ## Aufbau
 
 ```
 apis/<system>/        eine API = ein Dienst (Python/FastAPI), eigene requirements, Tests, README, WORKFLOWS
 apis/_vorlage/        Gerüst für die nächste API
 shared/               gemeinsame Bausteine – erst befüllen, wenn eine zweite API sie braucht
-docs/                 Architektur und gemeinsame Konventionen
+docs/                 Architektur, Konventionen, Betrieb, Workflow-Übersicht
+_old/                 Archiv (frühere Kopien, nicht mehr pflegen)
 .github/workflows/    Tests aller APIs bei jedem Push
 ```
 
@@ -37,11 +44,27 @@ Siehe [docs/konventionen.md](docs/konventionen.md) – kurz:
 
 ## Lokal starten (Beispiel Escola)
 
+Einfachster Weg: Repo auschecken und die Startdatei doppelklicken.
+
+| System | Datei |
+|---|---|
+| Windows | `start-escola.bat` |
+| macOS | `start-escola.command` (beim ersten Mal: Rechtsklick → Öffnen) |
+| Linux | `./start-escola.command` |
+
+Voraussetzung ist Python 3.12 oder neuer. Beim ersten Start richtet das Skript `apis/escola/.venv`
+ein, installiert die Pakete und legt `apis/escola/.env` an. Dabei fragt es, ob Schreiben erlaubt
+sein soll, und nach dem Port. Es erzeugt einen API-Key und zeigt ihn an. Danach öffnen sich Login
+und Testseite im Browser. Beenden mit Ctrl+C bzw. Fenster schliessen.
+
+`.env` neu erstellen: Datei löschen und erneut starten. Ohne Browser: `start-escola.command --ohne-browser`.
+
+Von Hand:
+
 ```bash
 cd apis/escola
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env      # Werte eintragen
-uvicorn escola_api.app:app --host 127.0.0.1 --port 8080
+python start_lokal.py        # liest .env selbst
 pytest -q
 ```

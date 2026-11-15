@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Escola-API – Testseite</title>
+<style>
+  :root { --bg:#f6f7f9; --karte:#fff; --text:#1d2433; --leise:#667085; --linie:#e2e5ea; --blau:#1f5fbf;
+          --gruen:#16794c; --gruen-bg:#e8f5ee; --rot:#b42318; --rot-bg:#fdecea; --gelb-bg:#fff7e0; --gelb:#8a5a00; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--text); }
+  header { background:var(--karte); border-bottom:1px solid var(--linie); padding:10px 18px; display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+  header h1 { font-size:16px; margin:0 12px 0 0; }
+  .pill { padding:2px 9px; border-radius:99px; font-size:12px; background:#eef1f5; color:var(--leise); }
+  .pill.ok { background:var(--gruen-bg); color:var(--gruen); } .pill.err { background:var(--rot-bg); color:var(--rot); }
+  main { display:grid; grid-template-columns: 300px 1fr; gap:16px; padding:16px 18px; max-width:1500px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  nav { background:var(--karte); border:1px solid var(--linie); border-radius:10px; padding:8px; align-self:start; position:sticky; top:12px; }
+  nav h3 { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--leise); margin:12px 8px 4px; }
+  nav button { display:block; width:100%; text-align:left; border:0; background:none; padding:7px 9px; border-radius:7px; cursor:pointer; font:inherit; color:var(--text); }
+  nav button:hover { background:#f0f3f8; } nav button.aktiv { background:#e6eefb; color:var(--blau); font-weight:600; }
+  section.karte { background:var(--karte); border:1px solid var(--linie); border-radius:10px; padding:16px 18px; margin-bottom:16px; }
+  h2 { font-size:17px; margin:0 0 4px; } .hinweis { color:var(--leise); margin:0 0 12px; }
+  .warn { background:var(--gelb-bg); color:var(--gelb); border-radius:8px; padding:8px 10px; margin:8px 0 12px; }
+  .params { display:flex; flex-wrap:wrap; gap:10px 16px; margin-bottom:12px; }
+  .params label { display:flex; flex-direction:column; font-size:12px; color:var(--leise); gap:3px; }
+  input, select, textarea { font:inherit; padding:6px 8px; border:1px solid #cfd5dd; border-radius:7px; background:#fff; color:var(--text); }
+  input[type=checkbox] { padding:0; }
+  .params input, .params select { width:150px; }
+  .schalter { display:flex; gap:18px; flex-wrap:wrap; margin:6px 0 14px; color:var(--leise); }
+  .schalter label { display:flex; gap:6px; align-items:center; cursor:pointer; }
+  button.b { border:1px solid #cfd5dd; background:#fff; padding:6px 12px; border-radius:7px; cursor:pointer; font:inherit; }
+  button.b:hover:not(:disabled) { border-color:var(--blau); color:var(--blau); }
+  button.b.primaer { background:var(--blau); color:#fff; border-color:var(--blau); }
+  button.b.primaer:hover:not(:disabled) { background:#174a96; color:#fff; }
+  button.b:disabled { opacity:.45; cursor:not-allowed; }
+  .schritt { border:1px solid var(--linie); border-radius:9px; margin:8px 0; overflow:hidden; }
+  .schritt-kopf { display:flex; gap:10px; align-items:center; padding:8px 10px; background:#fafbfc; }
+  .nr { width:24px; height:24px; border-radius:50%; background:#e9edf3; display:grid; place-items:center; font-weight:600; font-size:12px; flex:none; }
+  .schritt.ok .nr { background:var(--gruen); color:#fff; } .schritt.fehler .nr { background:var(--rot); color:#fff; }
+  .art { font-size:11px; padding:1px 7px; border-radius:99px; background:#eef1f5; color:var(--leise); }
+  .art.lesen { background:#e6eefb; color:var(--blau); } .art.schreiben { background:var(--gelb-bg); color:var(--gelb); }
+  .art.zurueck { background:#f1e9fb; color:#6b3fa0; }
+  code.aufruf { font-size:12px; color:var(--leise); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
+  .status { font-size:12px; color:var(--leise); white-space:nowrap; }
+  pre { margin:0; padding:10px; background:#0f172a; color:#e2e8f0; font-size:12px; max-height:320px; overflow:auto; white-space:pre-wrap; word-break:break-word; }
+  table.vergleich { border-collapse:collapse; width:100%; margin-top:6px; font-size:13px; }
+  table.vergleich td, table.vergleich th { border:1px solid var(--linie); padding:6px 8px; text-align:left; vertical-align:top; }
+  table.vergleich th { background:#fafbfc; font-weight:600; width:190px; }
+  .gleich { color:var(--gruen); font-weight:600; } .anders { color:var(--rot); font-weight:600; }
+  .frei textarea { width:100%; min-height:90px; font-family:ui-monospace,monospace; font-size:12px; }
+  .zeile { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
+  a { color:var(--blau); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Escola-API · Testseite</h1>
+  <span id="s-session" class="pill">Sitzung …</span>
+  <span id="s-schreiben" class="pill">Schreiben …</span>
+  <label class="pill" style="display:flex;gap:6px;align-items:center">API-Key
+    <input id="apikey" type="password" placeholder="X-API-Key" style="width:150px;padding:2px 6px"></label>
+  <a href="/login" target="_blank">Anmelden / Token</a>
+  <a href="/docs" target="_blank">API-Doku</a>
+</header>
+<main>
+  <nav id="nav"></nav>
+  <div>
+    <section class="karte" id="szenario"></section>
+    <section class="karte frei">
+      <h2>Freier Aufruf</h2>
+      <p class="hinweis">Jeder Endpunkt aus der <a href="/docs" target="_blank">API-Doku</a>. Schreibende Aufrufe nur bei aktivem Schalter „Schreiben freigeben“.</p>
+      <div class="zeile">
+        <select id="f-m"><option>GET</option><option>POST</option><option>PATCH</option><option>PUT</option><option>DELETE</option></select>
+        <input id="f-pfad" value="/klassen" style="flex:1;min-width:240px">
+        <button class="b primaer" id="f-los">Senden</button>
+      </div>
+      <textarea id="f-body" placeholder='Body (JSON), z. B. {"felder": {"natel": "079 000 00 00"}}'></textarea>
+      <div id="f-erg" style="margin-top:8px"></div>
+    </section>
+  </div>
+</main>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const store = { get: k => { try { return sessionStorage.getItem(k); } catch { return null; } },
+                set: (k, v) => { try { v == null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v); } catch {} } };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const heute = () => new Date().toISOString().slice(0, 10);
+const enc = encodeURIComponent;
+
+// ---------------------------------------------------------------- API-Aufruf
+async function api(m, pfad, body) {
+  const h = { "Content-Type": "application/json" };
+  const s = store.get("escolaSession"); if (s) h["X-Escola-Session"] = s;
+  const k = $("apikey").value || store.get("escolaApiKey"); if (k) h["X-API-Key"] = k;
+  const t0 = performance.now();
+  const r = await fetch(pfad, { method: m, headers: h, body: body === undefined ? undefined : JSON.stringify(body) });
+  let j = null; const txt = await r.text(); try { j = JSON.parse(txt); } catch { j = txt; }
+  return { ok: r.ok, status: r.status, ms: Math.round(performance.now() - t0), json: j };
+}
+
+// ---------------------------------------------------------------- Testfälle
+// Jeder Fall: lesen -> schreiben/anlegen -> lesen -> rückgängig/löschen -> lesen.
+// wert(json, p) liefert den Wert, der zwischen den drei Lese-Schritten verglichen wird.
+const FAELLE = [
+ { id: "person-feld", gruppe: "Personen", titel: "Feld einer Person ändern",
+   hinweis: "Liest den Reiter, schreibt einen Testwert, stellt den alten Wert wieder her.",
+   params: [["pid", "Person-ID", 649], ["abschnitt", "Reiter", "personalien"], ["feld", "Feld (intern)", "beruf"], ["neu", "Testwert", "Testwert API"]],
+   lesen: p => ["GET", `/personen/${p.pid}?abschnitte=${enc(p.abschnitt)}`],
+   wert: (j, p) => j.felder?.[p.feld] ?? "",
+   merken: (j, p, c) => { c.alt = j.felder?.[p.feld] ?? ""; },
+   schreiben: (p, c) => ["PATCH", `/personen/${p.pid}`, { felder: { [p.feld]: p.neu } }],
+   zurueck: (p, c) => ["PATCH", `/personen/${p.pid}`, { felder: { [p.feld]: c.alt } }],
+   probelauf: true },
+ { id: "rolle", gruppe: "Personen", titel: "Rolle zuweisen und entziehen",
+   hinweis: "Nur freigegebene Rollen (Lehrpersonen/Schulleitung je Schulhaus, eigene Rollen). IDs siehe GET /rollen.",
+   params: [["pid", "Person-ID", 649], ["rolle", "Rollen-ID", ""]],
+   lesen: p => ["GET", `/personen/${p.pid}/rollen`],
+   wert: j => (Array.isArray(j) ? j.map(r => r.id + " " + r.name).join(", ") : "") || "(keine)",
+   schreiben: p => ["PATCH", `/personen/${p.pid}/rollen`, { hinzufuegen: [+p.rolle], entfernen: [] }],
+   zurueck: p => ["PATCH", `/personen/${p.pid}/rollen`, { hinzufuegen: [], entfernen: [+p.rolle] }],
+   vorSchreiben: (p, c) => c.vorher?.includes?.(String(p.rolle) + " ") ? "Die Person hat diese Rolle schon – Rückgängig würde sie entfernen." : (p.rolle ? null : "Rollen-ID angeben."),
+   probelauf: true },
+ { id: "schueler-feld", gruppe: "Schüler:innen", titel: "Feld einer Schülerin ändern",
+   hinweis: "Wie oben, für Schüler:innen (z. B. Natel im Reiter „privat“).",
+   params: [["pid", "Schüler:in-ID", 650], ["abschnitt", "Reiter", "privat"], ["feld", "Feld (intern)", "natel"], ["neu", "Testwert", "079 999 99 99"]],
+   lesen: p => ["GET", `/schueler/${p.pid}?abschnitte=${enc(p.abschnitt)}`],
+   wert: (j, p) => j.felder?.[p.feld] ?? "",
+   merken: (j, p, c) => { c.alt = j.felder?.[p.feld] ?? ""; },
+   schreiben: (p, c) => ["PATCH", `/schueler/${p.pid}`, { felder: { [p.feld]: p.neu } }],
+   zurueck: (p, c) => ["PATCH", `/schueler/${p.pid}`, { felder: { [p.feld]: c.alt } }],
+   probelauf: true },
+ { id: "austritt", gruppe: "Schüler:innen", titel: "Austritt erfassen und zurücknehmen",
+   hinweis: "Setzt ein Austrittsdatum in der Zukunft und leert es wieder. Escola deaktiviert erst am Datum.",
+   params: [["pid", "Schüler:in-ID", 650], ["datum", "Austrittsdatum", "2027-07-09"]],
+   lesen: p => ["GET", `/schueler/${p.pid}?abschnitte=personalien`],
+   wert: j => j.felder?.austritt || "(leer)",
+   schreiben: p => ["POST", `/schueler/${p.pid}/austritt`, { datum: p.datum }],
+   zurueck: p => ["POST", `/schueler/${p.pid}/austritt`, { datum: "" }] },
+ { id: "klassenwechsel", gruppe: "Schüler:innen", titel: "Klasse wechseln und zurück",
+   hinweis: "Transfer ab heute in die Zielklasse und wieder zurück in die bisherige Klasse.",
+   warn: "Erzeugt in Escola zwei Transfer-Einträge im Verlauf der Person.",
+   params: [["pid", "Schüler:in-ID", 650], ["ziel", "Zielklasse-ID", 120]],
+   lesen: p => ["GET", `/schueler?refresh=true`],
+   wert: (j, p) => (Array.isArray(j) ? j.find(s => s.id == p.pid) : null)?.klasse_id ?? "(keine Klasse)",
+   merken: (j, p, c) => { c.alt = (j.find(s => s.id == p.pid) || {}).klasse_id; },
+   schreiben: p => ["POST", `/schueler/${p.pid}/klasse`, { klasse_id: +p.ziel, stichtag: heute() }],
+   zurueck: (p, c) => ["POST", `/schueler/${p.pid}/klasse`, { klasse_id: c.alt, stichtag: heute() }],
+   vorZurueck: (p, c) => c.alt ? null : "Bisherige Klasse unbekannt – nicht zurücksetzbar." },
+ { id: "arbeitsgruppe", gruppe: "Schüler:innen", titel: "In Arbeitsgruppe einteilen und entfernen",
+   params: [["pid", "Schüler:in-ID", 650], ["ag", "Arbeitsgruppe-ID", 3]],
+   lesen: p => ["GET", `/schueler/${p.pid}/arbeitsgruppen`],
+   wert: j => (Array.isArray(j) ? j.map(w => w.id + " " + (w.name || "")).join(", ") : "") || "(keine)",
+   schreiben: p => ["POST", `/schueler/${p.pid}/arbeitsgruppen`, { arbeitsgruppe_id: +p.ag }],
+   zurueck: p => ["DELETE", `/schueler/${p.pid}/arbeitsgruppen/${p.ag}`] },
+ { id: "bezugsperson", gruppe: "Schüler:innen", titel: "Bezugsperson verknüpfen und entfernen",
+   hinweis: "Verknüpft eine bestehende Person (keine neue Person). Escola gibt ihr dabei die Rolle „Eltern/Bezugspersonen“ und nimmt sie beim Entfernen wieder weg.",
+   params: [["pid", "Schüler:in-ID", 650], ["person", "Person-ID", 649], ["sorgerecht", "Sorgerecht", "informationsberechtigt", ["sorgeberechtigt", "informationsberechtigt", "keine"]], ["funktion", "Funktion", "andere Funktion"]],
+   lesen: p => ["GET", `/schueler/${p.pid}/bezugspersonen`],
+   wert: j => (Array.isArray(j) ? j.map(b => `${b.name} (${b.funktion}, ${b.sorgerecht})`).join("; ") : "") || "(keine)",
+   schreiben: p => ["POST", `/schueler/${p.pid}/bezugspersonen`, { person_id: +p.person, sorgerecht: p.sorgerecht, funktion: p.funktion, abholberechtigt: false }],
+   nachSchreiben: (j, c) => { c.bid = j?.beziehung_id; },
+   zurueck: (p, c) => ["DELETE", `/schueler/${p.pid}/bezugspersonen/${c.bid}`],
+   vorZurueck: (p, c) => c.bid ? null : "Keine Beziehungs-ID aus dem Schreibschritt." },
+ { id: "klp", gruppe: "Klassen & Lehrpersonen", titel: "Klassenlehrperson setzen und zurück",
+   hinweis: "Trägt die Person auf dem nächsten freien Platz (A/B/C) im aktuellen Schuljahr ein und stellt die alte Belegung wieder her.",
+   params: [["klasse", "Klassen-ID", 120], ["pid", "Person-ID", 649]],
+   lesen: p => ["GET", `/klassen/${p.klasse}/klassenlehrpersonen`],
+   wert: j => (j.aktuell || []).map(x => `${x.slot}: ${x.name}`).join(", ") || "(keine)",
+   merken: (j, p, c) => { c.alt = (j.aktuell || []).map(x => x.id); },
+   vorSchreiben: (p, c) => c.alt?.includes(+p.pid) ? "Die Person ist schon Klassenlehrperson." : (c.alt?.length >= 3 ? "Alle drei Plätze sind belegt." : null),
+   schreiben: (p, c) => ["PUT", `/klassen/${p.klasse}/klassenlehrpersonen`, { aktuell: [...c.alt, +p.pid] }],
+   zurueck: (p, c) => ["PUT", `/klassen/${p.klasse}/klassenlehrpersonen`, { aktuell: c.alt }],
+   probelauf: true },
+ { id: "fach", gruppe: "Klassen & Lehrpersonen", titel: "Fach zuteilen und entfernen",
+   hinweis: "Klasse oder Arbeitsgruppe (eines von beiden leer lassen), aktuelles oder kommendes Schuljahr.",
+   params: [["lp", "Lehrperson-ID", 649], ["klasse", "Klassen-ID", 120], ["ag", "Arbeitsgruppe-ID", ""], ["fach", "Fach-ID", 12], ["sj", "Schuljahr", "0", ["0", "1"]]],
+   lesen: p => ["GET", `/lehrpersonen/${p.lp}/faecher?${p.ag ? "arbeitsgruppe_id=" + p.ag : "klasse_id=" + p.klasse}&schuljahr=${p.sj}`],
+   wert: j => (j.faecher || []).map(f => f.id + " " + (f.kurz || f.name || "")).join(", ") || "(keine)",
+   merken: (j, p, c) => { c.hatte = (j.faecher || []).some(f => f.id == p.fach); },
+   vorSchreiben: (p, c) => c.hatte ? "Die Lehrperson hat das Fach schon – Rückgängig würde es entfernen." : null,
+   ziel: p => p.ag ? { arbeitsgruppe_id: +p.ag } : { klasse_id: +p.klasse },
+   schreiben(p) { return ["PATCH", `/lehrpersonen/${p.lp}/faecher`, { ...this.ziel(p), schuljahr: +p.sj, faecher_hinzu: [+p.fach] }]; },
+   zurueck(p) { return ["PATCH", `/lehrpersonen/${p.lp}/faecher`, { ...this.ziel(p), schuljahr: +p.sj, faecher_weg: [+p.fach] }]; },
+   probelauf: true },
+ { id: "stundenplan", gruppe: "Stundenplan", titel: "Lektion anlegen und löschen",
+   hinweis: "Das Fach muss der Klasse zugeteilt sein (zuerst „Fach zuteilen“ ausführen und noch nicht zurücknehmen). Tag A = Montag; Lektion = Escola-ID (Hinterbirch 2–12, Mettmenriet 24–34).",
+   params: [["klasse", "Klassen-ID", 120], ["tag", "Tag", "B", ["A", "B", "C", "D", "E"]], ["lektion", "Lektion-ID", 3], ["fach", "Fach-ID", 12], ["raum", "Raum-ID (leer = keiner)", 9]],
+   lesen: p => ["GET", `/klassen/${p.klasse}/stundenplan/${p.tag}/${p.lektion}`],
+   wert: j => (j.eintraege || []).map(e => `#${e.eintrag_id} Fach ${e.fach_id ?? "-"} Raum ${e.raum_ids?.join("/") || "-"} LP ${e.lehrperson_ids?.join("/") || "-"}`).join("; ") || "(leer)",
+   schreiben: p => ["POST", `/klassen/${p.klasse}/stundenplan/${p.tag}/${p.lektion}`, { fach_id: +p.fach, raum_ids: p.raum ? [+p.raum] : [] }],
+   nachSchreiben: (j, c) => { c.eid = j?.eintrag?.eintrag_id; },
+   zurueck: (p, c) => ["DELETE", `/klassen/${p.klasse}/stundenplan/${p.tag}/${p.lektion}/${c.eid}`],
+   vorZurueck: (p, c) => c.eid ? null : "Keine Eintrags-ID aus dem Schreibschritt.",
+   probelauf: true },
+ { id: "einstellen", gruppe: "Nur Probelauf", titel: "Mitarbeiter:in einstellen (Plan)",
+   hinweis: "Zeigt nur den Plan und prüft AHV/Schulmail. Echtes Anlegen ist nicht rückgängig zu machen und darum hier nicht vorgesehen.",
+   params: [["nachname", "Nachname", "Muster"], ["vorname", "Vorname", "Max"], ["geschlecht", "Geschlecht", "m", ["w", "m", "d"]], ["schulhaus", "Schulhaus", "Hinterbirch", ["Hinterbirch", "Mettmenriet"]], ["rolle", "Rolle", "lehrperson"], ["ahv", "AHV", "756.1234.5678.97"]],
+   nurLesen: true,
+   lesen: p => ["POST", `/mitarbeitende?probelauf=true`, { nachname: p.nachname, vorname: p.vorname, geschlecht: p.geschlecht, schulhaus: p.schulhaus, rolle: p.rolle, ahv: p.ahv || null }] },
+ { id: "ersetzen", gruppe: "Nur Probelauf", titel: "Lehrperson ersetzen (Plan)",
+   hinweis: "Zeigt, was bei einer Nachfolge übergeben würde (Fächer, Klassenlehrperson-Plätze, Lektionen).",
+   params: [["alt", "bisherige LP-ID", 135], ["neu", "Nachfolge-ID", 649]],
+   nurLesen: true,
+   lesen: p => ["POST", `/lehrpersonen/${p.alt}/ersetzen?probelauf=true`, { neu_id: +p.neu }] },
+ { id: "einsatz", gruppe: "Nur Lesen", titel: "Einsatz einer Lehrperson",
+   params: [["lp", "Lehrperson-ID", 135]], nurLesen: true,
+   lesen: p => ["GET", `/lehrpersonen/${p.lp}/einsatz`] },
+];
+
+// ---------------------------------------------------------------- Oberfläche
+let fall = null, ctx = {};
+const SCHRITTE = [
+  { k: "lesen", titel: "Lesen (vorher)", art: "lesen" },
+  { k: "schreiben", titel: "Schreiben / anlegen", art: "schreiben" },
+  { k: "lesen", titel: "Lesen (nach dem Schreiben)", art: "lesen" },
+  { k: "zurueck", titel: "Rückgängig / löschen", art: "zurueck" },
+  { k: "lesen", titel: "Lesen (nachher)", art: "lesen" },
+];
+
+function nav() {
+  let html = "", gruppe = "";
+  for (const f of FAELLE) {
+    if (f.gruppe !== gruppe) { gruppe = f.gruppe; html += `<h3>${esc(gruppe)}</h3>`; }
+    html += `<button data-id="${f.id}" class="${fall?.id === f.id ? "aktiv" : ""}">${esc(f.titel)}</button>`;
+  }
+  $("nav").innerHTML = html;
+  $("nav").querySelectorAll("button").forEach(b => b.onclick = () => waehle(b.dataset.id));
+}
+
+function params() {
+  const p = {};
+  fall.params.forEach(([k]) => p[k] = $("p-" + k).value.trim());
+  return p;
+}
+
+function waehle(id) {
+  fall = FAELLE.find(f => f.id === id); ctx = { erg: [] };
+  const schritte = fall.nurLesen ? [{ k: "lesen", titel: "Ausführen (ändert nichts)", art: "lesen" }] : SCHRITTE;
+  $("szenario").innerHTML = `
+    <h2>${esc(fall.titel)}</h2>
+    ${fall.hinweis ? `<p class="hinweis">${esc(fall.hinweis)}</p>` : ""}
+    ${fall.warn ? `<div class="warn">${esc(fall.warn)}</div>` : ""}
+    <div class="params">${fall.params.map(([k, l, d, opt]) => `<label>${esc(l)}${opt
+        ? `<select id="p-${k}">${opt.map(o => `<option ${o == d ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`
+        : `<input id="p-${k}" value="${esc(d)}">`}</label>`).join("")}</div>
+    ${fall.nurLesen ? "" : `<div class="schalter">
+      <label><input type="checkbox" id="frei"> Schreiben in Escola freigeben</label>
+      ${fall.probelauf ? `<label><input type="checkbox" id="probe"> nur Probelauf (Schreibschritte ändern nichts)</label>` : ""}
+    </div>`}
+    <div class="zeile">
+      <button class="b primaer" id="b-alle">${fall.nurLesen ? "Ausführen" : "Alle Schritte nacheinander"}</button>
+      <button class="b" id="b-neu">Zurücksetzen</button>
+    </div>
+    ${fall.nurLesen ? "" : `<div id="vergleich" class="hinweis" style="margin-bottom:10px">Vergleich erscheint nach dem ersten Lesen.</div>`}
+    <div id="schritte">${schritte.map((s, i) => `
+      <div class="schritt" id="s${i}">
+        <div class="schritt-kopf"><span class="nr">${i + 1}</span><span class="art ${s.art}">${s.art}</span>
+          <strong>${esc(s.titel)}</strong><code class="aufruf" id="a${i}"></code><span class="status" id="st${i}"></span>
+          <button class="b" id="b${i}" ${i ? "disabled" : ""}>Ausführen</button></div>
+        <div id="o${i}"></div></div>`).join("")}</div>
+`;
+  schritte.forEach((_, i) => $("b" + i).onclick = () => schritt(i));
+  $("b-alle").onclick = alle;
+  $("b-neu").onclick = () => waehle(fall.id);
+  nav();
+}
+
+function aufruf(i, p) {
+  const s = (fall.nurLesen ? [{ k: "lesen" }] : SCHRITTE)[i];
+  if (s.k === "lesen") return fall.lesen(p, ctx);
+  const a = s.k === "schreiben" ? fall.schreiben(p, ctx) : fall.zurueck(p, ctx);
+  if ($("probe")?.checked && fall.probelauf) a[1] += (a[1].includes("?") ? "&" : "?") + "probelauf=true";
+  return a;
+}
+
+async function schritt(i) {
+  const s = (fall.nurLesen ? [{ k: "lesen" }] : SCHRITTE)[i];
+  const p = params();
+  const box = $("s" + i);
+  if (s.k !== "lesen" && !$("frei")?.checked) { meld(i, "Zuerst „Schreiben in Escola freigeben“ ankreuzen."); return false; }
+  const sperre = s.k === "schreiben" ? fall.vorSchreiben?.(p, ctx) : s.k === "zurueck" ? fall.vorZurueck?.(p, ctx) : null;
+  if (sperre) { meld(i, sperre); return false; }
+  let a;
+  try { a = aufruf(i, p); } catch (e) { meld(i, "Parameter: " + e.message); return false; }
+  const [m, pfad, body] = a;
+  $("a" + i).textContent = `${m} ${pfad}`;
+  $("b" + i).disabled = true; $("st" + i).textContent = "läuft …";
+  let r;
+  try { r = await api(m, pfad, body); } catch (e) { r = { ok: false, status: 0, ms: 0, json: String(e) }; }
+  box.classList.toggle("ok", r.ok); box.classList.toggle("fehler", !r.ok);
+  $("st" + i).textContent = `${r.status} · ${r.ms} ms`;
+  $("o" + i).innerHTML = `${body !== undefined ? `<pre>Body: ${esc(JSON.stringify(body, null, 2))}</pre>` : ""}<pre>${esc(typeof r.json === "string" ? r.json : JSON.stringify(r.json, null, 2))}</pre>`;
+  $("b" + i).disabled = false;
+  if (r.ok) {
+    if (s.k === "lesen" && !fall.nurLesen) {
+      const w = fall.wert(r.json, p);
+      if (i === 0) { ctx.vorher = String(w); fall.merken?.(r.json, p, ctx); }
+      if (i === 2) ctx.nachSchreiben = String(w);
+      if (i === 4) ctx.nachher = String(w);
+      vergleich();
+    }
+    if (s.k === "schreiben") fall.nachSchreiben?.(r.json, ctx);
+    const naechster = $("b" + (i + 1)); if (naechster) naechster.disabled = false;
+  }
+  return r.ok;
+}
+
+function meld(i, text) { $("st" + i).textContent = ""; $("o" + i).innerHTML = `<div class="warn">${esc(text)}</div>`; }
+
+function vergleich() {
+  const zeile = (t, w, ref) => `<tr><th>${t}</th><td>${w === undefined ? "–" : esc(w)}${ref !== undefined && w !== undefined
+      ? (w === ref ? ' <span class="gleich">= vorher</span>' : ' <span class="anders">≠ vorher</span>') : ""}</td></tr>`;
+  $("vergleich").innerHTML = `<table class="vergleich">
+    ${zeile("1 · vorher", ctx.vorher)}${zeile("3 · nach dem Schreiben", ctx.nachSchreiben, ctx.vorher)}${zeile("5 · nachher", ctx.nachher, ctx.vorher)}</table>
+    ${ctx.nachher !== undefined ? (ctx.nachher === ctx.vorher ? '<p class="gleich">Zurückgesetzt – Endstand entspricht dem Anfang.</p>'
+      : '<p class="anders">Achtung: Endstand weicht vom Anfang ab – bitte prüfen.</p>') : ""}`;
+}
+
+async function alle() {
+  const n = fall.nurLesen ? 1 : 5;
+  if (!fall.nurLesen && !$("frei").checked) { meld(1, "Zuerst „Schreiben in Escola freigeben“ ankreuzen."); return; }
+  for (let i = 0; i < n; i++) { if (!(await schritt(i))) break; }
+}
+
+// ---------------------------------------------------------------- Kopfzeile, freier Aufruf
+$("apikey").value = store.get("escolaApiKey") || "";
+$("apikey").onchange = () => store.set("escolaApiKey", $("apikey").value || null);
+async function kopf() {
+  const s = store.get("escolaSession");
+  const st = s ? await api("GET", "/auth/status").catch(() => null) : null;
+  const ok = st?.ok && st.json?.status === "angemeldet";
+  $("s-session").textContent = s ? (ok ? "angemeldet" : "Sitzung: " + (st?.json?.status || st?.json?.detail || "unbekannt"))
+                                 : "nicht angemeldet (ESCOLA_COOKIE?)";
+  $("s-session").className = "pill " + (ok ? "ok" : "err");
+  const t = await api("GET", "/openapi.json").catch(() => null);
+  $("s-schreiben").textContent = "API " + (t?.json?.info?.version || "?");
+}
+$("f-los").onclick = async () => {
+  const m = $("f-m").value, pfad = $("f-pfad").value.trim();
+  let body;
+  if ($("f-body").value.trim()) { try { body = JSON.parse($("f-body").value); } catch (e) { $("f-erg").innerHTML = `<div class="warn">Body ist kein gültiges JSON: ${esc(e.message)}</div>`; return; } }
+  if (m !== "GET" && !confirm(`${m} ${pfad} wirklich an Escola senden?`)) return;
+  const r = await api(m, pfad, body);
+  $("f-erg").innerHTML = `<div class="status">${r.status} · ${r.ms} ms</div><pre>${esc(typeof r.json === "string" ? r.json : JSON.stringify(r.json, null, 2))}</pre>`;
+};
+nav(); waehle(FAELLE[0].id); kopf();
+</script>
+</body>
+</html>

@@ -131,3 +131,16 @@ def test_genau_ein_ziel(env):
         c.lehrperson_faecher(649)
     with pytest.raises(ValueError, match="Genau eines"):
         c.lehrperson_faecher(649, 120, arbeitsgruppe_id=3)
+
+
+def test_schuljahr_als_query_parameter(monkeypatch):
+    """Regression 15.11.2026: ?schuljahr=0 wurde mit 422 abgelehnt (Literal im Query-Parameter)."""
+    from fastapi.testclient import TestClient
+    from escola_api.app import create_app
+    fake = Fake()
+    c = EscolaClient(EscolaConfig(base_url="https://x/"), transport=httpx.MockTransport(fake))
+    tc = TestClient(create_app(client=c))
+    for url in ("/lehrpersonen/649/faecher?klasse_id=120&schuljahr=0", "/lehrpersonen/649/faecher?klasse_id=120&schuljahr=1",
+                "/klassen/120/lehrpersonen?schuljahr=1", "/arbeitsgruppen/3/lehrpersonen?schuljahr=0"):
+        assert tc.get(url).status_code == 200, url
+    assert tc.get("/klassen/120/lehrpersonen?schuljahr=2").status_code == 422
