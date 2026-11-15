@@ -19,7 +19,17 @@ neue Fälle unten anfügen, Nummer fortlaufend (`WF-xx`), auch wenn sie mehrere 
 | WF-08 | Schüler:in wechselt die Klasse ab Datum | Escola | ✅ | 🧪 | [Escola](../apis/escola/WORKFLOWS.md#wf-08-schülerin-wechselt-die-klasse-ab-datum) |
 | WF-09 | Schüler:in verlässt die Schule zum Zeitpunkt X | Escola | ✅ | ◐ | [Escola](../apis/escola/WORKFLOWS.md#wf-09-schülerin-verlässt-die-schule-zum-zeitpunkt-x) |
 | WF-10 | Schüler:in zieht um | Escola | ✅ | ◐ | [Escola](../apis/escola/WORKFLOWS.md#wf-10-schülerin-zieht-um) |
-| WF-11 | *(nächster Fall)* | | 💡 | | |
+| WF-11 | Massenimport Schüler:innen und Eltern (Einschulung) | Datenlieferung → IDA/CONNECT → Escola-Import | ⚠️ | 🧪 | [Escola](../apis/escola/WORKFLOWS.md#wf-11-massenimport-schülerinnen-und-eltern-einschulung) |
+| WF-12 | Übertrittsformular ins Schülerdossier | Escola oder IDA/CONNECT | ❌ | – | [Escola](../apis/escola/WORKFLOWS.md#wf-12-übertrittsformular-ins-schülerdossier) |
+| WF-13 | Klasseneinteilung durch die Schulleitung | Escola | ✅ | 🧪 | [Escola](../apis/escola/WORKFLOWS.md#wf-13-klasseneinteilung-durch-die-schulleitung) |
+| WF-14 | App-Zugang für Eltern, Nachfassen | Escola, IDA/CONNECT, Post Smart Send | ⚠️ | 🧪 | [Escola](../apis/escola/WORKFLOWS.md#wf-14-app-zugang-für-eltern-nachfassen) |
+| WF-15 | Zuteilungsbrief, Rekurs, Zuteilung definitiv | Escola, IDA/CONNECT | ⚠️ | 🧪 | [Escola](../apis/escola/WORKFLOWS.md#wf-15-zuteilungsbrief-rekurs-zuteilung-definitiv) |
+| WF-16 | Stundenpläne aus dem Stundenplaner einspielen | Stundenplaner, Escola | ⚠️ | ◐ | [Escola](../apis/escola/WORKFLOWS.md#wf-16-stundenpläne-aus-dem-stundenplaner-einspielen) |
+| WF-17 | ICT: Klassenlisten, Zugänge, Geräte, Nutzungsvereinbarung | Escola, Entra, Apple School Manager, Inventar | ⚠️ | 🧪 | [Escola](../apis/escola/WORKFLOWS.md#wf-17-ict--klassenlisten-zugänge-geräte-nutzungsvereinbarung) |
+| WF-18 | Arzt- und Zahnarztkontrollen | Escola, IDA/CONNECT (oder CMI) | ❌ | – | [Escola](../apis/escola/WORKFLOWS.md#wf-18-arzt--und-zahnarztkontrollen) |
+| WF-19 | Prüfungen mit Note an Eltern | IDA/CONNECT (Scan), Escola-App | ❌ | – | [Escola](../apis/escola/WORKFLOWS.md#wf-19-prüfungen-mit-note-an-eltern) |
+| WF-20 | Überführung nach CMI | Escola, IDA/CONNECT, CMI | ⚠️ | 🧪 | [Escola](../apis/escola/WORKFLOWS.md#wf-20-überführung-nach-cmi) |
+| WF-21 | *(nächster Fall)* | | 💡 | | |
 
 ## Neuen Workflow aufnehmen
 

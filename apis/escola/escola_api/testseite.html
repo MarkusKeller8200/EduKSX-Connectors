@@ -150,6 +150,12 @@ const FAELLE = [
   ["d-klassenlp", "Klassenlehrpersonen einer Klasse", "", [["klasse", "Klassen-ID", 120]], p => `/klassen/${p.klasse}/klassenlehrpersonen`, false],
   ["d-bezug", "Eltern einer Schülerin / eines Schülers", "Bezugspersonen mit Sorge-/Informationsrecht.",
    [["pid", "Person-ID SuS", 650]], p => `/schueler/${p.pid}/bezugspersonen`, false],
+  ["d-klassenlisten", "Klassenlisten (alle SuS mit Klasse und KLP)", "Für ICT-Zugänge, Drucklisten und den Abgleich nach der Einteilung.",
+   [["schulhaus", "Schulhaus", "", ["", "Hinterbirch", "Mettmenriet"]], ["schuljahr", "Schuljahr", "0", ["0", "1"]]],
+   p => "/klassenlisten" + q({ schulhaus: p.schulhaus, schuljahr: p.schuljahr })],
+  ["d-klasse-eltern", "Eltern einer Klasse", "Eine Zeile pro Kind und Bezugsperson; Kinder ohne Eltern mit leeren Feldern.",
+   [["klasse", "Klassen-ID", 120], ["schuljahr", "Schuljahr", "0", ["0", "1"]]],
+   p => `/klassen/${p.klasse}/eltern` + q({ schuljahr: p.schuljahr })],
   ["d-export", "Komplett-Export Stundenplan", "Klassen, Fächer, Lehrpersonen, Räume, Raster, Einträge in einem JSON.", [], () => "/export", false],
  ].map(([id, titel, hinweis, params, pfad, csv = true]) =>
    ({ id, gruppe: "Daten lesen", titel, hinweis, params, nurLesen: true, csv, lesen: p => ["GET", pfad(p)] })),

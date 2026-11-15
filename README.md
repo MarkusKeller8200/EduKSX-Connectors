@@ -11,7 +11,7 @@ gehören nie ins Repo (nur `.env.example`).
 
 | Ordner | System | Version | Stand | Doku |
 |---|---|---|---|---|
-| [`apis/escola`](apis/escola) | Escola (sekbuelach.ch) – Stammdaten, Stundenplan, Schüler:innen, Personen, Rollen, Fächer-Zuteilung, Bezugspersonen | 1.13.0 | Login mit 2FA live bestätigt, Lesen live geprüft; Schreib-Testläufe offen | [README](apis/escola/README.md) · [Workflows](apis/escola/WORKFLOWS.md) |
+| [`apis/escola`](apis/escola) | Escola (sekbuelach.ch) – Stammdaten, Stundenplan, Schüler:innen, Personen, Rollen, Fächer-Zuteilung, Bezugspersonen, Schuljahr vorbereiten | 1.14.0 | Login mit 2FA live bestätigt, Lesen live geprüft; Schreib-Testläufe offen | [README](apis/escola/README.md) · [Workflows](apis/escola/WORKFLOWS.md) |
 
 Neue APIs entstehen aus [`apis/_vorlage`](apis/_vorlage).
 

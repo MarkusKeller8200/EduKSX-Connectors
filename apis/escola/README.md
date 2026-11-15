@@ -133,6 +133,14 @@ docker run -p 8080:8080 --env-file apis/escola/.env escola-api
 | POST | `/schueler/{id}/eltern/deaktivieren` | 🔑 ✏️ | Eltern ohne weitere aktive Kinder deaktivieren (Austritt) |
 | GET | `/personen/{id}/kinder` | 🔑 | Kinder, mit denen eine Bezugsperson verknüpft ist |
 
+### Schuljahr vorbereiten
+
+| Methode | Endpunkt | Zugriff | Zweck |
+|---|---|---|---|
+| GET | `/klassenlisten?schuljahr=0\|1&schulhaus=…` | 🔑 | Eine Zeile pro Schüler:in mit Klasse, Schulhaus und Klassenlehrperson(en) – für ICT-Zugänge, Drucklisten, Abgleich (WF-13, WF-17) |
+| GET | `/klassen/{id}/eltern` | 🔑 | Alle Bezugspersonen der Kinder einer Klasse, Kinder ohne Eltern mit leeren Feldern – für App-Onboarding und Zuteilungsbrief (WF-14, WF-15) |
+| POST | `/import/pruefen` | 🔑 | Importliste (Schüler:innen, Eltern) mit der Escola-Duplikatprüfung vorprüfen, legt nichts an (WF-11) |
+
 ### Personen (Lehrpersonen, Mitarbeitende, weitere)
 
 | Methode | Endpunkt | Zugriff | Zweck |
@@ -718,5 +726,6 @@ Felder abgewiesen werden und dass das Passwort nirgends gespeichert wird.
 
 | Version | Datum | Änderungen |
 |---|---|---|
+| 1.14.0 | 15.11.2026 | Schuljahr vorbereiten: `/klassenlisten`, `/klassen/{id}/eltern`, `/import/pruefen`; Workflows WF-11 bis WF-20 aufgenommen |
 | 1.13.0 | 15.11.2026 | Startdateien (`start-escola.bat`/`.command`), Login an Escola angepasst (Referer, 2FA-Ablauf wie Escola-Loginseite) und live bestätigt, Login-Protokoll, Loginseite für Passwort-Manager, Testseite: „Daten lesen“ mit Tabelle/Filter/CSV und Abfragezähler (`GET /fortschritt`), Menügruppen ein-/ausklappbar, alles im selben Tab |
 | 1.12.0 | 15.11.2026 | Testseite (lesen → schreiben → lesen → zurück → lesen), Repo EduKSX-Connectors |

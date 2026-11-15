@@ -1,13 +1,13 @@
 # Escola-API – Workflows (Prüfliste und spätere Testläufe)
 
-Stand API: 1.12.0 · Liste wird laufend ergänzt (zuletzt 15.11.2026, WF-01 bis WF-10).
+Stand API: 1.14.0 · Liste wird laufend ergänzt (zuletzt 15.11.2026, WF-01 bis WF-20).
 
 Jeder Workflow wird zuerst **theoretisch** gegen die vorhandene API geprüft (reichen die Endpunkte?).
 Später dient er als **Testlauf** auf dem Testsystem (Testpersonen TEST TEST 649, SuS SuS 650, Testklasse TEST_A1a 120,
 Test-Arbeitsgruppe TEST 3).
 
 **Status:** ✅ mit der API vollständig möglich · ⚠️ teilweise / mit Einschränkung · ❌ fehlt noch
-**Live:** 🧪 noch nicht live getestet · ◐ Escola-Aufrufe live geprüft, API-Ablauf noch nicht · ✔️ live getestet (Datum)
+**Live:** 🧪 noch nicht live getestet · – kein Escola-Schreibteil · ◐ Escola-Aufrufe live geprüft, API-Ablauf noch nicht · ✔️ live getestet (Datum)
 
 ## Übersicht
 
@@ -23,6 +23,16 @@ Test-Arbeitsgruppe TEST 3).
 | WF-08 | Schüler:in wechselt die Klasse ab Datum | ✅ | 🧪 | – |
 | WF-09 | Schüler:in verlässt die Schule zum Zeitpunkt X | ✅ | ◐ | – |
 | WF-10 | Schüler:in zieht um | ✅ | ◐ | Ausführung ab Datum: IDA/CONNECT (L5) |
+| WF-11 | Massenimport Schüler:innen und Eltern (Einschulung) | ⚠️ | 🧪 | Vorprüfung ✅ `POST /import/pruefen`; Importformat/Upload ([#2](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/2)) |
+| WF-12 | Übertrittsformular ins Schülerdossier | ❌ | – | Dokumente ablegen ([#3](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/3)) |
+| WF-13 | Klasseneinteilung durch die Schulleitung, Kontrolle | ✅ | 🧪 | Einteilung im Escola-Tool; Kontrolle `GET /klassenlisten` |
+| WF-14 | App-Zugang für Eltern, Nachfassen | ⚠️ | 🧪 | Eltern je Klasse ✅ `GET /klassen/{id}/eltern`; App-Status ([#4](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/4)) |
+| WF-15 | Zuteilungsbrief, Rekurs, Zuteilung definitiv | ⚠️ | 🧪 | Umteilung ✅ (WF-08); Brief ([#5](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/5)), Sichtbarkeit App ([#7](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/7)) |
+| WF-16 | Stundenpläne aus dem Stundenplaner einspielen | ⚠️ | ◐ | Einzelschreiben ✅; Abgleich/Import ([#6](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/6)) |
+| WF-17 | ICT: Klassenlisten, Zugänge, Geräte, Nutzungsvereinbarung | ⚠️ | 🧪 | Klassenlisten ✅; Vereinbarung + Rücklauf ([#5](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/5)), Ablage ([#3](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/3)) |
+| WF-18 | Arzt- und Zahnarztkontrollen | ❌ | – | Gutscheine ([#5](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/5)), Rückmeldung ablegen ([#3](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/3)), Status/Liste ([#8](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/8)) |
+| WF-19 | Prüfungen mit Note an Eltern | ❌ | – | ([#10](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/10)), hängt an [#3](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/3), [#9](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/9) |
+| WF-20 | Überführung nach CMI | ⚠️ | 🧪 | Stammdaten ✅; Absenzen/Verhalten/Prüfungen ([#9](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/9)), Dokumente ([#3](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/3)) |
 
 ## Lücken
 
@@ -33,10 +43,22 @@ Test-Arbeitsgruppe TEST 3).
 | L3 | Fächer-Zuteilung für Arbeitsgruppen (Fachklassen) | ✅ seit 1.12 |
 | L4 | Bezugspersonen | ✅ seit 1.12 (lesen, verknüpfen, anlegen, Sorgerecht, entfernen, Eltern deaktivieren) |
 | L5 | Stichtag – Escola-Änderungen gelten sofort | offen, ausserhalb der API: IDA/CONNECT plant und löst am Datum aus |
-| L6 | Rechte (KLR/FP/SpM/Abs) fürs kommende Schuljahr | offen – Escola-Verhalten nicht live geprüft; Rechte nach dem SJ-Wechsel setzen |
-| L7 | Neue Bezugsperson anlegen (`createNewPersonAndRelationshipRpc`) | eingebaut, nicht live getestet (legt eine nicht löschbare Person an) – im ersten Testlauf prüfen |
-| L8 | Stundenplan von Arbeitsgruppen | offen – Escola-Aufruf unbekannt (Anzeige liefert keine Zellen) |
-| L9 | Lehrpersonen-Schalter im Stundenplan bei mehreren Lehrpersonen pro Fach | eingebaut, live nur gelesen (H_A1a), nicht geschaltet |
+| L6 | Rechte (KLR/FP/SpM/Abs) fürs kommende Schuljahr | offen – Escola-Verhalten nicht live geprüft; Rechte nach dem SJ-Wechsel setzen ([#11](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/11)) |
+| L7 | Neue Bezugsperson anlegen (`createNewPersonAndRelationshipRpc`) | eingebaut, nicht live getestet (legt eine nicht löschbare Person an) – im ersten Testlauf prüfen ([#12](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/12)) |
+| L8 | Stundenplan von Arbeitsgruppen | offen – Escola-Aufruf unbekannt (Anzeige liefert keine Zellen) ([#13](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/13)) |
+| L9 | Lehrpersonen-Schalter im Stundenplan bei mehreren Lehrpersonen pro Fach | eingebaut, live nur gelesen (H_A1a), nicht geschaltet ([#14](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/14)) |
+
+| L10 | Escola-Importformat und Upload | offen ([#2](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/2)) |
+| L11 | Dokumente im Schülerdossier lesen und ablegen | offen ([#3](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/3)) |
+| L12 | Eltern-App: Aktivierungsstatus, Zugänge | offen ([#4](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/4)) |
+| L13 | Mitteilungen über Escola senden, Rücklauf lesen | offen ([#5](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/5)) |
+| L14 | Stundenplan-Abgleich mit dem Stundenplaner | offen ([#6](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/6)) |
+| L15 | Sichtbarkeit in der Eltern-App pro Phase | offen, mit Escola klären ([#7](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/7)) |
+| L16 | Arzt-/Zahnarztkontrollen: Status, Liste der offenen | offen, Entscheid Escola/CMI/eigene Anwendung ([#8](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/8)) |
+| L17 | Absenzen, Verhalten, Prüfungsresultate lesen | offen ([#9](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/9)) |
+| L18 | Prüfungen mit Note an Eltern | offen ([#10](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/10)) |
+
+Testläufe der Schreib-Workflows WF-01 bis WF-10: [#15](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/15).
 
 ## Offene Fragen
 
@@ -228,6 +250,89 @@ Alle Fragen F-01 bis F-09 am 15.11.2026 beantwortet (siehe Entscheidungen).
 | 2b | Adresse der Bezugsperson: `PATCH /personen/{bezugsperson_id}` (gleiche Felder) |
 | 3 | Zuzug: `arrival_timestamp`, `arrival_municipality_name` |
 | 4 | Wegzug aus der Gemeinde → WF-09 |
+
+---
+
+## Schuljahr vorbereiten und laufendes Schuljahr (WF-11 bis WF-20)
+
+Erhoben am 15.11.2026 aus dem Gesamtablauf (siehe `docs/workflows-escola.md`). Teile ausserhalb von Escola
+(Datenaufbereitung, Rekurs, Geräte, Inventar, CMI) übernehmen IDA/CONNECT.
+
+### WF-11: Massenimport Schüler:innen und Eltern (Einschulung)
+
+- **Ziel:** Gelieferte Daten strukturiert einlesen; unsere Anwendung sortiert, ergänzt, bildet Mailadressen/Zugangsdaten und erzeugt eine Escola-Importdatei mit allen verfügbaren Angaben. SuS noch ohne Klasse.
+- **Status:** ⚠️
+
+| Schritt | Wer | Aufruf |
+|---|---|---|
+| 1 | IDA/CONNECT | Datenlieferung einlesen, aufbereiten |
+| 2 | Wrapper | `POST /import/pruefen` `{"personen": [{nachname, vorname, geschlecht, art, schulhaus}]}` → `neu` / `moegliche_duplikate` / `fehler`, legt nichts an |
+| 3 | IDA/CONNECT | Importdatei erzeugen (Format: L10) |
+| 4 | Escola-Import | Import (manuell oder über Wrapper: L10) |
+| 5 | Wrapper | Kontrolle `GET /schueler?ohne_klasse=true`, `GET /personen?rolle=guardians-all` |
+
+### WF-12: Übertrittsformular ins Schülerdossier
+
+- **Ziel:** Lehrpersonen der 6. Klassen reichen das Formular in Escola oder in unserer Anwendung ein; Ablage im Dossier für SL, Zuteilende und später die LP.
+- **Status:** ❌ – Dokumente ablegen (L11).
+
+### WF-13: Klasseneinteilung durch die Schulleitung
+
+- **Ziel:** Nach der Schulhauszuteilung teilt die SL mit dem Escola-Tool ein; danach Kontrolle und Weitergabe.
+- **Status:** ✅ (Einteilung selbst im Escola-Tool)
+
+| Schritt | Aufruf |
+|---|---|
+| 1 | Einteilung im Escola-Tool (SL) bzw. einzeln `POST /schueler/{id}/klasse` `{"klasse_id": k, "schuljahr": 1}` |
+| 2 | Kontrolle `GET /klassenlisten?schuljahr=1` (CSV) und `GET /schueler?ohne_klasse=true` (wer fehlt noch) |
+
+### WF-14: App-Zugang für Eltern, Nachfassen
+
+- **Ziel:** Spätestens nach der Einteilung erhalten die Eltern den App-Zugang (Escola-Funktion, unsere App oder Post Smart Send); nach einer Frist wird bei säumigen Eltern nachgefasst. Voraussetzung für den Zuteilungsbrief.
+- **Status:** ⚠️
+
+| Schritt | Aufruf |
+|---|---|
+| 1 | `GET /klassen/{id}/eltern?schuljahr=1` – Bezugspersonen je Kind, Kinder ohne Eltern fallen auf |
+| 2 | Zugänge versenden (L12 bzw. IDA/CONNECT, Smart Send) |
+| 3 | Aktivierungsstatus lesen, Liste säumiger Eltern (L12) |
+
+### WF-15: Zuteilungsbrief, Rekurs, Zuteilung definitiv
+
+- **Ziel:** Brief per Escola, Eltern sehen nur Klasse und KLP; Rekurs über die App oder unsere Plattform; nach Rekursfrist und Umteilungen definitiv, danach sehen Eltern ggf. die Mitschüler:innen.
+- **Status:** ⚠️ – Umteilung ✅ (`POST /schueler/{id}/klasse`, WF-08); Brief versenden (L13); Sichtbarkeit (L15); Rekurs: IDA/CONNECT.
+
+### WF-16: Stundenpläne aus dem Stundenplaner einspielen
+
+- **Ziel:** Finaler Stundenplan als Export aus dem Stundenplaner nach Escola; ab dann sichtbar für Eltern.
+- **Status:** ⚠️ – Einzelschreiben ✅ (`POST/PATCH/DELETE /klassen/{id}/stundenplan/…`); Abgleich Soll/Ist mit Probelauf (L14); Voraussetzung: Fächer-Zuteilung vollständig.
+
+### WF-17: ICT – Klassenlisten, Zugänge, Geräte, Nutzungsvereinbarung
+
+- **Ziel:** ICT lädt die Klassenlisten, erstellt fehlende Zugänge (Entra, Apple School Manager, weitere Umsysteme), meldet jedes Gerät einmal an, übergibt es mit Login-Blatt und Nutzungsvereinbarung; die Vereinbarung geht per Escola an die Eltern und muss unterschrieben zurück; Gerätedaten ins Inventar.
+- **Status:** ⚠️
+
+| Schritt | Wer | Aufruf |
+|---|---|---|
+| 1 | Wrapper | `GET /klassenlisten?format=csv` |
+| 2 | IDA/CONNECT | Zugänge Entra/ASM, Erstanmeldung Gerät, Inventar |
+| 3 | Wrapper | Klassenliste/Login-Blatt ins Dossier (L11) |
+| 4 | Wrapper | Nutzungsvereinbarung senden, Rücklauf lesen (L13) |
+
+### WF-18: Arzt- und Zahnarztkontrollen
+
+- **Ziel:** Gutscheine einmal jährlich bzw. einmal im Sekundarschulzyklus per Escola; Rückmeldungen der Ärzt:innen über unsere Plattform ins Dossier, Erhalt markieren; Liste der offenen für die Fachstelle.
+- **Status:** ❌ – Gutscheine senden (L13), Rückmeldung ablegen (L11), Status und Liste (L16).
+
+### WF-19: Prüfungen mit Note an Eltern
+
+- **Ziel:** Deckblätter mit Schüler- und Prüfungscode, gesammelt scannen, unser System trennt und ordnet zu, LP kontrolliert, dann Prüfung und Note zur Bestätigung in die App; Visum kann geprüft werden.
+- **Status:** ❌ – L18, hängt an L11 und L17.
+
+### WF-20: Überführung nach CMI
+
+- **Ziel:** Zentrales Dossier und Archiv in CMI. Überführt werden Stammdaten/Klassenzuteilung (Mutationen), Absenzen/Verhalten/Prüfungsresultate (Einzeldatensätze oder mindestens PDF pro SJ), Dokumente des Dossiers (täglich, mindestens Semesterende, v. a. Zeugnisse), Schuljahresdossier (Absenzen, Zeugnisse, Klassenlisten als PDF).
+- **Status:** ⚠️ – Stammdaten ✅ (`/schueler`, `/klassenlisten`, `/schueler/{id}/bezugspersonen`); L17, L11; CMI-Seite: IDA/CONNECT.
 
 ---
 

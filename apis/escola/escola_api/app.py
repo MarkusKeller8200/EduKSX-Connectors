@@ -33,6 +33,18 @@ class LoginDaten(BaseModel):
     dauer_stunden: int | None = Field(None, description="optional: gewünschte Login-Dauer in Stunden")
 
 
+class ImportPerson(BaseModel):
+    nachname: str
+    vorname: str
+    geschlecht: str = Field(..., description="w, m oder d")
+    art: Literal["schueler", "eltern"] = "schueler"
+    schulhaus: str | None = None
+
+
+class ImportListe(BaseModel):
+    personen: list[ImportPerson] = Field(..., max_length=1000)
+
+
 class Code(BaseModel):
     code: str
 
@@ -177,7 +189,7 @@ def _config_from_env() -> EscolaConfig:
 def create_app(client: EscolaClient | None = None, transport: httpx.BaseTransport | None = None) -> FastAPI:
     app = FastAPI(
         title="Escola-API",
-        version="1.13.0",
+        version="1.14.0",
         description="Liest Klassen, Fächer, Lehrpersonen, Räume, Tage, Lektionen und alle "
                     "Stundenplan-Einträge aus Escola (sekbuelach.ch). Alle Endpunkte liefern JSON "
                     "oder mit `?format=csv` eine CSV-Tabelle (Semikolon, UTF-8 mit BOM für Excel).",
@@ -768,6 +780,34 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
     def bezugspersonen(pid: int, c: EscolaClient = Depends(get_client)):
         """Eltern/Bezugspersonen mit Funktion, Sorgerecht, abholberechtigt, gleicher Adresse."""
         return c.bezugspersonen(pid)
+
+    # ------------------------------------------------------------------ Schuljahr vorbereiten (WF-11 ff.)
+    @app.get("/klassenlisten", dependencies=deps, tags=["Schuljahr vorbereiten"])
+    def klassenlisten(schuljahr: int = Query(0, ge=0, le=1, description="0 = aktuelles, 1 = kommendes Schuljahr"),
+                      schulhaus: str | None = None, format: Format = F, refresh: bool = R,
+                      c: EscolaClient = Depends(get_client)):
+        """Klassenlisten: eine Zeile pro Schüler:in mit Klasse, Schulhaus und Klassenlehrperson(en).
+        Für ICT (Zugänge), Drucklisten und den Abgleich nach der Einteilung."""
+        return out(c.klassenlisten(schuljahr, schulhaus, refresh), format, f"klassenlisten_sj{schuljahr}")
+
+    @app.get("/klassen/{klasse_id}/eltern", dependencies=deps, tags=["Schuljahr vorbereiten"])
+    def klasse_eltern(klasse_id: int, schuljahr: int = Query(0, ge=0, le=1), format: Format = F,
+                      c: EscolaClient = Depends(get_client)):
+        """Alle Bezugspersonen der Schüler:innen einer Klasse (eine Zeile pro Kind und Bezugsperson) –
+        für App-Onboarding, Zuteilungsbrief und Nachfassen. Kinder ohne Bezugsperson mit leeren Feldern.
+        Ob die Eltern die Escola-App aktiviert haben, kann die API noch nicht lesen (Issue L12)."""
+        return out(c.eltern_der_klasse(klasse_id, schuljahr), format, f"eltern_klasse_{klasse_id}")
+
+    @app.post("/import/pruefen", dependencies=deps, tags=["Schuljahr vorbereiten"])
+    def import_pruefen(body: ImportListe, format: Format = F, c: EscolaClient = Depends(get_client)):
+        """Vorprüfung einer Importliste (Schüler:innen und Eltern) mit der Escola-Duplikatprüfung.
+        Legt nichts an. `status`: `neu`, `moegliche_duplikate` (mit Liste) oder `fehler`.
+        Den Import selbst macht der Escola-Import mit der von unserer Anwendung erzeugten Datei."""
+        rows = c.import_pruefen([p.model_dump() for p in body.personen])
+        if format == "csv":
+            rows = [{**r, "fehler": "; ".join(r["fehler"]),
+                     "duplikate": "; ".join(f"{d['id']} {d['name']}" for d in r["duplikate"])} for r in rows]
+        return out(rows, format, "import_pruefung")
 
     @app.get("/personen/{pid}/kinder", dependencies=deps, tags=["Bezugspersonen"])
     def kinder(pid: int, c: EscolaClient = Depends(get_client)):

@@ -1636,6 +1636,58 @@ class EscolaClient:
             data = self._ref_rpc("getGuardianReferenceStructsRpc", {}, schueler_id)
         return [self._bezug(x, "kind") for x in data or []]
 
+    # ------------------------------------------------------------------ Schuljahr vorbereiten (WF-11 ff.)
+    def klassenlisten(self, schuljahr: int = 0, schulhaus: str | None = None, refresh: bool = False) -> list[dict]:
+        """Eine Zeile pro Schüler:in mit Klasse, Schulhaus und Klassenlehrperson(en) – für ICT
+        (Zugänge Entra/Apple School Manager), Drucklisten und Abgleich nach der Einteilung (WF-13, WF-17)."""
+        klp = {k["id"]: k.get("klassenlehrperson", "") for k in self.klassen(refresh)}
+        rows = [s for s in self.schueler(refresh, schuljahr=schuljahr) if not schulhaus or s.get("schulhaus") == schulhaus]
+        return sorted(({"schulhaus": s.get("schulhaus"), "klasse_id": s.get("klasse_id"), "klasse": s.get("klasse"),
+                        "klassenlehrperson": klp.get(s.get("klasse_id"), ""), "schueler_id": s.get("id"),
+                        "nachname": s.get("nachname"), "vorname": s.get("vorname")} for s in rows),
+                      key=lambda r: (r["schulhaus"] or "", r["klasse"] or "", r["nachname"] or "", r["vorname"] or ""))
+
+    def eltern_der_klasse(self, klasse_id: int, schuljahr: int = 0) -> list[dict]:
+        """Alle Bezugspersonen der Schüler:innen einer Klasse, eine Zeile pro Kind und Bezugsperson –
+        Grundlage für App-Onboarding, Zuteilungsbrief und Nachfassen (WF-14, WF-15). Kinder ohne
+        Bezugsperson erscheinen mit leeren Feldern, damit Lücken auffallen."""
+        kinder = [s for s in self.schueler(schuljahr=schuljahr) if s.get("klasse_id") == int(klasse_id)]
+        out = []
+        for k in kinder:
+            bez = self.bezugspersonen(k["id"])
+            for b in bez or [{}]:
+                out.append({"schueler_id": k["id"], "schueler": f"{k.get('nachname', '')} {k.get('vorname', '')}".strip(),
+                            "bezugsperson_id": b.get("person_id"), "bezugsperson": b.get("name"),
+                            "funktion": b.get("funktion"), "sorgerecht": b.get("sorgerecht"),
+                            "aktiv": b.get("aktiv"), "gleiche_adresse": b.get("gleiche_adresse")})
+        return out
+
+    def import_pruefen(self, personen: list[dict]) -> list[dict]:
+        """Vorprüfung einer Importliste mit der Escola-Duplikatprüfung („Neue Person“), ohne etwas anzulegen.
+        Jede Zeile: nachname, vorname, geschlecht (w/m/d), art (schueler|eltern), schulhaus. (WF-11)"""
+        out = []
+        for i, p in enumerate(personen):
+            nn, vn, g = str(p.get("nachname", "")).strip(), str(p.get("vorname", "")).strip(), p.get("geschlecht")
+            art = p.get("art", "schueler")
+            fehler = [t for t, ok in (("nachname fehlt", nn), ("vorname fehlt", vn),
+                                       ("geschlecht w/m/d", g in ("w", "m", "d")),
+                                       ("art schueler/eltern", art in ("schueler", "eltern"))) if not ok]
+            unit = self._unit_id(p["schulhaus"]) if p.get("schulhaus") else next(iter(self.cfg.schuleinheiten), 1)
+            if p.get("schulhaus") and unit is None:
+                fehler.append(f"unbekanntes Schulhaus '{p['schulhaus']}'")
+            if fehler:
+                out.append({"zeile": i, "nachname": nn, "vorname": vn, "status": "fehler", "fehler": fehler, "duplikate": []})
+                continue
+            kat = "students-without-schoolclass" if art == "schueler" else "eltern"
+            struct = {"id": -1, "firstName": vn, "lastName": nn, "gender": g}
+            with self._lock:
+                dup = self._neue_person_rpc("checkForDuplicatePersonsRpc", kat, None, unit, struct)
+            dups = [{"id": d.get("id"), "name": d.get("displayName"), "rollen": d.get("listOfAllRoles"), "aktiv": d.get("active")}
+                    for d in ((dup or {}).get("duplicatePersonStructs") or [])] if isinstance(dup, dict) else []
+            out.append({"zeile": i, "nachname": nn, "vorname": vn, "art": art,
+                        "status": "moegliche_duplikate" if dups else "neu", "fehler": [], "duplikate": dups})
+        return out
+
     def kinder(self, bezugsperson_id: int) -> list[dict]:
         """Alle Kinder, mit denen eine Bezugsperson verknüpft ist."""
         with self._lock:
