@@ -248,6 +248,11 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
     def login_seite():
         return HTMLResponse((Path(__file__).parent / "login.html").read_text(encoding="utf-8"))
 
+    @app.get("/testseite", response_class=HTMLResponse, include_in_schema=False)
+    def test_seite():
+        """Testseite: Endpunkte lesen, schreiben und rückgängig machen (lesen → schreiben → lesen → zurück → lesen)."""
+        return HTMLResponse((Path(__file__).parent / "testseite.html").read_text(encoding="utf-8"))
+
     @app.post("/auth/login", dependencies=deps, tags=["Anmeldung"])
     def auth_login(body: LoginDaten):
         """Schritt 1: Benutzername + Passwort an Escola weiterreichen (nichts wird gespeichert).
@@ -644,12 +649,12 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
 
     # ------------------------------------------------------------------ Fächer-Zuteilung
     @app.get("/klassen/{klasse_id}/lehrpersonen", dependencies=deps, tags=["Fächer-Zuteilung"])
-    def klasse_lehrpersonen(klasse_id: int, schuljahr: Literal[0, 1] = Query(0), c: EscolaClient = Depends(get_client)):
+    def klasse_lehrpersonen(klasse_id: int, schuljahr: int = Query(0, ge=0, le=1, description="0 = aktuelles, 1 = kommendes Schuljahr"), c: EscolaClient = Depends(get_client)):
         """Alle Lehrpersonen einer Klasse mit Fächern, Art (KLR/Fach/SoPä) und Rechten KLR/FP/SpM/Abs/Gesundheit."""
         return c.klasse_lehrpersonen(klasse_id, schuljahr)
 
     @app.get("/arbeitsgruppen/{ag_id}/lehrpersonen", dependencies=deps, tags=["Fächer-Zuteilung"])
-    def arbeitsgruppe_lehrpersonen(ag_id: int, schuljahr: Literal[0, 1] = Query(0), c: EscolaClient = Depends(get_client)):
+    def arbeitsgruppe_lehrpersonen(ag_id: int, schuljahr: int = Query(0, ge=0, le=1, description="0 = aktuelles, 1 = kommendes Schuljahr"), c: EscolaClient = Depends(get_client)):
         """Alle Lehrpersonen einer Arbeitsgruppe (Fachklasse) mit Fächern, Abs und Gesundheit."""
         return c.klasse_lehrpersonen(None, schuljahr, arbeitsgruppe_id=ag_id)
 
@@ -676,7 +681,7 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
 
     @app.get("/lehrpersonen/{lp_id}/faecher", dependencies=deps, tags=["Fächer-Zuteilung"])
     def lehrperson_faecher(lp_id: int, klasse_id: int | None = Query(None), arbeitsgruppe_id: int | None = Query(None),
-                           schuljahr: Literal[0, 1] = Query(0), c: EscolaClient = Depends(get_client)):
+                           schuljahr: int = Query(0, ge=0, le=1, description="0 = aktuelles, 1 = kommendes Schuljahr"), c: EscolaClient = Depends(get_client)):
         """Fächer der Klasse bzw. Arbeitsgruppe mit Zuteilung dieser Lehrperson und ihren Rechten."""
         try:
             return c.lehrperson_faecher(lp_id, klasse_id, schuljahr, arbeitsgruppe_id)

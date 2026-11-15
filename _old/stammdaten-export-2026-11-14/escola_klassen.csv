@@ -1,0 +1,60 @@
+﻿id;typ;gruppe;name;bezeichnung;klassenlehrperson
+92;Klasse;Klassen Hinterbirch;H_A1a;Schmid Schmelzbach;Schmid Sibylle
+93;Klasse;Klassen Hinterbirch;H_A1b;Schmidt;Schmidt Eva-Maria
+94;Klasse;Klassen Hinterbirch;H_A1c;Tzourbakis;Tzourbakis Jonas
+95;Klasse;Klassen Hinterbirch;H_A1d;Rehm;Rehm Mareike
+96;Klasse;Klassen Hinterbirch;H_A2a;Hangartner;Hangartner Anik
+97;Klasse;Klassen Hinterbirch;H_A2b;Stettler;Stettler Laura
+98;Klasse;Klassen Hinterbirch;H_A2c;Frietsch;Frietsch Elke
+99;Klasse;Klassen Hinterbirch;H_A2d;Locher;Locher Sarah
+100;Klasse;Klassen Hinterbirch;H_A2e;Richert;Richert Niklas
+101;Klasse;Klassen Hinterbirch;H_A3a;Nydegger;Nydegger Valentina
+102;Klasse;Klassen Hinterbirch;H_A3b;Ehrsam;Ehrsam Juerg
+103;Klasse;Klassen Hinterbirch;H_A3c;Novakovic;Novakovic Petra
+104;Klasse;Klassen Hinterbirch;H_A3d;Bott;Bott Jessica
+105;Klasse;Klassen Hinterbirch;H_B1a;Wyss;Wyss Selina
+106;Klasse;Klassen Hinterbirch;H_B1b;Byrnes;Byrnes Lillian
+107;Klasse;Klassen Hinterbirch;H_B1c;Wyss;Wyss Sven
+108;Klasse;Klassen Hinterbirch;H_B1d;Monn;Monn Jasmine
+109;Klasse;Klassen Hinterbirch;H_B2a;Rufener;Rufener Maria
+110;Klasse;Klassen Hinterbirch;H_B2b;Schlegel;Schlegel Barbara
+111;Klasse;Klassen Hinterbirch;H_B2c;Bauhuber;Bauhuber Verena
+112;Klasse;Klassen Hinterbirch;H_B2d;Camadini;Camadini Luis
+113;Klasse;Klassen Hinterbirch;H_B3a;Macagni;Macagni Diana
+114;Klasse;Klassen Hinterbirch;H_B3b;Tan;Tan Adeline
+115;Klasse;Klassen Hinterbirch;H_B3c;Mestrovic;Mestrovic Tomislav
+116;Klasse;Klassen Hinterbirch;H_C1a;Stüber;Stüber Sofie
+117;Klasse;Klassen Hinterbirch;H_C2a;Eming;Eming Julian
+118;Klasse;Klassen Hinterbirch;H_C2b;Pfeiffer-Guggisberg;Pfeiffer Maya
+119;Klasse;Klassen Hinterbirch;H_C3a;Beyer;Beyer Matthias
+120;Klasse;Klassen Hinterbirch;TEST_A1a;;
+64;Klasse;Klassen Hinterbirch;;;
+65;Klasse;Klassen Mettmenriet;M_A1a;Lanzendörfer;Lanzendörfer Mila
+66;Klasse;Klassen Mettmenriet;M_A1b;Sejdini-Avdiu;Sejdini-Avdiu Antigona
+67;Klasse;Klassen Mettmenriet;M_A1c;Faucon, Fischer;Faucon Virginie und Fischer Christine
+68;Klasse;Klassen Mettmenriet;M_A1d;Elmiger;Elmiger Andrea
+69;Klasse;Klassen Mettmenriet;M_A1e;Back;Back Diana
+70;Klasse;Klassen Mettmenriet;M_A2a;Strässler, Mehmeti;Strässler Corina und Mehmeti Isa
+71;Klasse;Klassen Mettmenriet;M_A2b;Mehmeti, Strässler;Mehmeti Isa und Strässler Corina
+72;Klasse;Klassen Mettmenriet;M_A2c;Pernisch-Loacker;Pernisch Nadja
+73;Klasse;Klassen Mettmenriet;M_A2d;Dalla Valle;Dalla Valle Nadia
+74;Klasse;Klassen Mettmenriet;M_A3e;Wüthrich;Wüthrich Daniel
+75;Klasse;Klassen Mettmenriet;M_A3f;Zannin;Zannin Anja
+76;Klasse;Klassen Mettmenriet;M_A3g;Clemenz, Erni;Clemenz Anastasia und Erni Rebecca
+77;Klasse;Klassen Mettmenriet;M_A3h;Erni, Clemenz;Erni Rebecca und Clemenz Anastasia
+78;Klasse;Klassen Mettmenriet;M_B1a;Wieland;Wieland Karin
+79;Klasse;Klassen Mettmenriet;M_B1b;Rudin;Rudin Christoph
+80;Klasse;Klassen Mettmenriet;M_B1c;Dünki, Schütz;Dünki Rahel und Schütz Corinna
+81;Klasse;Klassen Mettmenriet;M_B2a;Faber;Faber Minu
+82;Klasse;Klassen Mettmenriet;M_B2b;Reber;Reber Robin
+83;Klasse;Klassen Mettmenriet;M_B2c;Gacaferi;Gacaferi Hatigje
+84;Klasse;Klassen Mettmenriet;M_B3e;Oertle, Lanz;Oertle Daniela und Lanz Lucas
+85;Klasse;Klassen Mettmenriet;M_B3f;Hildebrand;Hildebrand Rita
+86;Klasse;Klassen Mettmenriet;M_C1a;Lichtensteiger;Lichtensteiger Martina
+87;Klasse;Klassen Mettmenriet;M_C1b;Lange;Lange Mirjam
+88;Klasse;Klassen Mettmenriet;M_C2a;Wolter-Meß;Wolter-Meß Mari
+89;Klasse;Klassen Mettmenriet;M_C3b;Bisig;Bisig Nicolas
+90;Klasse;Klassen Mettmenriet;M_C3c;Gantner;Gantner Tino
+91;Klasse;Klassen Mettmenriet;M_C3d;Schaffner;Schaffner Michael
+1;Arbeitsgruppe;Arbeitsgruppen Mettmenriet;M_WF_GM_A1;;
+2;Arbeitsgruppe;Arbeitsgruppen Mettmenriet;M_Sport_A1a/A1b_Kn;;

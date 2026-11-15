@@ -22,7 +22,45 @@ Escola-Weboberfläche und wertet deren Antworten aus.
 Ist `ESCOLA_API_KEY` gesetzt, braucht zusätzlich jeder Aufruf den Header `X-API-Key`.
 Listen-Endpunkte liefern mit `?format=csv` eine CSV-Tabelle.
 
-### Anmeldung
+### Testseite
+
+`http://127.0.0.1:8080/testseite` (bzw. die Server-Adresse der API). Zuerst unter `/login` anmelden – die
+Testseite übernimmt das Session-Token aus demselben Browser-Tab; API-Key oben rechts eintragen.
+
+Jeder Testfall läuft in fünf Schritten: **1 lesen → 2 schreiben/anlegen → 3 lesen → 4 rückgängig/löschen →
+5 lesen**. Oben steht ein Vergleich der drei Lesestände; am Ende muss „Zurückgesetzt – Endstand entspricht dem
+Anfang“ erscheinen. Schritte einzeln oder „Alle Schritte nacheinander“; Schreibschritte erst nach dem Haken
+„Schreiben in Escola freigeben“, wo möglich auch als Probelauf.
+
+| Testfall | Schreiben | Rückgängig |
+|---|---|---|
+| Feld einer Person / Schülerin | `PATCH /personen|schueler/{id}` Testwert | alten Wert zurückschreiben |
+| Rolle zuweisen | `PATCH /personen/{id}/rollen` hinzufügen | entfernen |
+| Austritt | `POST /schueler/{id}/austritt` Datum | Datum leeren |
+| Klassenwechsel | `POST /schueler/{id}/klasse` Zielklasse ab heute | zurück in die bisherige Klasse (Escola-Verlauf zeigt beide Transfers) |
+| Arbeitsgruppe | `POST /schueler/{id}/arbeitsgruppen` | `DELETE …/{ag}` |
+| Bezugsperson | `POST /schueler/{id}/bezugspersonen` bestehende Person | `DELETE …/{beziehung_id}` |
+| Klassenlehrperson | `PUT /klassen/{id}/klassenlehrpersonen` + Person | alte Belegung |
+| Fach zuteilen | `PATCH /lehrpersonen/{id}/faecher` hinzu (Klasse oder Arbeitsgruppe, SJ 0/1) | weg |
+| Lektion | `POST /klassen/{id}/stundenplan/{tag}/{lektion}` | `DELETE …/{eintrag_id}` |
+| Mitarbeiter:in einstellen, Lehrperson ersetzen | nur Probelauf (Plan) | – |
+
+Voreingestellt sind die Testobjekte (TEST TEST 649, SuS SuS 650, TEST_A1a 120, Arbeitsgruppe TEST 3).
+Dazu ein „Freier Aufruf“ für jeden Endpunkt. Fälle, die nicht rückgängig zu machen sind (neue Person anlegen,
+AHV setzen), gibt es auf der Testseite bewusst nur als Probelauf.
+
+## Betrieb in einer Webanwendung
+
+Die API ist ein Server-Dienst; eine Webanwendung ruft sie per HTTP auf. Direkt aus dem Browser geht es nicht
+(Escola erlaubt keine fremden Seiten, Anmeldung per HttpOnly-Cookie). Varianten und Regeln:
+[docs/betrieb-webanwendung.md](../../docs/betrieb-webanwendung.md). Mit Docker:
+
+```bash
+docker build -t escola-api apis/escola
+docker run -p 8080:8080 --env-file apis/escola/.env escola-api
+```
+
+## Anmeldung
 
 | Methode | Endpunkt | Zugriff | Zweck |
 |---|---|---|---|
@@ -148,6 +186,7 @@ Listen-Endpunkte liefern mit `?format=csv` eine CSV-Tabelle.
 
 | Methode | Endpunkt | Zugriff | Zweck |
 |---|---|---|---|
+| GET | `/testseite` | 🔓 | Testseite: Fälle lesen → schreiben → lesen → rückgängig → lesen, mit Vergleich |
 | GET | `/docs` | 🔓 | Interaktive Doku: alle Endpunkte mit Parametern direkt ausprobieren |
 | GET | `/openapi.json` | 🔓 | Maschinenlesbare Beschreibung (OpenAPI) – z. B. für Code-Generatoren im anderen Projekt |
 

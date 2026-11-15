@@ -15,13 +15,20 @@ gehören nie ins Repo (nur `.env.example`).
 
 Neue APIs entstehen aus [`apis/_vorlage`](apis/_vorlage).
 
+- **Workflows aller Systeme:** [docs/workflows.md](docs/workflows.md) – erweiterbare Liste der Geschäftsfälle
+- **Testseite:** jede API bringt `/testseite` mit (Escola: lesen → schreiben → lesen → rückgängig → lesen)
+- **Einsatz in Webanwendungen:** [docs/betrieb-webanwendung.md](docs/betrieb-webanwendung.md) – die APIs laufen als
+  Server-Dienst (z. B. Docker), Webanwendungen rufen sie per HTTP auf
+- **Archiv:** [`_old/`](_old) – Stände vor dem Umzug ins Repo (nur zum Nachschlagen)
+
 ## Aufbau
 
 ```
 apis/<system>/        eine API = ein Dienst (Python/FastAPI), eigene requirements, Tests, README, WORKFLOWS
 apis/_vorlage/        Gerüst für die nächste API
 shared/               gemeinsame Bausteine – erst befüllen, wenn eine zweite API sie braucht
-docs/                 Architektur und gemeinsame Konventionen
+docs/                 Architektur, Konventionen, Betrieb, Workflow-Übersicht
+_old/                 Archiv (frühere Kopien, nicht mehr pflegen)
 .github/workflows/    Tests aller APIs bei jedem Push
 ```
 

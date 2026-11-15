@@ -1,0 +1,97 @@
+﻿id;kuerzel;trakt;geschoss;nummer;bezeichnung;name
+9;A101;A;EG;101;Klassenzimmer;EG - 101 - Klassenzimmer
+10;A102;A;EG;102;Grupperaum;EG - 102 - Grupperaum
+11;A103;A;EG;103;Klassenzimmer;EG - 103 - Klassenzimmer
+12;A104;A;EG;104;Klassenzimmer;EG - 104 - Klassenzimmer
+13;A105;A;EG;105;Klassenzimmer;EG - 105 - Klassenzimmer
+14;A106;A;EG;106;Gruppenraum 1;EG - 106 - Gruppenraum 1
+15;A107;A;EG;107;Putzraum;EG - 107 - Putzraum
+16;A108;A;EG;108;Fachstelle ICT;EG - 108 - Fachstelle ICT
+17;A109;A;EG;109;Gruppenraum 2;EG - 109 - Gruppenraum 2
+18;A110;A;EG;110;Klassenzimmer;EG - 110 - Klassenzimmer
+19;A111;A;EG;111;Vorbereitung 1;EG - 111 - Vorbereitung 1
+20;A201;A;OG1;201;Klassenzimmer;OG1 - 201 - Klassenzimmer
+21;A202;A;OG1;202;Gruppenraum;OG1 - 202 - Gruppenraum
+22;A2023;A;OG1;203;Klassenzimmer;OG1 - 203 - Klassenzimmer
+23;A204;A;OG1;204;Klassenzimmer;OG1 - 204 - Klassenzimmer
+24;A205;A;OG1;205;Klassenzimmer;OG1 - 205 - Klassenzimmer
+25;A206;A;OG1;206;Vorbereitungszimmer;OG1 - 206 - Vorbereitungszimmer
+26;A207;A;OG1;207;Demozimmer;OG1 - 207 - Demozimmer
+27;A208;A;OG1;208;NT Vorbereitung;OG1 - 208 - NT Vorbereitung
+28;A2029;A;OG1;209;Experintierzimmer;OG1 - 209 - Experintierzimmer
+29;A210;A;OG1;210;Gruppenraum;OG1 - 210 - Gruppenraum
+30;A301;A;OG2;301;Gruppenraum;OG2 - 301 - Gruppenraum
+31;A302;A;OG2;302;Atellier;OG2 - 302 - Atellier
+32;A303;A;OG2;303;Ventilationsraum;OG2 - 303 - Ventilationsraum
+33;A001;A;UG;001;Zeichnungszimmer;UG - 001 - Zeichnungszimmer
+34;A002;A;UG;002;Schulküche 1;UG - 002 - Schulküche 1
+35;A003;A;UG;003;Schulküche 2;UG - 003 - Schulküche 2
+36;A004;A;UG;004;Materiallager;UG - 004 - Materiallager
+37;A105;A;UG;005;Hauswirtschaft;UG - 005 - Hauswirtschaft
+38;B101;B;EG;101;Klassenzimmer;EG - 101 - Klassenzimmer
+39;B102;B;EG;102;Klassenzimmer;EG - 102 - Klassenzimmer
+40;B103;B;EG;103;Klassenzimmer;EG - 103 - Klassenzimmer
+41;B104.1;B;EG;104.1;Gruppenraum 1;EG - 104.1 - Gruppenraum 1
+42;B104.2;B;EG;104.2;Gruppenraum 2;EG - 104.2 - Gruppenraum 2
+43;B201;B;OG;201;Schulleitung I - Schulleitungsassistenz;OG - 201 - Schulleitung I - Schulleitungsassistenz
+44;B202;B;OG;202;Lehrerzimmer II;OG - 202 - Lehrerzimmer II
+45;B203;B;OG;203;Lehrerzimmer I;OG - 203 - Lehrerzimmer I
+46;B204.1;B;OG;204.1;Schulleitung II;OG - 204.1 - Schulleitung II
+47;B204.2;B;OG;204.2;Schulleitung III;OG - 204.2 - Schulleitung III
+48;B205;B;OG;205;SSA;OG - 205 - SSA
+49;B206;B;OG;206;Hausdienst;OG - 206 - Hausdienst
+50;B210;B;OG;210;Teamzimmer;OG - 210 - Teamzimmer
+51;B001;B;UG;001;Lager 1;UG - 001 - Lager 1
+52;B002;B;UG;002;Lager 2;UG - 002 - Lager 2
+53;B003;B;UG;003;Holzwerkstatt;UG - 003 - Holzwerkstatt
+54;B004;B;UG;004;Töpferwerkstatt H;UG - 004 - Töpferwerkstatt H
+55;B005;B;UG;005;Lager 3;UG - 005 - Lager 3
+56;B006;B;UG;006;Lager 4;UG - 006 - Lager 4
+57;B007;B;UG;007;Lager 5;UG - 007 - Lager 5
+58;B008;B;UG;008;Lager 6;UG - 008 - Lager 6
+59;B009;B;UG;009;Lager 7;UG - 009 - Lager 7
+60;C103;C;EG;103;Foyer;EG - 103 - Foyer
+61;V105.1;V;EG;105.1;LFZ I;EG - 105.1 - LFZ I
+62;C105.1;C;EG;105.1;LFZ II;EG - 105.1 - LFZ II
+63;C105.3;C;EG;105.3;DaZ;EG - 105.3 - DaZ
+64;C106;C;EG;106;Küche;EG - 106 - Küche
+65;C107;C;EG;107;Gruppenraum;EG - 107 - Gruppenraum
+66;C108;C;EG;108;Klassenzimmer H;EG - 108 - Klassenzimmer H
+67;C109;C;EG;109;Bibliothek;EG - 109 - Bibliothek
+68;C110;C;EG;110;Musikübungsraum;EG - 110 - Musikübungsraum
+69;C113;C;EG;113;Singsaal;EG - 113 - Singsaal
+70;C203;C;OG;203;Gruppenraum 1;OG - 203 - Gruppenraum 1
+71;C204;C;OG;204;Klassenzimmer;OG - 204 - Klassenzimmer
+72;C205;C;OG;205;Klassenzimmer;OG - 205 - Klassenzimmer
+73;C206;C;OG;206;Gruppenraum;OG - 206 - Gruppenraum
+74;C207;C;OG;207;Klassenzimmer;OG - 207 - Klassenzimmer
+75;C208;C;OG;208;Klassenzimmer;OG - 208 - Klassenzimmer
+76;C209.1;C;OG;209.1;Gruppenraum 4;OG - 209.1 - Gruppenraum 4
+77;C209.2;C;OG;209.2;Gruppenraum 5;OG - 209.2 - Gruppenraum 5
+78;C210;C;OG;210;Klassenzimmer;OG - 210 - Klassenzimmer
+79;C211;C;OG;211;Klassenzimmer;OG - 211 - Klassenzimmer
+80;C002;C;UG;002;Stuhllager;UG - 002 - Stuhllager
+81;C019;C;UG;019;Lager Schule;UG - 019 - Lager Schule
+82;C020;C;UG;020;Material Handarbeit HTC-UG-;UG - 020 - Material Handarbeit HTC-UG-
+83;C022;C;UG;022;Handarbeit 1;UG - 022 - Handarbeit 1
+84;C023;C;UG;023;Handarbeit 2;UG - 023 - Handarbeit 2
+85;C024;C;UG;024;Werstatt Metall;UG - 024 - Werstatt Metall
+86;C025;C;UG;025;Werstatt Holz;UG - 025 - Werstatt Holz
+87;C026;C;UG;026;Maschinenraum;UG - 026 - Maschinenraum
+88;C027;C;UG;027;Material Holz;UG - 027 - Material Holz
+89;P101;P;EG;101;Fachzimmer;EG - 101 - Fachzimmer
+90;P102;P;EG;102;Gruppenraum;EG - 102 - Gruppenraum
+91;P103;P;EG;103;Klassenzimmer;EG - 103 - Klassenzimmer
+92;P104;P;EG;104;Klassenzimmer;EG - 104 - Klassenzimmer
+93;P105;P;EG;105;Gruppenraum;EG - 105 - Gruppenraum
+94;P106;P;EG;106;Vorbereitung;EG - 106 - Vorbereitung
+95;P201;P;OG1;201;Klassenzimmer;OG1 - 201 - Klassenzimmer
+96;P202;P;OG1;202;Gruppenraum;OG1 - 202 - Gruppenraum
+97;P203;P;OG1;203;Klassenzimmer;OG1 - 203 - Klassenzimmer
+98;P204;P;OG1;204;Klassenzimmer;OG1 - 204 - Klassenzimmer
+99;P205;P;OG1;205;Gruppenraum;OG1 - 205 - Gruppenraum
+100;P301;P;OG1;301;Klassenzimmer;OG1 - 301 - Klassenzimmer
+101;P302;P;OG2;302;Gruppenraum;OG2 - 302 - Gruppenraum
+102;P303;P;OG2;303;Klassenzimmer;OG2 - 303 - Klassenzimmer
+103;P304;P;OG2;304;Klassenzimmer;OG2 - 304 - Klassenzimmer
+104;P305;P;OG2;305;Gruppenraum;OG2 - 305 - Gruppenraum
