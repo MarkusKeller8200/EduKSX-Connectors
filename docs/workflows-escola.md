@@ -6,7 +6,7 @@ Stand 15.11.2026 · Sek Bülach · Fassung zum Teilen mit Escola (Original als D
 
 Unser Ziel ist, dass Verwaltungsabläufe über ein Portal ausgelöst und der Escola-Teil danach automatisch erledigt wird. Dieses Dokument zeigt pro Ablauf, wo der Aufwand in Escola heute entsteht, was wir automatisieren und wo Escola selbst nachbessern könnte.
 
-Heute lösen Mitarbeitende die Vorgänge über SharePoint-Seiten der Verwaltung aus (z. B. „Lernende anmelden“, „Kantonale Anstellung“). Daraus entsteht ein Ticket, und die zuständige Fachstelle erledigt den Escola-Teil von Hand. Einiges davon lässt sich auch direkt in Escola erfassen. Für Eltern steht das Portal noch nicht zur Verfügung; Änderungen melden sie heute direkt in Escola.
+Heute lösen Mitarbeitende die Vorgänge über SharePoint-Seiten der Verwaltung aus (z. B. „Lernende anmelden“, „Kantonale Anstellung“). Daraus entsteht ein Ticket, und die zuständige Fachstelle erledigt den Escola-Teil von Hand. Einiges davon lässt sich auch direkt in Escola erfassen. Für Eltern steht das Portal noch nicht zur Verfügung; Änderungen melden sie heute über die Escola-App, sofern sie aktiviert ist.
 
 Weil Escola keine offizielle API hat, haben wir einen Wrapper um die Weboberfläche gebaut. Er arbeitet mit einem persönlichen Login inkl. Zwei-Faktor und nutzt dieselben Aufrufe wie der Browser. Schreiben ist nur mit Freigabe möglich, Löschfunktionen wie „Personen definitiv löschen“ sind bewusst nicht eingebaut.
 
@@ -37,7 +37,8 @@ Von den Vorgängen auf unseren Portal-Seiten berühren die meisten Escola; die E
 | Verwaltung Lernende | Lernende abmelden | WF-09 | Austritt, Eltern deaktivieren | eingebaut |
 | Verwaltung Lernende | Einteilung | WF-08 | Klasse, Arbeitsgruppen | eingebaut |
 | Verwaltung Lernende | Personenangaben | WF-10 | Felder und Adresse | eingebaut (Felder ändern) |
-| Verwaltung Lernende | Zahnarzt-/Arztgutschein, Schulbestätigung, Zeugnis-Kopie, Dokument einreichen | – | zu klären (Dokumente) | nein, Dokumente vorbereitet |
+| Verwaltung Lernende | Zahnarzt- / Arztgutschein | – | fehlt in Escola: Kontrollen heute in CMI, in benutzerdefinierten Escola-Feldern oder in unserer Anwendung zu führen | nein |
+| Verwaltung Lernende | Schulbestätigung, Zeugnis-Kopie, Dokument einreichen | – | zu klären (Dokumente) | nein, Dokumente vorbereitet |
 | Verwaltung Personelles | Kantonale / kommunale Anstellung | WF-01, WF-03 | Person, Rollen, AHV, Schulmail, Fächer | eingebaut |
 | Verwaltung Personelles | Austritt kantonal / kommunal | WF-02, WF-04 | Austritt, Rollen, Nachfolge | eingebaut |
 | Verwaltung Personelles | Personalangaben | – | Felder einer Person | eingebaut (Felder ändern) |
@@ -45,7 +46,7 @@ Von den Vorgängen auf unseren Portal-Seiten berühren die meisten Escola; die E
 | Verwaltung Personelles | Befristete Anstellung (provisorisch, Vikariat) | – | zu klären | nein |
 | Verwaltung Personelles | Begleitung, Unfall | – | zu klären | nein |
 
-Eltern können Änderungen bereits direkt in Escola melden, Ein- und Austritte aber nicht. Dafür fehlt heute ein Weg, in Escola wie in unserem Portal.
+Eltern mit aktivierter Escola-App können Änderungen bereits dort melden; ein Austritt liesse sich dort ebenfalls melden. Ein Eintritt oder Zuzug geht nicht, weil neue Eltern noch keinen App-Zugang haben.
 
 ## Übersicht
 
@@ -146,8 +147,10 @@ Am meisten würde uns eine offizielle Schnittstelle helfen; danach Stichtage und
 2. **Änderungen ab Datum** für Fächer, Rollen, Klassenlehrpersonen und Adressen, wie es beim Klassenwechsel schon geht.
 3. **Eindeutigkeit** von AHV-Nummer und Geschäfts-E-Mail mit Prüfung beim Speichern und Suche danach.
 4. **Sammel- und Vorlagenfunktionen:** Fächer × Klassen in einer Maske, Vorlagen für Fach-LP und SoPä, „Lehrperson ersetzen“.
-5. **Anmeldung in einem Schritt:** Kind, Klasse, Arbeitsgruppen und Eltern zusammen erfassen. Ein- und Austritte auch von Eltern melden lassen, wie heute schon Änderungen.
-6. **Schuljahr sichtbar machen:** deutlich anzeigen, wenn eine Sitzung im kommenden Schuljahr arbeitet.
-7. **Vorankündigung** bei Änderungen am Login oder an den Verwaltungsseiten, solange wir den Wrapper brauchen.
+5. **Anmeldung in einem Schritt:** Kind, Klasse, Arbeitsgruppen und Eltern zusammen erfassen.
+6. **Eltern ohne App-Zugang:** einen Weg für Eintritt und Zuzug, bevor die Eltern die Escola-App aktiviert haben; Austritte über die App melden lassen.
+7. **Schulärztliche und schulzahnärztliche Kontrollen** als Teil der Schülerdaten, statt in CMI, in benutzerdefinierten Feldern oder in einer eigenen Anwendung.
+8. **Schuljahr sichtbar machen:** deutlich anzeigen, wenn eine Sitzung im kommenden Schuljahr arbeitet.
+9. **Vorankündigung** bei Änderungen am Login oder an den Verwaltungsseiten, solange wir den Wrapper brauchen.
 
 Gerne zeigen wir die Abläufe in einer halben Stunde, auch online.
