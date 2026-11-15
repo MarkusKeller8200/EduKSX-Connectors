@@ -27,6 +27,54 @@ flowchart LR
 
 Portal und Ticket bleiben; was sich ändert, ist der Schritt nach der Freigabe durch die Fachstelle.
 
+## Das Schuljahr vorbereiten
+
+Als Nächstes nehmen wir die Zuteilung der Schüler:innen und den Kanal zu den Eltern in Angriff: Die Eltern sollen schon vor Schulstart in der Escola-App sein, und die Einteilung wird direkt dort ausgespielt. Was die Eltern sehen, wächst mit jeder Phase.
+
+```mermaid
+flowchart TB
+  P1["1 · Import Schüler:innen und Eltern<br/>noch ohne Klasse"] --> P2["2 · Übertrittsformular<br/>LP 6. Klasse, Ablage im Dossier"]
+  P2 --> P3["3 · Schulhaus- und Klasseneinteilung<br/>Escola-Tool"]
+  P3 --> P4["4 · App-Zugang für Eltern<br/>Nachfassen nach Frist"]
+  P4 --> P5["5 · Zuteilungsbrief und Rekurs<br/>Eltern sehen: Klasse + Klassenlehrperson"]
+  P5 --> P6["6 · Zuteilung definitiv<br/>Eltern sehen: + Mitschüler:innen"]
+  P6 --> P7["7 · Stundenpläne<br/>Eltern sehen: + Stundenplan"]
+  P7 --> P8["8 · Zugänge und Geräte<br/>Nutzungsvereinbarung"]
+```
+
+| Phase | Was passiert | Wer, welches System | Anforderung an Escola |
+|---|---|---|---|
+| 1 Import | Die Datenlieferung wird strukturiert eingelesen; unsere Anwendung sortiert, ergänzt fehlende Angaben, bildet Mailadressen und Zugangsdaten und erzeugt eine Standard-Importdatei. Die Schüler:innen haben noch keine Klasse. | unsere Anwendung, Escola-Import | Import mit sehr vielen Feldern; ein schlanker Import mit klaren Pflichtfeldern würde helfen |
+| 2 Übertritt | Die Lehrpersonen der 6. Klassen reichen das Übertrittsformular ein; es liegt im Schülerdossier für Schulleitung, Zuteilende und später die Lehrpersonen. | Escola oder unsere Anwendung | Formular und Zugang für Lehrpersonen der abgebenden Schule |
+| 3 Einteilung | Nach der Schulhauszuteilung teilt die Schulleitung die Schüler:innen in Klassen ein. | Escola-Tool | vorhanden |
+| 4 App-Zugang | Spätestens jetzt erhalten die Eltern den App-Zugang; nach einer Frist fassen wir bei säumigen Eltern nach. Voraussetzung für den Zuteilungsbrief. | Escola-Funktion oder unsere App, notfalls Post Smart Send | Versand der Zugänge und Liste, wer noch nicht aktiviert hat |
+| 5 Zuteilungsbrief | Brief per Escola; Eltern sehen nur Klasse und Klassenlehrperson. Rekurse über die App oder unsere Plattform. | Escola-App, unsere Plattform | Sichtbarkeit in der App pro Phase steuern; Rekurs in der App |
+| 6 Definitiv | Nach Rekursfrist und Umteilungen gelten Klassen und Klassenlehrpersonen; Eltern sehen ggf. die Mitschüler:innen. | Escola | Sichtbarkeit Mitschüler:innen freischalten |
+| 7 Stundenpläne | Der finale Stundenplan kommt als Export aus dem Stundenplaner nach Escola; ab dann sehen ihn die Eltern. | Stundenplaner, Escola | Import aus dem Stundenplaner |
+| 8 Zugänge, Geräte | ICT lädt die Klassenlisten, erstellt fehlende Zugänge (Entra, Apple School Manager, weitere Umsysteme), meldet jedes Gerät einmal an und übergibt es mit Login-Blatt und Nutzungsvereinbarung. Die Vereinbarung geht per Escola an die Eltern und muss unterschrieben zurück, sonst bleibt das Gerät in der Schule. Gerätedaten gehen automatisch ins Inventar. | ICT, unsere Anwendung, Escola | Klassenlisten aus dem Escola-Dokumentensystem; Rücklauf der Unterschrift sichtbar (heute nicht möglich) |
+
+Damit ist das Schuljahr vorbereitet.
+
+## Das laufende Schuljahr
+
+Absenzen, Verhaltenseinträge und Lernberichte sind in Escola vollständig gelöst. Lücken gibt es bei den Arztkontrollen und beim papierlosen Weg der Prüfungen zu den Eltern.
+
+| Thema | Ablauf | System | Anforderung an Escola |
+|---|---|---|---|
+| Absenzen, Verhalten, Lernberichte | vollständig in Escola | Escola | keine |
+| Arzt- und Zahnarztkontrolle | Gutscheine einmal jährlich bzw. einmal im Sekundarschulzyklus per Escola; die Rückmeldungen der Ärzt:innen nehmen wir auf unserer Plattform entgegen, legen sie automatisch im Dossier ab und markieren den Erhalt. Die Fachstelle braucht eine Liste, wer noch offen ist. | Escola, unsere Plattform | Kontrollen als Teil der Schülerdaten, Liste der offenen |
+| Prüfungen an Eltern | Deckblätter tragen einen Schüler- und möglichst einen Prüfungscode. Nach der Korrektur werden sie gesammelt gescannt; unser System trennt und ordnet sie zu. Die Lehrperson kontrolliert die Zuordnung, dann gehen Prüfung und Note zur Bestätigung in die App. Das Visum kann geprüft werden, muss aber nicht. | unsere Plattform, Escola-App | Prüfung als Dokument mit der Note zustellen, Bestätigung durch die Eltern |
+| Mutationen | über ein Formularsystem ausgelöst und in allen Systemen nachgeführt | Portal, unsere Plattform, Escola | siehe Abläufe WF-01 bis WF-10 |
+
+## Ablage und Archiv in CMI
+
+Das zentrale Dossier und das spätere Archiv führen wir in CMI; dort werden auch Anträge und Beschlüsse traktandiert und abgelegt. Solange Escola keine Schnittstelle zu CMI anbietet, überführen wir die Daten selbst:
+
+- **Stammdaten:** Schüler:innen, Elternkontakte und Klassenzuteilung; die Schullaufbahn ergibt sich aus den Mutationen, die ebenfalls an CMI gehen.
+- **Absenzen, Verhaltenseinträge, Prüfungsresultate:** als Einzeldatensätze, wenn die Schnittstellen es zulassen, bei Bedarf von uns umgewandelt; mindestens einmal am Ende des Schuljahrs als zusammenfassendes PDF über die Dokumentenschnittstelle.
+- **Dokumente im Schülerdossier:** automatisch einmal täglich, mindestens zum Semesterende, insbesondere die Zeugnisse.
+- **Schuljahresdossier:** alle Absenzen, Zeugnisse und Klassenlisten gesammelt als PDF, für die Auffindbarkeit und den Jahresbericht.
+
 ## Portal-Vorgänge und Stand im Wrapper
 
 Von den Vorgängen auf unseren Portal-Seiten berühren die meisten Escola; die Ein- und Austritte sind im Wrapper bereits abgebildet. „Eingebaut“ heisst: im Wrapper vorhanden, noch nicht alles live getestet.
@@ -141,16 +189,20 @@ Fünf Eigenheiten tauchen in fast jedem Ablauf auf; sie sind der grösste Hebel 
 
 ## Wünsche an Escola
 
-Am meisten würde uns eine offizielle Schnittstelle helfen; danach Stichtage und Eindeutigkeit in der Oberfläche.
+Am meisten würden uns eine offizielle Schnittstelle und eine Anbindung an CMI helfen; danach die Eltern-App in Stufen und das App-Onboarding.
 
 1. **Offizielle API** für Personen, Klassen, Fächer-Zuteilung und Stundenplan, mit Zugang über einen API-Schlüssel statt eines persönlichen Logins. Dann können wir den Wrapper ablösen.
-2. **Änderungen ab Datum** für Fächer, Rollen, Klassenlehrpersonen und Adressen, wie es beim Klassenwechsel schon geht.
-3. **Eindeutigkeit** von AHV-Nummer und Geschäfts-E-Mail mit Prüfung beim Speichern und Suche danach.
-4. **Sammel- und Vorlagenfunktionen:** Fächer × Klassen in einer Maske, Vorlagen für Fach-LP und SoPä, „Lehrperson ersetzen“.
-5. **Anmeldung in einem Schritt:** Kind, Klasse, Arbeitsgruppen und Eltern zusammen erfassen.
-6. **Eltern ohne App-Zugang:** einen Weg für Eintritt und Zuzug, bevor die Eltern die Escola-App aktiviert haben; Austritte über die App melden lassen.
-7. **Schulärztliche und schulzahnärztliche Kontrollen** als Teil der Schülerdaten, statt in CMI, in benutzerdefinierten Feldern oder in einer eigenen Anwendung.
-8. **Schuljahr sichtbar machen:** deutlich anzeigen, wenn eine Sitzung im kommenden Schuljahr arbeitet.
-9. **Vorankündigung** bei Änderungen am Login oder an den Verwaltungsseiten, solange wir den Wrapper brauchen.
+2. **Schnittstelle zu CMI** für Stammdaten, Mutationen, Absenzen, Verhalten, Prüfungsresultate und Dokumente; sonst überführen wir selbst.
+3. **Eltern-App in Stufen:** Sichtbarkeit pro Phase steuern (Klasse und Klassenlehrperson, dann Mitschüler:innen, dann Stundenplan), Rekurs in der App.
+4. **App-Onboarding:** Zugänge versenden, Liste der Eltern, die noch nicht aktiviert haben; einen Weg für Eintritt und Zuzug, bevor die Eltern die App haben; Austritte über die App melden.
+5. **Prüfungen an Eltern:** gescannte Prüfung mit der Note zustellen und bestätigen lassen.
+6. **Unterschriften mit Rücklauf,** z. B. für die Nutzungsvereinbarung der Geräte, mit Übersicht, wer noch fehlt.
+7. **Schulärztliche und schulzahnärztliche Kontrollen** als Teil der Schülerdaten, mit Liste der offenen.
+8. **Änderungen ab Datum** für Fächer, Rollen, Klassenlehrpersonen und Adressen, wie es beim Klassenwechsel schon geht.
+9. **Eindeutigkeit** von AHV-Nummer und Geschäfts-E-Mail mit Prüfung beim Speichern und Suche danach.
+10. **Sammel- und Vorlagenfunktionen:** Fächer × Klassen in einer Maske, Vorlagen für Fach-LP und SoPä, „Lehrperson ersetzen“; schlanker Import mit klaren Pflichtfeldern.
+11. **Anmeldung in einem Schritt:** Kind, Klasse, Arbeitsgruppen und Eltern zusammen erfassen.
+12. **Schuljahr sichtbar machen:** deutlich anzeigen, wenn eine Sitzung im kommenden Schuljahr arbeitet.
+13. **Vorankündigung** bei Änderungen am Login oder an den Verwaltungsseiten, solange wir den Wrapper brauchen.
 
 Gerne zeigen wir die Abläufe in einer halben Stunde, auch online.
