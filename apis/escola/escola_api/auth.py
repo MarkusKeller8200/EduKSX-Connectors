@@ -40,7 +40,10 @@ def _log(schritt: str, r: httpx.Response) -> None:
         info = f"{schritt}: {r.request.method} {r.request.url.path} -> HTTP {r.status_code}, {ct.split(';')[0] or '-'}, {len(r.content)} B"
         if r.headers.get("location"):
             info += f", weiter nach {r.headers['location']}"
-        info += f", Cookies: {sorted(c for c in r.cookies.keys()) or '-'}"
+        gesendet = sorted({x.split("=", 1)[0].strip() for x in r.request.headers.get("cookie", "").split(";") if "=" in x})
+        info += f", Cookies gesendet: {gesendet or '-'}, neu: {sorted(c for c in r.cookies.keys()) or '-'}"
+        if r.request.headers.get("referer"):
+            info += f", Referer: {r.request.headers['referer']}"
         if "json" in ct:
             j = _json(r)
             sicher = {k: j[k] for k in ("success", "errorMessage", "message", "msg", "twoFactorRequired",
