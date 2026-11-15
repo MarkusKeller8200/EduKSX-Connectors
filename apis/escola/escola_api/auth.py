@@ -82,12 +82,23 @@ def _ist_angemeldet(c: EscolaClient) -> bool:
     return r.status_code == 200 and "<title>Escola - Login</title>" not in r.text and "unifiedClassOrWorkgroupChooser" in r.text
 
 
+def _h2fa(c: EscolaClient) -> dict:
+    h = {"Accept": "application/json"}
+    ref = getattr(c, "_login_referer", None)
+    if ref:
+        h["Referer"] = ref
+    return h
+
+
 def _zwei_faktor_infos(c: EscolaClient) -> dict | None:
-    r = c._http.get(API + "login/two-factor/login-infos", headers={"Accept": "application/json"})
+    r = c._http.get(API + "login/two-factor/login-infos", headers=_h2fa(c))
     _log("2FA-Infos", r)
     if r.status_code != 200:
         return None
     d = _data(_json(r))
+    if isinstance(d, dict):
+        log.info("2FA-Infos: Felder %s, Methoden %s", sorted(d.keys()),
+                 [m.get("id") if isinstance(m, dict) else m for m in (d.get("twoFactorMethods") or d.get("methods") or [])])
     return d if isinstance(d, dict) else {"raw": d}
 
 
@@ -120,30 +131,38 @@ def login_schritt1(c: EscolaClient, benutzername: str, passwort: str, dauer_stun
         raise LoginFehler(j.get("errorMessage") or f"Login fehlgeschlagen (HTTP {r.status_code}{': ' + kurz if kurz else ''})")
     # Weitere Schritte, die Escola verlangen kann
     flags = {k: bool(j.get(k)) for k in ("twoFactorRequired", "twoFactorSetupRequired",
-                                         "passwordUpdateRequired", "emailAddressUpdateRequired") if k in j}
-    if _ist_angemeldet(c) and not flags.get("twoFactorRequired"):
-        return {"status": "angemeldet"}
-    infos = _zwei_faktor_infos(c)
+                                         "passwordUpdateRequired") if k in j}
+    ziel = j.get("redirectUrl")
+    log.info("Escola leitet weiter nach: %s", ziel or "-")
     if flags.get("twoFactorSetupRequired"):
         return {"status": "2fa_einrichtung_noetig",
                 "meldung": "Für dieses Konto muss zuerst in Escola (Browser) die Zwei-Faktor-Anmeldung eingerichtet werden."}
     if flags.get("passwordUpdateRequired"):
         return {"status": "passwort_aenderung_noetig",
                 "meldung": "Escola verlangt eine Passwortänderung – bitte einmal im Browser anmelden und ändern."}
-    if flags.get("twoFactorRequired") or infos:
+    if flags.get("twoFactorRequired"):
+        # Wie der Browser: zuerst die 2FA-Seite öffnen (NICHT admin.php – das verwirft den 2FA-Zustand),
+        # danach laufen alle 2FA-Aufrufe mit dieser Seite als Referer.
+        if ziel:
+            url = ziel if "://" in ziel else str(c._http.base_url) + ziel.lstrip("/")
+            c._login_referer = url
+            _log("2FA-Seite", c._http.get(url, headers={"Referer": str(c._http.base_url) + "escola/login"}))
+        infos = _zwei_faktor_infos(c)
         return {"status": "2fa_erforderlich", "methoden": _methoden(infos)}
+    if _ist_angemeldet(c):
+        return {"status": "angemeldet"}
     raise LoginFehler("Login nicht abgeschlossen – unbekannte Antwort von Escola")
 
 
 def zwei_faktor_methode(c: EscolaClient, methode: str) -> None:
-    r = c._http.patch(API + "login/two-factor/method", json={"method": methode})
+    r = c._http.patch(API + "login/two-factor/method", json={"method": methode}, headers=_h2fa(c))
     _log("2FA", r)
     if r.status_code >= 400:
         raise LoginFehler(_json(r).get("message") or f"Methode konnte nicht gewählt werden (HTTP {r.status_code})")
 
 
 def zwei_faktor_erneut(c: EscolaClient) -> dict:
-    r = c._http.post(API + "login/two-factor/resend")
+    r = c._http.post(API + "login/two-factor/resend", headers=_h2fa(c))
     _log("2FA", r)
     if r.status_code >= 400:
         raise LoginFehler(_json(r).get("message") or "Code konnte nicht erneut gesendet werden")
@@ -151,11 +170,16 @@ def zwei_faktor_erneut(c: EscolaClient) -> dict:
 
 
 def zwei_faktor_code(c: EscolaClient, code: str) -> dict:
-    r = c._http.post(API + "login/two-factor/verification", json={"code": str(code).strip()})
+    code = "".join(ch for ch in str(code) if ch.isdigit())
+    log.info("2FA-Code wird gesendet (%d Ziffern)", len(code))
+    r = c._http.post(API + "login/two-factor/verification", json={"code": code}, headers=_h2fa(c))
     _log("2FA", r)
     j = _json(r)
+    d = _data(j)
     if r.status_code >= 400:
         raise LoginFehler(j.get("message") or j.get("msg") or "Code falsch oder abgelaufen")
+    if isinstance(d, dict) and d.get("success") is False:
+        raise LoginFehler(d.get("errorMessage") or "Code falsch oder abgelaufen")
     if _ist_angemeldet(c):
         return {"status": "angemeldet"}
     raise LoginFehler("Code angenommen, aber keine gültige Escola-Session – bitte neu anmelden")
@@ -163,15 +187,16 @@ def zwei_faktor_code(c: EscolaClient, code: str) -> dict:
 
 def app_anfrage(c: EscolaClient) -> dict:
     """Bestätigung in der Escola-App anfordern; liefert ein Token für den Status-Abruf."""
-    r = c._http.post(API + "login/two-factor/request")
+    r = c._http.post(API + "login/two-factor/request", headers=_h2fa(c))
     if r.status_code >= 400:
-        raise LoginFehler("Anfrage an die Escola-App fehlgeschlagen")
+        _log("App-Anfrage", r)
+        raise LoginFehler(f"Anfrage an die Escola-App fehlgeschlagen (HTTP {r.status_code})")
     d = _data(_json(r))
     return {"status": "angefragt", "token": d.get("token") if isinstance(d, dict) else d}
 
 
 def app_status(c: EscolaClient, token: str) -> dict:
-    r = c._http.get(API + "login/two-factor/state", params={"token": token})
+    r = c._http.get(API + "login/two-factor/state", params={"token": token}, headers=_h2fa(c))
     d = _data(_json(r)) if r.status_code == 200 else {}
     if _ist_angemeldet(c):
         return {"status": "angemeldet"}
