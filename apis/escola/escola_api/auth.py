@@ -7,15 +7,20 @@ Grundsätze:
   Der Aufrufer erhält nur ein zufälliges API-Session-Token (`X-Escola-Session`).
 - Nach Logout, Ablauf oder Neustart der API ist die Session weg.
 
-Escola-Ablauf (aus dem Escola-Frontend ermittelt, 14.11.2026):
-  1. POST login.php (multipart: username, password, [loginDurationInHours]) -> JSON
-  2. falls 2FA: GET  escola/api/login/two-factor/login-infos   -> verfügbare Methoden
-               PATCH escola/api/login/two-factor/method        {method}
-               POST escola/api/login/two-factor/verification  {code}
-               POST escola/api/login/two-factor/resend
-     Escola-App: POST escola/api/login/two-factor/request -> Token, GET …/state?token=…
-  3. Logout:     GET admin.php?action=logout&newLogout=true
-  4. Keep-alive: GET escola/api/session/keep-alive (Escola-Frontend: alle 2 Minuten)
+Escola-Ablauf (Escola-Loginseite, live bestätigt 15.11.2026):
+  1. GET  escola/login, dann POST login.php (multipart: username, password) mit Referer escola/login
+     -> JSON {success, twoFactorRequired, redirectUrl, …}; ohne Referer: 403 "Referrer check failed"
+  2. falls 2FA (alle Aufrufe mit Referer escola/login):
+               GET   escola/api/logged-in-person              -> twoFactorMethods (id, preselected, …)
+               PATCH escola/api/login/two-factor/method       {method}
+               POST  escola/api/login/two-factor/verification {code}  -> data {success, errorMessage}
+               POST  escola/api/login/two-factor/resend
+     Escola-App: POST escola/api/login/two-factor/request -> Token, GET …/state?token=… (pending|accepted|declined)
+     ACHTUNG: vor erfolgreichem Code weder admin.php/redirectUrl noch login/two-factor/login-infos aufrufen –
+     beides beendet die halbe Anmeldung (Escola löscht PHPSESSID).
+  3. nach dem Code: redirectUrl (admin.php?page_request=5&fromLogin=1) öffnen
+  4. Logout:     GET admin.php?action=logout&newLogout=true
+  5. Keep-alive: GET escola/api/session/keep-alive (Escola-Frontend: alle 2 Minuten)
 """
 from __future__ import annotations
 
