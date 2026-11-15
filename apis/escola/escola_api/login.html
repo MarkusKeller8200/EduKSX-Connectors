@@ -120,7 +120,7 @@ $('f-login').addEventListener('submit', async e => {
     $('password').value = '';
     if (j.status === 'angemeldet') return show('ok');
     const sel = $('methode'); sel.innerHTML = '';
-    (j.methoden || []).forEach(m => { const o = document.createElement('option'); o.value = m.method || m.type || m.id; o.textContent = m.label || m.name || o.value; sel.appendChild(o); });
+    (j.methoden || []).forEach(m => { const o = document.createElement('option'); o.value = m.id || m.method || m.type; o.textContent = m.label || m.name || ({totp: 'Authentifizierungsapp', sms: 'SMS', 'escola-app': 'Escola-App'}[o.value]) || o.value; o.selected = o.value === j.methode; sel.appendChild(o); });
     $('methode-wrap').hidden = sel.options.length < 2;
     show('2fa');
   } catch (err) { msg(err.message); }

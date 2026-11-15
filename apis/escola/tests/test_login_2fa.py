@@ -8,6 +8,7 @@ from escola_api.client import EscolaClient, EscolaConfig
 def test_2fa_ablauf_ohne_admin_vor_code():
     aufrufe = []
     angemeldet = {"ok": False}
+    gewaehlt = {"ok": False}
 
     def handler(req: httpx.Request):
         p = req.url.path
@@ -20,11 +21,16 @@ def test_2fa_ablauf_ohne_admin_vor_code():
                                              "twoFactorSetupRequired": False, "passwordUpdateRequired": False,
                                              "redirectUrl": "admin.php?page_request=5&fromLogin=1"})
         if p.endswith("/login-infos"):
-            assert req.headers["referer"].endswith("escola/login")
-            return httpx.Response(200, json={"data": {"twoFactorMethods": [{"id": "totp", "label": "App"}]}})
+            raise AssertionError("login-infos beendet die Anmeldung")
+        if p.endswith("/logged-in-person"):
+            return httpx.Response(200, json={"displayName": "X", "twoFactorMethods": [{"id": "totp", "preselected": True}]})
+        if p.endswith("/two-factor/method"):
+            assert b'"totp"' in req.content
+            gewaehlt["ok"] = True
+            return httpx.Response(200, json={})
         if p.endswith("/verification"):
             assert req.headers["referer"].endswith("escola/login")
-            assert b'"123456"' in req.content
+            assert b'"123456"' in req.content and gewaehlt["ok"]
             angemeldet["ok"] = True
             return httpx.Response(200, json={"data": {"success": True}})
         if p == "/admin.php":
@@ -34,7 +40,7 @@ def test_2fa_ablauf_ohne_admin_vor_code():
 
     c = EscolaClient(EscolaConfig(cookie=""), transport=httpx.MockTransport(handler))
     r = A.login_schritt1(c, "u", "p")
-    assert r["status"] == "2fa_erforderlich" and r["methoden"][0]["id"] == "totp"
+    assert r["status"] == "2fa_erforderlich" and r["methoden"][0]["id"] == "totp" and r["methode"] == "totp"
     assert A.zwei_faktor_code(c, " 123 456 ")["status"] == "angemeldet"
 
 

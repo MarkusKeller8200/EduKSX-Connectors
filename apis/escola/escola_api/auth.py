@@ -94,7 +94,9 @@ def _h2fa(c: EscolaClient) -> dict:
 
 
 def _zwei_faktor_infos(c: EscolaClient) -> dict | None:
-    r = c._http.get(API + "login/two-factor/login-infos", headers=_h2fa(c))
+    # Escola-Loginseite (DataCompletion): GET logged-in-person -> twoFactorMethods
+    # (login-infos NICHT aufrufen: beendet die halbe Anmeldung)
+    r = c._http.get(API + "logged-in-person", headers=_h2fa(c))
     _log("2FA-Infos", r)
     if r.status_code != 200:
         return None
@@ -112,7 +114,8 @@ def _methoden(infos: dict | None) -> list:
     out = []
     for x in m:
         if isinstance(x, dict):
-            out.append({k: x.get(k) for k in ("method", "type", "id", "label", "name", "isDefault", "maskedPhoneNumber") if k in x})
+            out.append({k: x.get(k) for k in ("id", "method", "type", "label", "name", "details", "preselected",
+                                              "canBeResend", "isDefault", "maskedPhoneNumber") if k in x})
         else:
             out.append({"method": x})
     return out
@@ -148,8 +151,15 @@ def login_schritt1(c: EscolaClient, benutzername: str, passwort: str, dauer_stun
         # NACH dem Code – vorher öffnen beendet die halbe Anmeldung (PHPSESSID wird verworfen).
         c._login_referer = str(c._http.base_url) + "escola/login"
         c._nach_login = (ziel if "://" in ziel else str(c._http.base_url) + ziel.lstrip("/")) if ziel else None
-        infos = _zwei_faktor_infos(c)
-        return {"status": "2fa_erforderlich", "methoden": _methoden(infos)}
+        methoden = _methoden(_zwei_faktor_infos(c))
+        # Wie die Escola-Seite: Methode wählen (vorausgewählte bzw. erste), erst dann Code prüfen
+        wahl = next((m for m in methoden if m.get("preselected")), methoden[0] if methoden else None)
+        if wahl and wahl.get("id") and wahl.get("id") != "escola-app":
+            try:
+                zwei_faktor_methode(c, wahl["id"])
+            except LoginFehler as e:
+                log.warning("2FA-Methode %s konnte nicht gewählt werden: %s", wahl["id"], e)
+        return {"status": "2fa_erforderlich", "methoden": methoden, "methode": wahl.get("id") if wahl else None}
     if _ist_angemeldet(c):
         return {"status": "angemeldet"}
     raise LoginFehler("Login nicht abgeschlossen – unbekannte Antwort von Escola")

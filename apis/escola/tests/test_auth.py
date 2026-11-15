@@ -53,8 +53,8 @@ class FakeLogin:
             if self.sessions.get(sid) == "ok":
                 return httpx.Response(200, text="<html><body>" + CHOOSER + "</body></html>")
             return httpx.Response(302, headers={"location": "/escola/login"})
-        if url == "/escola/api/login/two-factor/login-infos":
-            return httpx.Response(200, json={"data": {"twoFactorMethods": [{"method": "totp", "label": "Authentifizierungsapp"}, {"method": "sms", "label": "SMS"}]}})
+        if url == "/escola/api/logged-in-person":  # wie Escola: ohne data-Hülle
+            return httpx.Response(200, json={"displayName": "Test", "twoFactorMethods": [{"id": "totp", "method": "totp", "label": "Authentifizierungsapp"}, {"id": "sms", "method": "sms", "label": "SMS"}]})
         if url == "/escola/api/login/two-factor/method":
             return httpx.Response(200, json={})
         if url == "/escola/api/login/two-factor/resend":
