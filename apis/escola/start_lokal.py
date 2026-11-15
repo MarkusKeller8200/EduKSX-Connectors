@@ -75,6 +75,12 @@ def main() -> None:
     print(f"  Testseite: {basis}/testseite")
     print(f"  API-Doku:  {basis}/docs")
     print(f"  Schreiben: {'erlaubt' if os.environ.get('ESCOLA_SCHREIBEN') == '1' else 'aus (nur lesen)'}")
+    key = os.environ.get("ESCOLA_API_KEY", "")
+    if key:
+        maske = key[:3] + "*" * max(len(key) - 6, 4) + key[-3:] if len(key) > 8 else "*" * len(key)
+        print(f"  API-Key:   {maske} (aus .env geladen, {len(key)} Zeichen)")
+    else:
+        print("  API-Key:   KEINER gesetzt – ESCOLA_API_KEY in .env fehlt oder ist leer (Schreiben gesperrt)")
     print("Beenden mit Ctrl+C.\n")
     if "--ohne-browser" not in sys.argv:
         def oeffnen():
