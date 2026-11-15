@@ -16,6 +16,7 @@ gehören nie ins Repo (nur `.env.example`).
 Neue APIs entstehen aus [`apis/_vorlage`](apis/_vorlage).
 
 - **Workflows aller Systeme:** [docs/workflows.md](docs/workflows.md) – erweiterbare Liste der Geschäftsfälle
+- **Workflows aus Sicht Escola:** [docs/workflows-escola.md](docs/workflows-escola.md) – Aufwand heute, Automatisierung, Wünsche an Escola (zum Teilen mit dem Anbieter)
 - **Testseite:** jede API bringt `/testseite` mit (Escola: lesen → schreiben → lesen → rückgängig → lesen)
 - **Einsatz in Webanwendungen:** [docs/betrieb-webanwendung.md](docs/betrieb-webanwendung.md) – die APIs laufen als
   Server-Dienst (z. B. Docker), Webanwendungen rufen sie per HTTP auf
