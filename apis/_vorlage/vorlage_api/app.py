@@ -1,6 +1,9 @@
 """Gerüst einer neuen API – siehe apis/_vorlage/README.md und docs/konventionen.md."""
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import os
 
 from fastapi import Depends, FastAPI, Header, HTTPException
@@ -24,7 +27,7 @@ def schreib_check(probelauf: bool = False):
         raise HTTPException(403, f"Zum Schreiben muss {PRAEFIX}API_KEY gesetzt sein")
 
 
-app = FastAPI(title="Vorlage-API", version="0.1.0", dependencies=[Depends(api_key_pruefen)])
+app = FastAPI(title="Vorlage-API", version=json.loads((Path(__file__).resolve().parent.parent / "api.json").read_text(encoding="utf-8"))["version"], dependencies=[Depends(api_key_pruefen)])
 
 
 @app.get("/status")

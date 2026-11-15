@@ -5,6 +5,7 @@ Doku:   http://localhost:8080/docs
 """
 from __future__ import annotations
 
+import json
 import csv
 import io
 import os
@@ -26,6 +27,9 @@ from .client import EscolaClient, EscolaConfig, KonfliktFehler, SessionAbgelaufe
 
 Format = Literal["json", "csv"]
 
+
+
+API_VERSION = json.loads((Path(__file__).resolve().parent.parent / "api.json").read_text(encoding="utf-8"))["version"]
 
 class LoginDaten(BaseModel):
     benutzername: str
@@ -202,7 +206,7 @@ def _config_from_env() -> EscolaConfig:
 def create_app(client: EscolaClient | None = None, transport: httpx.BaseTransport | None = None) -> FastAPI:
     app = FastAPI(
         title="Escola-API",
-        version="1.15.0",
+        version=API_VERSION,
         description="Liest Klassen, Fächer, Lehrpersonen, Räume, Tage, Lektionen und alle "
                     "Stundenplan-Einträge aus Escola (sekbuelach.ch). Alle Endpunkte liefern JSON "
                     "oder mit `?format=csv` eine CSV-Tabelle (Semikolon, UTF-8 mit BOM für Excel).",
