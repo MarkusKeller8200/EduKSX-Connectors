@@ -21,8 +21,10 @@ CONNECT. Steckbrief: `docs/PROJEKTSTART.md`. Antworten und Doku auf Deutsch (de-
 - **Doku-Kopien im Claude-Projekt ESCOLA** mitführen: `apis/escola/README.md` → `claude/escola-api-readme.md`,
   `apis/escola/WORKFLOWS.md` → `claude/escola-api-workflows.md`. `docs/workflows-escola.md` ist die Repo-Kopie des
   Dokuments «Escola-Workflows: Aufwand heute und Automatisierung» (Original in claude.ai).
-- **Echte Daten:** `_old/` und Teile von `apis/escola/tests/fixtures/` enthalten echte Namen aus Escola (vor dem
-  Blueprint entstanden); siehe Issue zur Anonymisierung. Keine neuen echten Daten hinzufügen.
+- **Echte Daten:** `apis/escola/tests/` und `_old/` sind pseudonymisiert (#17, 16.11.2026): erfundene Namen und
+  Kürzel, Escola-IDs unverändert. Die Zuordnung liegt nicht im Repo. Neue Fixtures aus Escola vor dem Einchecken
+  genauso pseudonymisieren; Testobjekte (TEST TEST, SuS SuS) bleiben. Der Git-Verlauf vor dem 16.11.2026 enthält
+  noch echte Namen.
 
 <!-- blueprint:github-ablauf -->
 

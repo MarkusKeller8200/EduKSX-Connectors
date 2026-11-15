@@ -61,9 +61,9 @@ class FakeAnlegen:
             if form.get("mode") == "13":
                 self.form_offen = int(form["activePersonId"])
                 if form["transferSchoolyear"] == "1":
-                    opts = '<option value="92">zukünftige H_A2a - Schmid Schmelzbach</option><option value="120">zukünftige TEST_A1a</option>'
+                    opts = '<option value="92">zukünftige H_A2a - Riedhofer Ulmrist</option><option value="120">zukünftige TEST_A1a</option>'
                 else:
-                    opts = '<option value="92">H_A1a - Schmid Schmelzbach</option><option value="93">H_A1b - Schmidt</option>'
+                    opts = '<option value="92">H_A1a - Riedhofer Ulmrist</option><option value="93">H_A1b - Halinger</option>'
                 return httpx.Response(200, text='<span id="transfer-tutorial">Bitte wähle die Klasse …</span>'
                                                 f'<form id="s_form"><select name="klassen_id_transfer">{opts}</select></form>')
             if form.get("mode") == "14":
@@ -78,7 +78,7 @@ class FakeAnlegen:
                                                     'erfolgreich in die Klasse H_A2a transferiert</div>')
                 q.update(kategorie="schueler", klasse=int(form["klassen_id_transfer"]))
                 return httpx.Response(200, text='<div class="alert alert-success" role="alert">'
-                                                f'{q["nachname"]} {q["vorname"]} wurde ab 14.11.2026 in die Klasse H_A1a - Schmid Schmelzbach transferiert.'
+                                                f'{q["nachname"]} {q["vorname"]} wurde ab 14.11.2026 in die Klasse H_A1a - Riedhofer Ulmrist transferiert.'
                                                 '<br /><br /><a onclick="personManagementGotoMode(16);">VORGANG WIDERRUFEN</a></div>')
             if form.get("mode") == "17":
                 assert form["action"] in ("1008", "1009")
@@ -183,7 +183,7 @@ def test_umteilen_entfernen_kommendes_sj(monkeypatch):
     assert api.post(f"/schueler/{pid}/klasse", json={"klasse_id": 120}).status_code == 400 and len(fake.transfers) == n
     # Optionen fürs kommende SJ mit künftigen Namen
     o = api.get(f"/schueler/{pid}/klasse/optionen", params={"schuljahr": 1}).json()
-    assert o[0] == {"id": 92, "name": "zukünftige H_A2a - Schmid Schmelzbach"}
+    assert o[0] == {"id": 92, "name": "zukünftige H_A2a - Riedhofer Ulmrist"}
     # Einteilung kommendes SJ (ohne Stichtag)
     k = api.post(f"/schueler/{pid}/klasse", json={"klasse_id": 92, "schuljahr": 1}).json()
     assert k["schuljahr"] == 1 and k["stichtag"] is None and "transferDate" not in fake.transfers[-1]

@@ -26,8 +26,8 @@ Hinterbirch (H_*): IDs 92–119 · Mettmenriet (M_*): IDs 65–91 · ID 64 ohne 
 | Lehrpersonen (119) | `POST inc/ajax/persons/show_persons_of_group.php` mit `pageRequest=154, personCategory=lehrperson, schoolclassId=null, workgroupId=null, schoolUnitId=1|2, schoolYear=0, searchMode=0` | `li#li_<personId>`, `#name_person_*`, `#vorname_person_*` |
 
 - `schoolUnitId` 1 = Hinterbirch (61 LP), 2 = Mettmenriet (58 LP).
-- `personId` der Lehrperson = `teacherId` für type=2 im Stundenplan (verifiziert: 135 Schmid Sibylle, 643 Staffelbach Aglaja).
-- LP-Kürzel (z. B. ScSi) ist nicht als Feld vorhanden, sondern berechnet: 2 Buchstaben Nachname + 2 Vorname. Doppelt: LaMi (Lange/Lanzendörfer), ScCo (Schütz/Schwager). Escola entfernt Akzente, behält Umlaute (Stricker Félix → StFe, Götte → GöKa).
+- `personId` der Lehrperson = `teacherId` für type=2 im Stundenplan (verifiziert: 135 Riedhofer Marco, 643 Ulminger Remo).
+- LP-Kürzel (z. B. RiMa) ist nicht als Feld vorhanden, sondern berechnet: 2 Buchstaben Nachname + 2 Vorname. Doppelt: EgDo (Eghofer/Nefmatter), PfTi (Pfishofer/Bernli). Escola entfernt Akzente, behält Umlaute (Laninger Flurina → StFe, Oberhofer → ObMa).
 - Raumkürzel A105 ist doppelt vergeben (ID 13 EG-105 und ID 37 UG-005) → immer roomId verwenden.
 - Die Parameter `schoolclassId`/`workgroupId` müssen als String `null` gesendet werden, sonst „Es ist ein Fehler aufgetreten.“
 
@@ -80,7 +80,7 @@ Gemeinsame Felder bei type=1/3: `classOrWorkgroupId, schoolYear=0, semester, day
 - Zelle: `div#content_<dayCode>_<lessonId>`, darin pro Eintrag `table.stundenplan_innen td`
 - `span.timetable-course-name` = Fachkürzel
 - `a.tipped[title]` = HTML: `<b>Fach</b><br>LP1<br />LP2<br /><i>Raum1/Raum2</i>`
-- 1. `div` = LP-Kürzel (z. B. `ScSi/StAg`), 2. `div` = Raumkürzel (z. B. `A001/A002`)
+- 1. `div` = LP-Kürzel (z. B. `RiMa/UlRe`), 2. `div` = Raumkürzel (z. B. `A001/A002`)
 - Keine IDs in der Anzeige → IDs über Stammdaten zuordnen oder Edit-HTML (type=1) lesen
 
 ## Stand 14.11.2026

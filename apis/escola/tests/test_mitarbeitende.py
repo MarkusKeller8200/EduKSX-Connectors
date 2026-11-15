@@ -7,9 +7,9 @@ from escola_api.client import EscolaClient, EscolaConfig, KonfliktFehler
 
 
 @pytest.mark.parametrize("vorname,nachname,mail", [
-    ("Jürg", "Ehrsam", "juerg.ehrsam@sekbuelach.ch"),
-    ("Félix", "Stricker", "felix.stricker@sekbuelach.ch"),
-    ("Anna-Lena", "Müller-Schäfer", "anna.mueller@sekbuelach.ch"),
+    ("Jürg", "Riedow", "juerg.riedow@sekbuelach.ch"),
+    ("Félix", "Laninger", "felix.laninger@sekbuelach.ch"),
+    ("Anna-Lena", "Müller-Widli", "anna.mueller@sekbuelach.ch"),
     ("Hans Peter", "Meier Huber", "hans.meier@sekbuelach.ch"),
     ("Laura", "von Arx", "laura.vonarx@sekbuelach.ch"),
     ("Ondřej", "Polisenský", "ondrej.polisensky@sekbuelach.ch"),

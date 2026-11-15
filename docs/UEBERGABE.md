@@ -25,7 +25,7 @@ Kopien im Claude-Projekt ESCOLA: `claude/uebergabe.md` und `claude/projektstand.
 | #5 | 0.1.0 | `_1 bereit` | Mitteilungen – Versand nur mit Freigabe und genanntem Testempfänger |
 | #7, #10 | 0.1.0 | `_1 bereit` | hängen an der Antwort von Escola (Mail an Hannes/Lars) |
 | #12, #14, #15 | 0.1.0 | `_1 bereit` | Testläufe – schreiben in Escola, nur zusammen mit dem Projektverantwortlichen |
-| #17 | – | `triage` | echte Personendaten in Fixtures und `_old/` – Entscheid nötig |
+| #17 | – | `_3 Beta-Test` | Testdaten und `_old/` pseudonymisiert; offen: Git-Verlauf bereinigen? Kopien im Claude-Projekt? |
 
 Schliessen erst nach «getestet ok» bzw. abgehakter Testliste.
 
@@ -44,6 +44,12 @@ Schliessen erst nach «getestet ok» bzw. abgehakter Testliste.
 - Löschen nur nach Rückfrage.
 
 ## Sitzungen
+
+### Sitzung 2026-11-16 (00:05–) – Pseudonymisierung (#17)
+
+- 119 Lehrpersonen in Fixtures, Tests, README-Beispiel und `_old/` (inkl. ZIP) durch erfundene Namen und Kürzel ersetzt,
+  Zuordnung nur ausserhalb des Repos. Tests angepasst (Kürzel- und Schulmail-Regeln mit erfundenen Beispielen).
+- Entscheid 2026-11-16: Testdaten werden pseudonymisiert (nicht gelöscht).
 
 ### Sitzung 2026-11-14/15 – Escola-API bis 1.15.0, Repo, Blueprint
 

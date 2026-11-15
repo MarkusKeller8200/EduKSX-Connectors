@@ -9,7 +9,7 @@ from escola_api import parsers as P
 from escola_api.client import EscolaClient, EscolaConfig
 
 VORLAGE = (Path(__file__).parent / "fixtures" / "klasse_formular.html").read_text(encoding="utf-8")
-LPS = {576: "Bauhuber Verena", 135: "Schmid Sibylle", 649: "TEST TEST"}
+LPS = {576: "Obereck Ursina", 135: "Riedhofer Marco", 649: "TEST TEST"}
 
 
 def optionen(wert: int) -> str:
@@ -71,7 +71,7 @@ def test_formular_wie_browser():
 def test_lesen(env):
     c, fake = env
     r = c.klassenlehrpersonen(120, waehlbar=True)
-    assert r["aktuell"] == [] and r["kommend"] == [{"slot": "A", "id": 576, "name": "Bauhuber Verena"}]
+    assert r["aktuell"] == [] and r["kommend"] == [{"slot": "A", "id": 576, "name": "Obereck Ursina"}]
     assert len(r["waehlbar"]) == 3 and not fake.posts
 
 

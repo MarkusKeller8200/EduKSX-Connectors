@@ -72,7 +72,7 @@ def test_schreib_payload():
 
 # ------------------------------------------------------------------ Mock-Escola (Personen)
 PERS_LIST = ('<ul><li id="li_650"><span id="name_person_650">sus</span> <span id="vorname_person_650">sus</span></li></ul>')
-STAFF = ('<ul><li id="li_135"><span id="name_person_135">Schmid</span> <span id="vorname_person_135">Sibylle</span></li>'
+STAFF = ('<ul><li id="li_135"><span id="name_person_135">Riedhofer</span> <span id="vorname_person_135">Marco</span></li>'
          '<li id="li_649"><span id="name_person_649">TEST</span> <span id="vorname_person_649">TEST</span></li></ul>')
 
 

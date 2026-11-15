@@ -78,7 +78,7 @@ def lp_kuerzel(nachname: str, vorname: str) -> str:
     import unicodedata
 
     def strip_acc(s: str) -> str:
-        # Umlaute behalten (Escola zeigt 'GöKa', 'WäNi'), nur andere Akzente entfernen (Félix -> Fe)
+        # Umlaute behalten (z. B. 'ÖbKa', 'WäLi'), nur andere Akzente entfernen (Félix -> Fe)
         keep = {"ä", "ö", "ü", "Ä", "Ö", "Ü"}
         return "".join(
             c if c in keep else unicodedata.normalize("NFD", c)[0] for c in s

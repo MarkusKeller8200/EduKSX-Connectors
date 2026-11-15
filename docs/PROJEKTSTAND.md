@@ -19,7 +19,7 @@
 ## Offen bzw. geplant
 
 - Meilenstein «0.1.0 – Escola live getestet»: #2–#15 (`_1 bereit`), davon #6 und #8 eingebaut
-- #17 echte Personendaten in Fixtures und `_old/` (`triage`, Entscheid nötig)
+- #17 Pseudonymisierung umgesetzt (`_3 Beta-Test`); offen: Git-Verlauf, Kopien im Claude-Projekt
 - Sammlungen Fehler / Verbesserungen / Funktionen: nur nach Freigabe
 
 ## Technik

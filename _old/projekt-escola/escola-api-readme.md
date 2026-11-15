@@ -348,7 +348,7 @@ aktuelle und fürs kommende Schuljahr.
 ```bash
 curl localhost:8080/klassen/120/klassenlehrpersonen -H 'X-Escola-Session: …'
 # {"klasse_id": 120, "name": "TEST_A1a", "aktuell": [],
-#  "kommend": [{"slot": "A", "id": 576, "name": "Bauhuber Verena"}], "wird_archiviert": false}
+#  "kommend": [{"slot": "A", "id": 576, "name": "Obereck Ursina"}], "wird_archiviert": false}
 
 curl -X PUT localhost:8080/klassen/120/klassenlehrpersonen -H 'X-Escola-Session: …' -H 'X-API-Key: …' \
      -H 'Content-Type: application/json' -d '{"aktuell": [649, 135]}'
@@ -379,7 +379,7 @@ curl -X POST 'localhost:8080/mitarbeitende?probelauf=true' -H 'X-Escola-Session:
 - Danach: anlegen → Rollen → Felder → AHV → Schulmail. Scheitert ein späterer Schritt, ist die Person schon
   angelegt; die Antwort zeigt pro Schritt `ok`/`fehler` und `vollstaendig: false`.
 - **Schulmail** `vorname.nachname@sekbuelach.ch`: ä/ö/ü → ae/oe/ue, ß → ss, Akzente weg (é → e, ř → r),
-  bei Doppelnamen nur der erste Teil (Anna-Lena Müller-Schäfer → `anna.mueller`). Namenszusätze gehören zum
+  bei Doppelnamen nur der erste Teil (Anna-Lena Müller-Widli → `anna.mueller`). Namenszusätze gehören zum
   Namen (Laura von Arx → `laura.vonarx`). Gesetzt wird das Feld `email` im Reiter „Geschäft“ – bei Mitarbeitenden
   zugleich die Haupt-E-Mail in Escola (ein separates Feld „Haupt-E-Mail“ gibt es dort nicht).
 - Das **Postfach** (M365) legt Escola nicht an – das übernimmt später IDA bzw. CONNECT.
@@ -570,7 +570,7 @@ curl -X PATCH localhost:8080/schueler/650 -H 'X-Escola-Session: …' -H 'X-API-K
 - **Zeiteinteilung:** Das Modul Ressourcen hat eigene Zeitprofile („HIBI – Lektionen“, „METTMI – Lektionen“)
   mit eigenen IDs. Für den Stundenplan gelten die Lektions-IDs aus `/lektionen`.
 - **Fächer** zeigt Escola nur, wenn sie der Klasse zugeteilt sind.
-- **Kürzel sind nicht eindeutig** (Raum A105, LP LaMi/ScCo) → immer IDs verwenden.
+- **Kürzel sind nicht eindeutig** (Raum A105, LP EgDo/PfTi) → immer IDs verwenden.
 - **Session-Zustand:** Escola merkt sich in der Sitzung die „aktive Klasse“ und die „aktive Person“.
   Die API arbeitet pro Session strikt nacheinander. Wer mit derselben Escola-Sitzung gleichzeitig im
   Browser arbeitet, sieht dort u. U. andere Klassen/Personen.

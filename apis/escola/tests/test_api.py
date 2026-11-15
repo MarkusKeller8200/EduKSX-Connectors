@@ -20,9 +20,9 @@ fx = lambda n: (FX / n).read_text(encoding="utf-8")
 def test_klassen():
     k = P.parse_klassen(fx("chooser.html"))
     assert len(k) == 8
-    assert k[0] == {"id": 92, "typ": "Klasse", "name": "H_A1a", "bezeichnung": "Schmid Schmelzbach",
-                    "klassenlehrperson": "Schmid Sibylle", "schulhaus": "Hinterbirch"}
-    assert k[5]["klassenlehrperson"] == "Faucon Virginie und Fischer Christine"
+    assert k[0] == {"id": 92, "typ": "Klasse", "name": "H_A1a", "bezeichnung": "Riedhofer Ulmrist",
+                    "klassenlehrperson": "Riedhofer Marco", "schulhaus": "Hinterbirch"}
+    assert k[5]["klassenlehrperson"] == "Vogeck Bettina und Widmatter Bettina"
     wg = [x for x in k if x["typ"] == "Arbeitsgruppe"]
     assert [x["id"] for x in wg] == [1, 2] and wg[0]["schulhaus"] == "Mettmenriet"
     assert any(x["id"] == 64 and x["name"] == "" for x in k)
@@ -30,11 +30,11 @@ def test_klassen():
 
 def test_lehrpersonen_und_kuerzel():
     lp = P.parse_lehrpersonen(fx("lehrpersonen.html"))
-    assert lp[0] == {"id": 67, "nachname": "Albrecht", "vorname": "Corinne"}
+    assert lp[0] == {"id": 67, "nachname": "Gassrist", "vorname": "Ursina"}
     assert len(lp) == 3
-    assert P.lp_kuerzel("Stricker", "Félix") == "StFe"
-    assert P.lp_kuerzel("Götte", "Karsten") == "GöKa"
-    assert P.lp_kuerzel("Wäckerlin", "Nicole") == "WäNi"
+    assert P.lp_kuerzel("Laninger", "Félix") == "LaFe"      # Akzente weg
+    assert P.lp_kuerzel("Öberli", "Kai") == "ÖbKa"           # Umlaute bleiben
+    assert P.lp_kuerzel("Wälbach", "Lina") == "WäLi"
 
 
 def test_faecher_raeume_details():
@@ -66,11 +66,11 @@ def test_stundenplan_eintraege():
     e = P.parse_stundenplan(fx("stundenplan_92.html"))
     assert len(e) == 6
     wah = next(x for x in e if x["fach_kuerzel"] == "WAH")
-    assert wah["lehrpersonen"] == ["Wäckerlin Nicole", "Füllemann Brigitte"]
+    assert wah["lehrpersonen"] == ["Bernmann Ines", "Widbach Fabian"]
     assert wah["raeume"] == ["UG - 001 - Zeichnungszimmer", "UG - 002 - Schulküche 1"]
     assert wah["raeume_kuerzel"] == ["A001", "A002"]
     bs = next(x for x in e if x["fach_kuerzel"] == "BS")
-    assert bs["raeume"] == [] and bs["lehrpersonen_kuerzel"] == ["GöKa", "ReMa"]
+    assert bs["raeume"] == [] and bs["lehrpersonen_kuerzel"] == ["ObMa", "RiTi"]
     assert P.parse_stundenplan(fx("stundenplan_65.html")) == []
 
 
@@ -78,9 +78,9 @@ def test_stundenplan_eintraege():
 EMPTY_H = re.sub(r'<table width="100%" height="33" class="stundenplan_innen">.*?</table>', "", fx("stundenplan_92.html"))
 NEW_CELL_H = '<div><select id="tt_select_new_2_A"><option value="0"></option>' + \
     "".join(f'<option value="{o}">{n}</option>' for o, n in re.findall(r'<option value="(\d+)"[^>]*>([^<]*\(\w+\))</option>', fx("edit_cell.html"))) + "</select></div>"
-LP_H = ('<ul><li id="li_135"><span id="name_person_135">Schmid</span> <span id="vorname_person_135">Sibylle</span></li>'
-        '<li id="li_632"><span id="name_person_632">Füllemann</span> <span id="vorname_person_632">Brigitte</span></li>'
-        '<li id="li_578"><span id="name_person_578">Wäckerlin</span> <span id="vorname_person_578">Nicole</span></li></ul>')
+LP_H = ('<ul><li id="li_135"><span id="name_person_135">Riedhofer</span> <span id="vorname_person_135">Marco</span></li>'
+        '<li id="li_632"><span id="name_person_632">Widbach</span> <span id="vorname_person_632">Fabian</span></li>'
+        '<li id="li_578"><span id="name_person_578">Bernmann</span> <span id="vorname_person_578">Ines</span></li></ul>')
 
 
 class FakeEscola:

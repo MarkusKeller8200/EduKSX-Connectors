@@ -14,4 +14,5 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
   Import-Vorprüfung; 1.13.0: Startdateien, Login an Escola angepasst und live bestätigt, Testseite «Daten lesen»
 
 ### Sicherheit
-- Echte Personendaten in Fixtures und `_old/` sind erfasst, Bereinigung offen (#17)
+- Testdaten (`apis/escola/tests/`) und Archiv `_old/` pseudonymisiert: erfundene Namen und Kürzel statt echter
+  Lehrpersonen, auch im ZIP unter `_old/pakete/`; Escola-IDs bleiben (#17)
