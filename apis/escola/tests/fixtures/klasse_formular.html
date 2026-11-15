@@ -1,0 +1,29 @@
+<html><body>
+<form action="admin.php?page_request=6&mode=902&id=120" method="post">
+<input type="hidden" name="deletematchings" value="[]">
+<table>
+<tr><td>Klasse (aktiv) / Planklasse</td><td><input type="radio" name="active_type" value="0" checked disabled id="activeType0">Klasse (aktiv) <input type="radio" name="active_type" value="2" disabled>Planklasse</td></tr>
+<tr><td>Standort</td><td><select name="schoolSiteId"><option value="0">Standort nicht definiert</option><option value="1" selected>
+									Schulhaus Hinterbirch (HIBI - Bista-Code: L041)			</option></select></td></tr>
+<tr><td>Klassenname</td><td><input type="text" name="name" value="TEST_A1a"></td></tr>
+<tr><td>Klassenlehrperson A</td><td><select name="klassenlehrer_id" class="chosen-select">{KLP_A}</select></td></tr>
+<tr><td>Klassenlehrperson B</td><td><select name="klassenlehrer_id_2" class="chosen-select">{KLP_B}</select></td></tr>
+<tr><td>Klassenlehrperson C</td><td><select name="klassenlehrer_id_3" class="chosen-select">{KLP_C}</select></td></tr>
+<tr><td>Jahrgangsstufe</td><td><input type="radio" name="real_class_0" value="mixclass">Mischklasse <input type="radio" name="real_class_0" value="1">1 <input type="radio" name="real_class_0" value="9" checked>1. Sek</td></tr>
+<tr><td>kommendes Schuljahr</td><td><input type="checkbox" name="archive_at_next_schoolyear_change" id="archive_at_next_schoolyear_change"> beim kommenden Schuljahreswechsel archivieren</td></tr>
+<tr><td>zukünftiger Klassenname</td><td><input type="text" name="name_plan" value="TEST_A1a"></td></tr>
+<tr><td>Klassenlehrperson A (kommendes Schuljahr)</td><td><select name="klassenlehrer_id_plan" class="chosen-select">{KLP_PA}</select></td></tr>
+<tr><td>Klassenlehrperson B (kommendes Schuljahr)</td><td><select name="klassenlehrer_id_2_plan" class="chosen-select">{KLP_PB}</select></td></tr>
+<tr><td>Klassenlehrperson C (kommendes Schuljahr)</td><td><select name="klassenlehrer_id_3_plan" class="chosen-select">{KLP_PC}</select></td></tr>
+<tr><td>Jahrgangsstufe (kommendes Schuljahr)</td><td><input type="radio" name="real_class_1" value="9">1. Sek <input type="radio" name="real_class_1" value="10" checked>2. Sek</td></tr>
+<tr><td>Anzeige</td><td><input type="checkbox" name="show_in_public_area" value="1" checked></td></tr>
+<tr><td>Alternativer Klassenname</td><td><input type="text" name="alternative_name" value=""></td></tr>
+<tr><td>Verwaltungsklasse</td><td><input type="checkbox" name="administrativeClass" value="1"></td></tr>
+<tr><td>Personen-Statistiken</td><td><input type="checkbox" name="includeInStatistics" value="1" checked></td></tr>
+<tr><td>Bista-Export</td><td><input type="checkbox" name="include_in_bista_export" value="1" checked></td></tr>
+<tr><td>Bista: Schulart (SA)</td><td><input type="radio" name="bista_sa" value="22">Regelkindergarten <input type="radio" name="bista_sa" value="70">Volksschule</td></tr>
+<tr><td></td><td><input type="submit" name="submit" value="Abschicken"></td></tr>
+</table>
+</form>
+<a href="admin.php?page_request=6&mode=900">Zurück ohne speichern</a>
+</body></html>

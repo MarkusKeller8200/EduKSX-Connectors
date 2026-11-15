@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Escola-API – Anmeldung</title>
+<style>
+  :root { --bg:#f5f6f8; --card:#fff; --text:#1d2330; --muted:#667085; --line:#e4e7ec; --accent:#0b63ce; --err:#b42318; --ok:#067647; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; display:grid; place-items:center; background:var(--bg); color:var(--text);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .card { width:min(400px, 92vw); background:var(--card); border:1px solid var(--line); border-radius:12px; padding:28px; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  p.sub { margin:0 0 20px; color:var(--muted); font-size:14px; }
+  label { display:block; font-size:13px; font-weight:600; margin:14px 0 6px; }
+  input, select { width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:8px; font:inherit; }
+  input:focus, select:focus { outline:2px solid color-mix(in srgb, var(--accent) 30%, transparent); border-color:var(--accent); }
+  input.code { font-size:22px; letter-spacing:6px; text-align:center; font-variant-numeric:tabular-nums; }
+  button { width:100%; margin-top:20px; padding:11px; border:0; border-radius:8px; background:var(--accent); color:#fff; font:inherit; font-weight:600; cursor:pointer; }
+  button.link { background:none; color:var(--accent); margin-top:10px; padding:4px; font-weight:500; }
+  button:disabled { opacity:.6; cursor:wait; }
+  .msg { margin-top:16px; padding:10px 12px; border-radius:8px; font-size:14px; display:none; }
+  .msg.err { display:block; background:#fef3f2; color:var(--err); }
+  .msg.ok { display:block; background:#ecfdf3; color:var(--ok); }
+  .token { font-family: ui-monospace, Menlo, monospace; font-size:12px; word-break:break-all; background:var(--bg); padding:10px; border-radius:8px; margin-top:6px; }
+  .hint { font-size:12px; color:var(--muted); margin-top:16px; }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<main class="card">
+  <h1>Escola-API</h1>
+  <p class="sub">Anmeldung mit deinem Escola-Konto. Benutzername und Passwort werden nur an Escola weitergegeben und nicht gespeichert.</p>
+
+  <!-- Schritt 1 -->
+  <form id="f-login" autocomplete="on">
+    <label for="user">Benutzername</label>
+    <input id="user" name="username" autocomplete="username" required>
+    <label for="pw">Passwort</label>
+    <input id="pw" name="password" type="password" autocomplete="current-password" required>
+    <div id="key-wrap" hidden>
+      <label for="apikey">API-Schlüssel</label>
+      <input id="apikey" type="password" autocomplete="off">
+    </div>
+    <button type="submit">Anmelden</button>
+  </form>
+
+  <!-- Schritt 2: 2FA -->
+  <form id="f-2fa" hidden autocomplete="off">
+    <div id="methode-wrap" hidden>
+      <label for="methode">Methode</label>
+      <select id="methode"></select>
+    </div>
+    <label for="code">Bestätigungscode</label>
+    <input id="code" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="8" required>
+    <button type="submit">Bestätigen</button>
+    <button type="button" class="link" id="b-resend">Code erneut senden</button>
+    <button type="button" class="link" id="b-app">Stattdessen in der Escola-App bestätigen</button>
+    <button type="button" class="link" id="b-back">Zurück</button>
+  </form>
+
+  <!-- Schritt 3 -->
+  <section id="s-ok" hidden>
+    <div class="msg ok">Angemeldet. Die Session gilt, bis du dich abmeldest oder sie abläuft.</div>
+    <label>Session-Token (Header <code>X-Escola-Session</code>)</label>
+    <div class="token" id="token"></div>
+    <button type="button" id="b-copy">Token kopieren</button>
+    <button type="button" class="link" id="b-docs">API-Dokumentation öffnen</button>
+    <button type="button" class="link" id="b-logout">Abmelden</button>
+  </section>
+
+  <div class="msg" id="msg" role="status"></div>
+  <p class="hint">Das Token liegt nur in diesem Browser-Tab (sessionStorage) und verschwindet beim Schliessen.</p>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const store = { get: k => { try { return sessionStorage.getItem(k); } catch { return null; } },
+                set: (k, v) => { try { v == null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v); } catch {} } };
+let session = store.get('escolaSession');
+let apiKey = store.get('escolaApiKey') || '';
+
+function show(step) {
+  $('f-login').hidden = step !== 'login';
+  $('f-2fa').hidden = step !== '2fa';
+  $('s-ok').hidden = step !== 'ok';
+  if (step === 'ok') $('token').textContent = session;
+  if (step === '2fa') setTimeout(() => $('code').focus(), 0);
+}
+function msg(text, kind = 'err') { const m = $('msg'); m.textContent = text || ''; m.className = 'msg ' + (text ? kind : ''); }
+
+async function call(method, path, body) {
+  const h = { 'Content-Type': 'application/json' };
+  if (session) h['X-Escola-Session'] = session;
+  if (apiKey) h['X-API-Key'] = apiKey;
+  const r = await fetch(path, { method, headers: h, body: body ? JSON.stringify(body) : undefined });
+  let j = {}; try { j = await r.json(); } catch {}
+  if (r.status === 401 && /X-API-Key/.test(j.detail || '')) { $('key-wrap').hidden = false; }
+  if (!r.ok) throw new Error(j.meldung || j.detail || ('Fehler ' + r.status));
+  return j;
+}
+function busy(form, on) { form.querySelectorAll('button').forEach(b => b.disabled = on); }
+
+$('f-login').addEventListener('submit', async e => {
+  e.preventDefault(); msg('');
+  apiKey = $('apikey').value || apiKey; store.set('escolaApiKey', apiKey || null);
+  busy(e.target, true);
+  try {
+    session = null;
+    const j = await call('POST', '/auth/login', { benutzername: $('user').value.trim(), passwort: $('pw').value });
+    session = j.session; store.set('escolaSession', session);
+    $('pw').value = '';
+    if (j.status === 'angemeldet') return show('ok');
+    const sel = $('methode'); sel.innerHTML = '';
+    (j.methoden || []).forEach(m => { const o = document.createElement('option'); o.value = m.method || m.type || m.id; o.textContent = m.label || m.name || o.value; sel.appendChild(o); });
+    $('methode-wrap').hidden = sel.options.length < 2;
+    show('2fa');
+  } catch (err) { msg(err.message); }
+  finally { busy(e.target, false); $('pw').value = ''; }
+});
+
+$('methode').addEventListener('change', async () => {
+  try { await call('POST', '/auth/2fa/methode', { methode: $('methode').value }); msg('Methode gewählt.', 'ok'); }
+  catch (err) { msg(err.message); }
+});
+
+$('f-2fa').addEventListener('submit', async e => {
+  e.preventDefault(); msg(''); busy(e.target, true);
+  try { await call('POST', '/auth/2fa', { code: $('code').value.trim() }); $('code').value = ''; show('ok'); }
+  catch (err) { msg(err.message); $('code').select(); }
+  finally { busy(e.target, false); }
+});
+
+$('b-resend').onclick = async () => { try { await call('POST', '/auth/2fa/erneut'); msg('Neuer Code wurde gesendet.', 'ok'); } catch (err) { msg(err.message); } };
+
+$('b-app').onclick = async () => {
+  try {
+    const j = await call('POST', '/auth/2fa/app'); msg('Bitte die Anmeldung in der Escola-App bestätigen …', 'ok');
+    for (let i = 0; i < 60; i++) {
+      await new Promise(r => setTimeout(r, 2000));
+      const s = await call('GET', '/auth/2fa/app/' + encodeURIComponent(j.token));
+      if (s.status === 'angemeldet') { msg(''); return show('ok'); }
+    }
+    msg('Keine Bestätigung erhalten – bitte erneut versuchen.');
+  } catch (err) { msg(err.message); }
+};
+
+$('b-back').onclick = () => { session = null; store.set('escolaSession', null); msg(''); show('login'); };
+$('b-copy').onclick = async () => { try { await navigator.clipboard.writeText(session); msg('Token kopiert.', 'ok'); } catch { msg('Kopieren nicht möglich – Token bitte markieren.'); } };
+$('b-docs').onclick = () => window.open('/docs', '_blank', 'noopener');
+$('b-logout').onclick = async () => {
+  try { await call('POST', '/auth/logout'); } catch {}
+  session = null; store.set('escolaSession', null); msg('Abgemeldet.', 'ok'); show('login');
+};
+
+(async () => {
+  if (!session) return show('login');
+  try { const s = await call('GET', '/auth/status'); show(s.status === 'angemeldet' ? 'ok' : s.status === '2fa_erforderlich' ? '2fa' : 'login'); }
+  catch { session = null; store.set('escolaSession', null); show('login'); }
+})();
+</script>
+</body>
+</html>
