@@ -44,11 +44,27 @@ Siehe [docs/konventionen.md](docs/konventionen.md) – kurz:
 
 ## Lokal starten (Beispiel Escola)
 
+Einfachster Weg: Repo auschecken und die Startdatei doppelklicken.
+
+| System | Datei |
+|---|---|
+| Windows | `start-escola.bat` |
+| macOS | `start-escola.command` (beim ersten Mal: Rechtsklick → Öffnen) |
+| Linux | `./start-escola.command` |
+
+Voraussetzung ist Python 3.12 oder neuer. Beim ersten Start richtet das Skript `apis/escola/.venv`
+ein, installiert die Pakete und legt `apis/escola/.env` an. Dabei fragt es, ob Schreiben erlaubt
+sein soll, und nach dem Port. Es erzeugt einen API-Key und zeigt ihn an. Danach öffnen sich Login
+und Testseite im Browser. Beenden mit Ctrl+C bzw. Fenster schliessen.
+
+`.env` neu erstellen: Datei löschen und erneut starten. Ohne Browser: `start-escola.command --ohne-browser`.
+
+Von Hand:
+
 ```bash
 cd apis/escola
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env      # Werte eintragen
-uvicorn escola_api.app:app --host 127.0.0.1 --port 8080
+python start_lokal.py        # liest .env selbst
 pytest -q
 ```

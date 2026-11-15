@@ -626,6 +626,9 @@ curl -X PATCH localhost:8080/schueler/650 -H 'X-Escola-Session: …' -H 'X-API-K
 
 ## Installation & Start
 
+Am einfachsten mit `start-escola.bat` (Windows) bzw. `start-escola.command` (macOS/Linux) im
+Repo-Hauptordner, siehe Haupt-README. Von Hand:
+
 ```bash
 python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
