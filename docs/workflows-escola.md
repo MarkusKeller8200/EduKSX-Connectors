@@ -4,11 +4,48 @@ Stand 15.11.2026 · Sek Bülach · Fassung zum Teilen mit Escola (Original als D
 
 ## Zweck
 
-Zehn wiederkehrende Abläufe der Sek Bülach berühren in Escola jeweils mehrere Bereiche, die man heute nacheinander von Hand bedient. Dieses Dokument zeigt pro Ablauf, wo der Aufwand entsteht, was unser API-Wrapper automatisiert und wo Escola selbst nachbessern könnte.
+Unser Ziel ist, dass Verwaltungsabläufe über ein Portal ausgelöst und der Escola-Teil danach automatisch erledigt wird. Dieses Dokument zeigt pro Ablauf, wo der Aufwand in Escola heute entsteht, was wir automatisieren und wo Escola selbst nachbessern könnte.
 
-Ausgangspunkt war die Erfassung der Stundenpläne. Weil Escola keine offizielle API hat, haben wir einen Wrapper um die Weboberfläche gebaut. Er arbeitet mit einem persönlichen Login inkl. Zwei-Faktor und nutzt dieselben Aufrufe wie der Browser. Schreiben ist nur mit Freigabe möglich, Löschfunktionen wie „Personen definitiv löschen“ sind bewusst nicht eingebaut.
+Heute lösen Mitarbeitende die Vorgänge über SharePoint-Seiten der Verwaltung aus (z. B. „Lernende anmelden“, „Kantonale Anstellung“). Daraus entsteht ein Ticket, und die zuständige Fachstelle erledigt den Escola-Teil von Hand. Einiges davon lässt sich auch direkt in Escola erfassen. Für Eltern steht das Portal noch nicht zur Verfügung.
 
-Die Workflows WF-01 bis WF-10 sind mit der Schule abgestimmt. Live geprüft sind Login und Lesen, die Schreibabläufe testen wir schrittweise mit Testpersonen und einer Testklasse.
+Weil Escola keine offizielle API hat, haben wir einen Wrapper um die Weboberfläche gebaut. Er arbeitet mit einem persönlichen Login inkl. Zwei-Faktor und nutzt dieselben Aufrufe wie der Browser. Schreiben ist nur mit Freigabe möglich, Löschfunktionen wie „Personen definitiv löschen“ sind bewusst nicht eingebaut.
+
+Die Abläufe WF-01 bis WF-10 haben wir mit den Fachstellen erhoben; nur ein Teil davon ist bereits im Wrapper umgesetzt. Live geprüft sind Login und Lesen, die Schreibabläufe testen wir schrittweise mit Testpersonen und einer Testklasse.
+
+```mermaid
+flowchart LR
+  subgraph heute["Heute"]
+    direction LR
+    P1["Portal<br/>SharePoint-Seite"] --> T1["Ticket<br/>an Fachstelle"] --> F1["Fachstelle<br/>erfasst in Escola von Hand"] --> E1["Escola"]
+  end
+  subgraph ziel["Ziel"]
+    direction LR
+    P2["Portal<br/>SharePoint-Seite"] --> T2["Ticket<br/>an Fachstelle"] --> F2["Fachstelle<br/>prüft, gibt frei"] --> A2["IDA/CONNECT<br/>+ Escola-Wrapper"] --> E2["Escola<br/>nachgeführt"]
+    EL["Eltern<br/>Zugang geplant"] -.-> P2
+  end
+```
+
+Portal und Ticket bleiben; was sich ändert, ist der Schritt nach der Freigabe durch die Fachstelle.
+
+## Portal-Vorgänge und Stand im Wrapper
+
+Von den Vorgängen auf unseren Portal-Seiten berühren die meisten Escola; die Ein- und Austritte sind im Wrapper bereits abgebildet. „Eingebaut“ heisst: im Wrapper vorhanden, noch nicht alles live getestet.
+
+| Portal-Seite | Vorgang | Ablauf | Escola-Teil | Im Wrapper |
+|---|---|---|---|---|
+| Verwaltung Lernende | Lernende anmelden | WF-07 | Person, Klasse, Arbeitsgruppen, Eltern | eingebaut |
+| Verwaltung Lernende | Lernende abmelden | WF-09 | Austritt, Eltern deaktivieren | eingebaut |
+| Verwaltung Lernende | Einteilung | WF-08 | Klasse, Arbeitsgruppen | eingebaut |
+| Verwaltung Lernende | Personenangaben | WF-10 | Felder und Adresse | eingebaut (Felder ändern) |
+| Verwaltung Lernende | Zahnarzt-/Arztgutschein, Schulbestätigung, Zeugnis-Kopie, Dokument einreichen | – | zu klären (Dokumente) | nein, Dokumente vorbereitet |
+| Verwaltung Personelles | Kantonale / kommunale Anstellung | WF-01, WF-03 | Person, Rollen, AHV, Schulmail, Fächer | eingebaut |
+| Verwaltung Personelles | Austritt kantonal / kommunal | WF-02, WF-04 | Austritt, Rollen, Nachfolge | eingebaut |
+| Verwaltung Personelles | Personalangaben | – | Felder einer Person | eingebaut (Felder ändern) |
+| Verwaltung Personelles | Pensum & Anstellung | WF-05, WF-06 | Fächer, Klassenlehrpersonen | zu klären |
+| Verwaltung Personelles | Befristete Anstellung (provisorisch, Vikariat) | – | zu klären | nein |
+| Verwaltung Personelles | Begleitung, Unfall | – | zu klären | nein |
+
+Für Eltern gibt es noch keine Portal-Vorgänge; naheliegend wären Adressänderung und Abmeldung.
 
 ## Übersicht
 
@@ -45,7 +82,7 @@ Das Beispiel WF-07 zeigt das Muster aller Abläufe: Die Schritte selbst sind ein
 
 ## Abläufe im Detail
 
-Pro Ablauf: die Schritte heute in Escola, was der Wrapper übernimmt und was Escola verbessern könnte.
+Pro Ablauf: was die Fachstelle nach dem Ticket heute in Escola von Hand erledigt, was der Wrapper übernimmt und was Escola verbessern könnte.
 
 ### WF-01 Mitarbeiter:in einstellen
 
