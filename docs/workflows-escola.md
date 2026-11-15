@@ -10,7 +10,7 @@ Heute lösen Mitarbeitende die Vorgänge über SharePoint-Seiten der Verwaltung 
 
 Weil Escola keine offizielle API hat, haben wir einen Wrapper um die Weboberfläche gebaut. Er arbeitet mit einem persönlichen Login inkl. Zwei-Faktor und nutzt dieselben Aufrufe wie der Browser. Schreiben ist nur mit Freigabe möglich, Löschfunktionen wie „Personen definitiv löschen“ sind bewusst nicht eingebaut.
 
-Die Abläufe WF-01 bis WF-10 haben wir mit den Fachstellen erhoben; nur ein Teil davon ist bereits im Wrapper umgesetzt. Live geprüft sind Login und Lesen, die Schreibabläufe testen wir schrittweise mit Testpersonen und einer Testklasse.
+Die Abläufe WF-01 bis WF-20 haben wir mit den Fachstellen erhoben; nur ein Teil davon ist bereits im Wrapper umgesetzt. Live geprüft sind Login und Lesen, die Schreibabläufe testen wir schrittweise mit Testpersonen und einer Testklasse.
 
 ```mermaid
 flowchart LR
@@ -29,7 +29,7 @@ Portal und Ticket bleiben; was sich ändert, ist der Schritt nach der Freigabe d
 
 ## Das Schuljahr vorbereiten
 
-Als Nächstes nehmen wir die Zuteilung der Schüler:innen und den Kanal zu den Eltern in Angriff: Die Eltern sollen schon vor Schulstart in der Escola-App sein, und die Einteilung wird direkt dort ausgespielt. Was die Eltern sehen, wächst mit jeder Phase.
+Als Nächstes nehmen wir die Zuteilung der Schüler:innen und den Kanal zu den Eltern in Angriff: Die Eltern sollen schon vor Schulstart in der Escola-App sein, und die Einteilung wird direkt dort ausgespielt. Was die Eltern sehen, wächst mit jeder Phase. Die Spalte „Anforderung an Escola“ beschreibt, was wir brauchen; ob Escola das bereits kann, wissen wir nicht in jedem Fall.
 
 ```mermaid
 flowchart TB
@@ -44,7 +44,7 @@ flowchart TB
 
 | Phase | Was passiert | Wer, welches System | Anforderung an Escola |
 |---|---|---|---|
-| 1 Import | Die Datenlieferung wird strukturiert eingelesen; unsere Anwendung sortiert, ergänzt fehlende Angaben, bildet Mailadressen und Zugangsdaten und erzeugt eine Standard-Importdatei. Die Schüler:innen haben noch keine Klasse. | unsere Anwendung, Escola-Import | Import mit sehr vielen Feldern; ein schlanker Import mit klaren Pflichtfeldern würde helfen |
+| 1 Import | Die Datenlieferung wird strukturiert eingelesen; unsere Anwendung sortiert, ergänzt fehlende Angaben, bildet Mailadressen und Zugangsdaten und erzeugt eine Standard-Importdatei. Die Schüler:innen haben noch keine Klasse. | unsere Anwendung, Escola-Import | Import, der alle gelieferten Angaben aufnimmt, auch Eltern und Sorgerecht |
 | 2 Übertritt | Die Lehrpersonen der 6. Klassen reichen das Übertrittsformular ein; es liegt im Schülerdossier für Schulleitung, Zuteilende und später die Lehrpersonen. | Escola oder unsere Anwendung | Formular und Zugang für Lehrpersonen der abgebenden Schule |
 | 3 Einteilung | Nach der Schulhauszuteilung teilt die Schulleitung die Schüler:innen in Klassen ein. | Escola-Tool | vorhanden |
 | 4 App-Zugang | Spätestens jetzt erhalten die Eltern den App-Zugang; nach einer Frist fassen wir bei säumigen Eltern nach. Voraussetzung für den Zuteilungsbrief. | Escola-Funktion oder unsere App, notfalls Post Smart Send | Versand der Zugänge und Liste, wer noch nicht aktiviert hat |
@@ -98,7 +98,7 @@ Eltern mit aktivierter Escola-App können Änderungen bereits dort melden; ein A
 
 ## Übersicht
 
-Die meisten Abläufe verteilen sich in Escola auf bis zu fünf Bereiche; der Wrapper fasst sie zu einem Aufruf zusammen. „Bereiche“ sind die Escola-Module, die man dafür öffnet, nicht einzelne Klicks.
+Die meisten Abläufe verteilen sich in Escola auf bis zu fünf Bereiche; der Wrapper fasst WF-01 bis WF-10 zu je einem Ablauf zusammen. WF-11 bis WF-20 sind neu erhoben und erst teilweise umgesetzt; beschrieben sind sie in den Abschnitten zum Schuljahr. „Bereiche“ sind die Escola-Module, die man dafür öffnet, nicht einzelne Klicks.
 
 | Nr | Ablauf | Escola-Bereiche heute | Hauptaufwand | Nachholbedarf Escola |
 |---|---|---|---|---|
@@ -112,6 +112,16 @@ Die meisten Abläufe verteilen sich in Escola auf bis zu fünf Bereiche; der Wra
 | WF-08 | Klassenwechsel ab Datum | Personen → Klasse zuordnen, Arbeitsgruppen | Arbeitsgruppen separat nachführen | Arbeitsgruppen beim Wechsel mitführen |
 | WF-09 | Schüler:in tritt aus | Personen (Austritt), Bezugspersonen, Arbeitsgruppen | Eltern ohne weitere Kinder von Hand deaktivieren | Eltern beim Austritt automatisch prüfen |
 | WF-10 | Schüler:in zieht um | Personen bzw. Bezugsperson | Adresse am richtigen Ort und zum richtigen Datum ändern | Änderungen ab Datum vormerken |
+| WF-11 | Massenimport Schüler:innen und Eltern | Escola-Import | sehr viele Felder, Daten vorher aufbereiten | Import, der alle gelieferten Angaben aufnimmt |
+| WF-12 | Übertrittsformular | Dokumente im Schülerdossier | Formular von der abgebenden Schule einholen und ablegen | Formular und Zugang für Lehrpersonen der 6. Klassen |
+| WF-13 | Klasseneinteilung durch die Schulleitung | Escola-Einteilungstool | – (im Tool gelöst) | – |
+| WF-14 | App-Zugang für Eltern, Nachfassen | Personen, Escola-App | Zugänge verteilen, säumige Eltern finden | Versand der Zugänge, Liste „noch nicht aktiviert“ |
+| WF-15 | Zuteilungsbrief, Rekurs, definitiv | Mitteilungen, Escola-App, Klasse zuordnen | Sichtbarkeit für Eltern schrittweise freigeben | Sichtbarkeit pro Phase, Rekurs in der App |
+| WF-16 | Stundenpläne einspielen | Stundenplan | Abgleich mit dem Stundenplaner | Import aus dem Stundenplaner |
+| WF-17 | Klassenlisten, Zugänge, Geräte | Klassenlisten, Dokumente, Mitteilungen | Nutzungsvereinbarung: Rücklauf nicht sichtbar | Klassenlisten aus dem Dokumentensystem, Unterschrift mit Rücklauf |
+| WF-18 | Arzt- und Zahnarztkontrollen | Mitteilungen (Gutscheine) | Kontrollen ausserhalb von Escola nachführen | Kontrollen als Schülerdaten, Liste der offenen |
+| WF-19 | Prüfungen mit Note an Eltern | Noten, Escola-App | Prüfungen auf Papier nach Hause | Prüfung als Dokument mit Note zustellen, Bestätigung |
+| WF-20 | Überführung nach CMI | alle Module | Daten und Dokumente von Hand übertragen | Schnittstelle zu CMI |
 
 ```mermaid
 flowchart LR
@@ -189,7 +199,7 @@ Fünf Eigenheiten tauchen in fast jedem Ablauf auf; sie sind der grösste Hebel 
 
 ## Wünsche an Escola
 
-Am meisten würden uns eine offizielle Schnittstelle und eine Anbindung an CMI helfen; danach die Eltern-App in Stufen und das App-Onboarding.
+Am meisten würden uns eine offizielle Schnittstelle und eine Anbindung an CMI helfen; danach die Eltern-App in Stufen und das App-Onboarding. Die Liste ist aus unserer Sicht geschrieben; manches kann Escola vielleicht schon, dann freuen wir uns über den Hinweis.
 
 1. **Offizielle API** für Personen, Klassen, Fächer-Zuteilung und Stundenplan, mit Zugang über einen API-Schlüssel statt eines persönlichen Logins. Dann können wir den Wrapper ablösen.
 2. **Schnittstelle zu CMI** für Stammdaten, Mutationen, Absenzen, Verhalten, Prüfungsresultate und Dokumente; sonst überführen wir selbst.
@@ -200,7 +210,7 @@ Am meisten würden uns eine offizielle Schnittstelle und eine Anbindung an CMI h
 7. **Schulärztliche und schulzahnärztliche Kontrollen** als Teil der Schülerdaten, mit Liste der offenen.
 8. **Änderungen ab Datum** für Fächer, Rollen, Klassenlehrpersonen und Adressen, wie es beim Klassenwechsel schon geht.
 9. **Eindeutigkeit** von AHV-Nummer und Geschäfts-E-Mail mit Prüfung beim Speichern und Suche danach.
-10. **Sammel- und Vorlagenfunktionen:** Fächer × Klassen in einer Maske, Vorlagen für Fach-LP und SoPä, „Lehrperson ersetzen“; schlanker Import mit klaren Pflichtfeldern.
+10. **Sammel- und Vorlagenfunktionen:** Fächer × Klassen in einer Maske, Vorlagen für Fach-LP und SoPä, „Lehrperson ersetzen“; ein Import, der alle verfügbaren Angaben aufnimmt.
 11. **Anmeldung in einem Schritt:** Kind, Klasse, Arbeitsgruppen und Eltern zusammen erfassen.
 12. **Schuljahr sichtbar machen:** deutlich anzeigen, wenn eine Sitzung im kommenden Schuljahr arbeitet.
 13. **Vorankündigung** bei Änderungen am Login oder an den Verwaltungsseiten, solange wir den Wrapper brauchen.
