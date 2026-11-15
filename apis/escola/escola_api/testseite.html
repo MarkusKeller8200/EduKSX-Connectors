@@ -371,10 +371,12 @@ async function schritt(i) {
   const [m, pfad, body] = a;
   $("a" + i).textContent = `${m} ${pfad}`;
   $("b" + i).disabled = true; $("st" + i).textContent = "läuft …";
+  const stopp = await zaehler(i);
   let r;
   try { r = await api(m, pfad, body); } catch (e) { r = { ok: false, status: 0, ms: 0, json: String(e) }; }
+  const anz = await stopp();
   box.classList.toggle("ok", r.ok); box.classList.toggle("fehler", !r.ok);
-  $("st" + i).textContent = `${r.status} · ${r.ms} ms`;
+  $("st" + i).textContent = `${r.status} · ${r.ms} ms${anz ? ` · ${anz} Escola-Abfragen` : ""}`;
   const roh = `<pre>${esc(typeof r.json === "string" ? r.json : JSON.stringify(r.json, null, 2))}</pre>`;
   $("o" + i).innerHTML = (body !== undefined ? `<pre>Body: ${esc(JSON.stringify(body, null, 2))}</pre>` : "")
     + (fall.nurLesen && r.ok ? tabelle(r.json, pfad) : roh);
@@ -393,6 +395,29 @@ async function schritt(i) {
     const naechster = $("b" + (i + 1)); if (naechster) naechster.disabled = false;
   }
   return r.ok;
+}
+
+// Zähler: fragt während des Aufrufs /fortschritt ab und zeigt, wie viele Einzelabfragen
+// die API schon an Escola geschickt hat. Liefert am Ende die Gesamtzahl.
+async function zaehler(i) {
+  let start = null, n = 0, aktiv = true;
+  const t0 = performance.now();
+  const holen = () => api("GET", "/fortschritt").then(r => r.ok ? r.json : null).catch(() => null);
+  const zeigen = (f) => {
+    if (!f) return;
+    if (start === null) { start = f.aufrufe; return; }
+    n = f.aufrufe - start;
+    if (aktiv) $("st" + i).textContent = `läuft … ${Math.round((performance.now() - t0) / 1000)} s · ${n} Escola-Abfragen${f.zuletzt ? ` (${f.zuletzt})` : ""}`;
+  };
+  const erst = holen().then(zeigen);
+  await erst;  // Startwert vor dem eigentlichen Aufruf
+  const timer = setInterval(() => holen().then(zeigen), 500);
+  return async () => {
+    aktiv = false; clearInterval(timer); await erst;
+    // eigene /fortschritt-Abfragen zählen nicht (laufen nicht über Escola)
+    const f = await holen(); if (f && start !== null) n = f.aufrufe - start;
+    return n;
+  };
 }
 
 function meld(i, text) { $("st" + i).textContent = ""; $("o" + i).innerHTML = `<div class="warn">${esc(text)}</div>`; }

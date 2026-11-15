@@ -46,7 +46,11 @@ class EscolaClient:
         self.cfg = cfg
         self._lock = threading.RLock()
         self._cache: dict[str, tuple[float, object]] = {}
+        # Zähler aller Anfragen an Escola (für Fortschrittsanzeige: GET /fortschritt)
+        self.zaehler = 0
+        self.zuletzt = ""
         self._http = httpx.Client(
+            event_hooks={"request": [self._zaehlen]},
             base_url=cfg.base_url,
             # Mit ESCOLA_COOKIE: fester Cookie-Header. Ohne: Cookies aus dem Login (/auth/login)
             # landen im Cookie-Speicher dieses Clients – nur im Arbeitsspeicher, nie auf Disk.
@@ -64,6 +68,10 @@ class EscolaClient:
         )
 
     # ------------------------------------------------------------------ HTTP
+    def _zaehlen(self, req: httpx.Request) -> None:
+        self.zaehler += 1
+        self.zuletzt = req.url.path.rsplit("/", 1)[-1]
+
     def _check(self, r: httpx.Response) -> str:
         loc = r.headers.get("location", "")
         if r.status_code in (301, 302, 303) and "login" in loc.lower():

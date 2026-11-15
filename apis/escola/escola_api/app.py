@@ -325,6 +325,12 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
             s.status = "angemeldet"
         return res
 
+    @app.get("/fortschritt", dependencies=deps, tags=["Anmeldung"])
+    def fortschritt(c: EscolaClient = Depends(get_client)):
+        """Anzahl bisheriger Anfragen dieser Sitzung an Escola – für eine Fortschrittsanzeige
+        während langer Listen (Seite fragt alle ~0.5 s ab und zeigt die Differenz)."""
+        return {"aufrufe": c.zaehler, "zuletzt": c.zuletzt}
+
     @app.get("/auth/status", dependencies=deps, tags=["Anmeldung"])
     def auth_status(x_escola_session: str = Header(...)):
         s = _sitzung(x_escola_session)
