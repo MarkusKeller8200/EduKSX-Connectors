@@ -47,6 +47,7 @@
   table.vergleich { border-collapse:collapse; width:100%; margin-top:6px; font-size:13px; }
   table.vergleich td, table.vergleich th { border:1px solid var(--linie); padding:6px 8px; text-align:left; vertical-align:top; }
   table.vergleich th { background:#fafbfc; font-weight:600; width:190px; }
+  table.daten th { width:auto; position:sticky; top:0; white-space:nowrap; } table.daten td { white-space:nowrap; max-width:420px; overflow:hidden; text-overflow:ellipsis; }
   .gleich { color:var(--gruen); font-weight:600; } .anders { color:var(--rot); font-weight:600; }
   .frei textarea { width:100%; min-height:90px; font-family:ui-monospace,monospace; font-size:12px; }
   .zeile { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
@@ -88,6 +89,7 @@ const store = { get: k => { try { return sessionStorage.getItem(k); } catch { re
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const heute = () => new Date().toISOString().slice(0, 10);
 const enc = encodeURIComponent;
+const q = o => { const s = Object.entries(o).filter(([, v]) => v !== "" && v != null).map(([k, v]) => `${k}=${enc(v)}`).join("&"); return s ? "?" + s : ""; };
 
 // ---------------------------------------------------------------- API-Aufruf
 async function api(m, pfad, body) {
@@ -104,6 +106,48 @@ async function api(m, pfad, body) {
 // Jeder Fall: lesen -> schreiben/anlegen -> lesen -> rückgängig/löschen -> lesen.
 // wert(json, p) liefert den Wert, der zwischen den drei Lese-Schritten verglichen wird.
 const FAELLE = [
+ // ---- Daten lesen: ändert nichts in Escola. Listen als Tabelle, Download als CSV.
+ ...[
+  ["d-sus", "Schüler:innen", "SuS mit Klasse. Leer lassen = alle Schulhäuser/Klassen.",
+   [["schulhaus", "Schulhaus", "", ["", "Hinterbirch", "Mettmenriet"]], ["klasse_id", "Klassen-ID (leer = alle)", ""], ["schuljahr", "Schuljahr", "0", ["0", "1"]]],
+   p => "/schueler" + q({ schulhaus: p.schulhaus, klasse_id: p.klasse_id, schuljahr: p.schuljahr })],
+  ["d-sus-ohne", "SuS ohne Klasse / zukünftig / ehemalig", "",
+   [["rolle", "Ansicht", "students-without-schoolclass", ["students-without-schoolclass", "future-students", "former-students"]]],
+   p => "/personen" + q({ rolle: p.rolle })],
+  ["d-eltern", "Eltern / Bezugspersonen", "„guardians-all“ = alle Bezugspersonen, „eltern“ = nur die von SuS mit Klasse.",
+   [["rolle", "Ansicht", "guardians-all", ["guardians-all", "eltern"]]],
+   p => "/personen" + q({ rolle: p.rolle })],
+  ["d-lp", "Lehrpersonen", "", [["schulhaus", "Schulhaus", "", ["", "Hinterbirch", "Mettmenriet"]]],
+   p => "/lehrpersonen" + q({ schulhaus: p.schulhaus })],
+  ["d-personen", "Mitarbeitende / Personen nach Rolle", "Rollen-Kennungen siehe „Rollen“ (Spalte rolle), z. B. gruppe_4 = Schulverwaltung.",
+   [["rolle", "Rolle", "allActive", ["allActive", "allInactive", "lehrperson", "schulleitung", "admin", "gruppe_4", "gruppe_5", "gruppe_6", "gruppe_7", "gruppe_8", "gruppe_9", "gruppe_12", "gruppe_2", "gruppe_3", "gruppe_10", "gruppe_13", "doctor", "dentist"]],
+    ["schulhaus", "Schulhaus", "", ["", "Hinterbirch", "Mettmenriet"]]],
+   p => "/personen" + q({ rolle: p.rolle, schulhaus: p.schulhaus })],
+  ["d-rollen", "Rollen", "Alle Escola-Rollen mit ID (für Rollen zuweisen).", [], () => "/rollen"],
+  ["d-rollen-ansichten", "Rollen-Kennungen für Personenlisten", "", [], () => "/personen/rollen", false],
+  ["d-klassen", "Klassen", "", [["schulhaus", "Schulhaus", "", ["", "Hinterbirch", "Mettmenriet"]]],
+   p => "/klassen" + q({ schulhaus: p.schulhaus })],
+  ["d-ag", "Arbeitsgruppen (Fachklassen)", "", [["schuljahr", "Schuljahr", "0", ["0", "1"]]],
+   p => "/arbeitsgruppen" + q({ schuljahr: p.schuljahr })],
+  ["d-faecher", "Fächer", "", [], () => "/faecher"],
+  ["d-lektionen", "Lektionen / Zeiten", "Lektionenraster mit Beginn und Ende.", [["schulhaus", "Schulhaus", "", ["", "Hinterbirch", "Mettmenriet"]]],
+   p => "/lektionen" + q({ schulhaus: p.schulhaus })],
+  ["d-tage", "Schultage", "", [], () => "/tage"],
+  ["d-raeume", "Räume", "", [["schulhaus", "Schulhaus", "", ["", "Hinterbirch", "Mettmenriet"]]],
+   p => "/raeume" + q({ schulhaus: p.schulhaus })],
+  ["d-ressourcen", "Ressourcen (reservierbar)", "", [["schulhaus", "Schulhaus", "", ["", "Hinterbirch", "Mettmenriet"]]],
+   p => "/ressourcen" + q({ schulhaus: p.schulhaus })],
+  ["d-plan", "Stundenpläne", "Alle Stundenplan-Einträge, optional nur einer Klasse.",
+   [["klasse_id", "Klassen-ID (leer = alle)", ""], ["schulhaus", "Schulhaus", "", ["", "Hinterbirch", "Mettmenriet"]]],
+   p => "/eintraege" + q({ klasse_id: p.klasse_id, schulhaus: p.schulhaus })],
+  ["d-klp", "Lehrpersonen & Fächer einer Klasse", "Wer unterrichtet welches Fach mit welchen Rechten (KLR/FP/SpM/Abs).",
+   [["klasse", "Klassen-ID", 120]], p => `/klassen/${p.klasse}/lehrpersonen`, false],
+  ["d-klassenlp", "Klassenlehrpersonen einer Klasse", "", [["klasse", "Klassen-ID", 120]], p => `/klassen/${p.klasse}/klassenlehrpersonen`, false],
+  ["d-bezug", "Eltern einer Schülerin / eines Schülers", "Bezugspersonen mit Sorge-/Informationsrecht.",
+   [["pid", "Person-ID SuS", 650]], p => `/schueler/${p.pid}/bezugspersonen`, false],
+  ["d-export", "Komplett-Export Stundenplan", "Klassen, Fächer, Lehrpersonen, Räume, Raster, Einträge in einem JSON.", [], () => "/export", false],
+ ].map(([id, titel, hinweis, params, pfad, csv = true]) =>
+   ({ id, gruppe: "Daten lesen", titel, hinweis, params, nurLesen: true, csv, lesen: p => ["GET", pfad(p)] })),
  { id: "person-feld", gruppe: "Personen", titel: "Feld einer Person ändern",
    hinweis: "Liest den Reiter, schreibt einen Testwert, stellt den alten Wert wieder her.",
    params: [["pid", "Person-ID", 649], ["abschnitt", "Reiter", "personalien"], ["feld", "Feld (intern)", "beruf"], ["neu", "Testwert", "Testwert API"]],
@@ -209,6 +253,46 @@ const FAELLE = [
    lesen: p => ["GET", `/lehrpersonen/${p.lp}/einsatz`] },
 ];
 
+
+// ---------------------------------------------------------------- Tabellen für „Daten lesen“
+function zelle(v) {
+  if (v == null) return "";
+  if (Array.isArray(v)) return v.map(x => typeof x === "object" && x ? (x.name ?? x.bezeichnung ?? x.id ?? JSON.stringify(x)) : x).join(", ");
+  if (typeof v === "object") return JSON.stringify(v);
+  return String(v);
+}
+function tabelle(j, pfad) {
+  // Liste direkt oder Objekt mit Listen (z. B. /export)
+  if (!Array.isArray(j)) {
+    if (j && typeof j === "object" && Object.values(j).some(Array.isArray))
+      return Object.entries(j).map(([k, v]) => `<h3 style="margin:14px 10px 4px">${esc(k)}</h3>` + (Array.isArray(v) ? tabelle(v) : `<pre>${esc(JSON.stringify(v, null, 2))}</pre>`)).join("");
+    return `<pre>${esc(JSON.stringify(j, null, 2))}</pre>`;
+  }
+  const spalten = [...new Set(j.flatMap(r => r && typeof r === "object" ? Object.keys(r) : ["wert"]))];
+  const max = 2000, zeilen = j.slice(0, max);
+  return `<div class="zeile" style="padding:8px 10px 0">
+      <strong>${j.length} Einträge</strong>
+      <input class="filter" placeholder="Filtern …" style="width:220px">
+      ${pfad && fall.csv ? '<button class="b csv">Als CSV herunterladen</button>' : ""}
+      ${j.length > max ? `<span class="hinweis" style="margin:0">angezeigt: erste ${max}</span>` : ""}</div>
+    <div style="overflow:auto;max-height:560px"><table class="vergleich daten"><thead><tr>${spalten.map(s => `<th>${esc(s)}</th>`).join("")}</tr></thead>
+    <tbody>${zeilen.map(r => `<tr>${spalten.map(s => `<td>${esc(zelle(r && typeof r === "object" ? r[s] : r))}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+}
+function filtern(inp) {
+  const f = inp.value.toLowerCase();
+  inp.closest("[id^=o]").querySelectorAll("table.daten tbody tr").forEach(tr => tr.hidden = !!f && !tr.textContent.toLowerCase().includes(f));
+}
+async function csv(pfad) {
+  const h = {};
+  const s = store.get("escolaSession"); if (s) h["X-Escola-Session"] = s;
+  const k = $("apikey").value || store.get("escolaApiKey"); if (k) h["X-API-Key"] = k;
+  const r = await fetch(pfad + (pfad.includes("?") ? "&" : "?") + "format=csv", { headers: h });
+  if (!r.ok) { alert("CSV fehlgeschlagen: HTTP " + r.status); return; }
+  const name = (r.headers.get("content-disposition") || "").match(/filename="([^"]+)"/)?.[1] || "escola.csv";
+  const a = document.createElement("a"); a.href = URL.createObjectURL(await r.blob()); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
 // ---------------------------------------------------------------- Oberfläche
 let fall = null, ctx = {};
 const SCHRITTE = [
@@ -291,7 +375,11 @@ async function schritt(i) {
   try { r = await api(m, pfad, body); } catch (e) { r = { ok: false, status: 0, ms: 0, json: String(e) }; }
   box.classList.toggle("ok", r.ok); box.classList.toggle("fehler", !r.ok);
   $("st" + i).textContent = `${r.status} · ${r.ms} ms`;
-  $("o" + i).innerHTML = `${body !== undefined ? `<pre>Body: ${esc(JSON.stringify(body, null, 2))}</pre>` : ""}<pre>${esc(typeof r.json === "string" ? r.json : JSON.stringify(r.json, null, 2))}</pre>`;
+  const roh = `<pre>${esc(typeof r.json === "string" ? r.json : JSON.stringify(r.json, null, 2))}</pre>`;
+  $("o" + i).innerHTML = (body !== undefined ? `<pre>Body: ${esc(JSON.stringify(body, null, 2))}</pre>` : "")
+    + (fall.nurLesen && r.ok ? tabelle(r.json, pfad) : roh);
+  $("o" + i).querySelector(".filter")?.addEventListener("input", e => filtern(e.target));
+  $("o" + i).querySelector(".csv")?.addEventListener("click", () => csv(pfad));
   $("b" + i).disabled = false;
   if (r.ok) {
     if (s.k === "lesen" && !fall.nurLesen) {
