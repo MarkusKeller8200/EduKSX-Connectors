@@ -1,0 +1,4 @@
+{"data": [
+  {"id": "r1", "name": "VZE Unterricht Primar", "anstellungstyp": "Kantonal", "einh_soll": 29.5, "einh_ist": 28.0,
+   "einheit": {"name": "Stelle/VZE", "name_kurz": "VZE", "einheit_in_wochenlektionen": false, "einheiten_pro_vze": 1.0}}
+], "meta": {"current_page": 1, "last_page": 2}}

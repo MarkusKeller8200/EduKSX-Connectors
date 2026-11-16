@@ -1,0 +1,15 @@
+{"data": [
+  {"id": "k1", "fach": "BS", "klasse": "A1b", "klasse_einh_soll": 2.0, "halbklasse": 1.0, "lp_einh_soll": 3.0,
+   "sem1": true, "sem2": true, "u_faktor": 58.0,
+   "ressourcentyp": {"name": "VZE Unterricht Primar", "anstellungstyp": "Kantonal"},
+   "zuweisung": [
+     {"person_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6", "local_user_id": "f0e1d2c3-b4a5-6789-0abc-def123456789",
+      "name": "Muster", "vorname": "Anna", "geburtsdatum": "1985-06-15", "einh_anzahl": 2.0,
+      "start_datum": "2025-08-01", "end_datum": "2026-07-31"},
+     {"person_id": "9b2d7c41-0000-4000-8000-000000000002", "local_user_id": "00000000-0000-4000-8000-0000000000b2",
+      "name": "Beispiel", "vorname": "Ben", "geburtsdatum": "1990-01-01", "einh_anzahl": 1.0,
+      "start_datum": "2025-08-01", "end_datum": "2026-07-31"}
+   ]},
+  {"id": "k2", "fach": "M", "klasse": "A1b", "klasse_einh_soll": 5.0, "halbklasse": 0.0, "lp_einh_soll": 5.0,
+   "sem1": true, "sem2": true, "u_faktor": 58.0, "zuweisung": []}
+]}

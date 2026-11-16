@@ -7,6 +7,8 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
 ## [Unveröffentlicht]
 
 ### Hinzugefügt
+- SL-Planer-API 0.1.0 (`apis/slplaner`, nur lesen): Ressourcen Soll/Ist, Einheiten, Personen, Pensenplanung aller
+  Bereiche, Pensen, Personaldossier/MAB hinter eigenem Schalter; CSV-Ausgabe; Tests gegen nachgebauten SL-Planer
 - GitHub-Blueprint angewendet: Labels, Meilensteine, Formulare, Workflows (Prüfungen, Release, Installer-ZIP,
   Fremdkomponenten), CLAUDE.md/AGENTS.md, Übergabe und Projektstand, Steckbrief `docs/PROJEKTSTART.md`
 - `pruefen.py`: Tests aller APIs und gültige Modul-Versionen; `VERSION` (Repo 0.1.0); `apis/*/api.json` (Modul-Versionen)

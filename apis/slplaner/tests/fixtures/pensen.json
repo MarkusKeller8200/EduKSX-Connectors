@@ -1,0 +1,14 @@
+[
+  {"person": {"person_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6", "name": "Muster", "vorname": "Anna"},
+   "anstellungen": [
+     {"anstellungstyp": "Kantonal", "schulstufe": "Primar", "funktion": "Lp", "arbeitszeitregelung": "Standard Kanton ZH",
+      "wl": 24, "bg": 87, "start_datum": "2025-08-01", "end_datum": "2026-07-31"},
+     {"anstellungstyp": "Kommunal", "schulstufe": "Primar", "funktion": "ICT-Support", "arbeitszeitregelung": "Standard Kanton ZH",
+      "wl": 0, "bg": 5, "start_datum": "2025-08-01", "end_datum": "2026-07-31"}],
+   "arbeitszeit": {"soll_brutto": 1796, "altersbedingte_mehrferien": 0, "soll_netto": 1796, "ist_total": 1793, "differenz": -3},
+   "unterricht": [{"typ": "klassenlektionen", "einh_anzahl": 5, "stunden": 290.0, "fach": "BS", "klasse": "A1b"}],
+   "weitere_anstellungen": [], "zusaetzlich_entschaedigte_aemter": [],
+   "ba_klp": [{"typ": "aufgaben_klp", "einh_anzahl": 1, "stunden": 100.0}],
+   "ba_schule": [{"typ": "weiterer_berufsauftrag", "einh_anzahl": 1, "stunden": 40.0, "name": "Schulkonferenz"}],
+   "ba_zusammenarbeit": [], "ba_weiterbildung": [], "ba_flex": []}
+]

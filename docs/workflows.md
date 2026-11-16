@@ -29,7 +29,9 @@ neue Fälle unten anfügen, Nummer fortlaufend (`WF-xx`), auch wenn sie mehrere 
 | WF-18 | Arzt- und Zahnarztkontrollen | Escola, IDA/CONNECT (oder CMI) | ❌ | – | [Escola](../apis/escola/WORKFLOWS.md#wf-18-arzt--und-zahnarztkontrollen) |
 | WF-19 | Prüfungen mit Note an Eltern | IDA/CONNECT (Scan), Escola-App | ❌ | – | [Escola](../apis/escola/WORKFLOWS.md#wf-19-prüfungen-mit-note-an-eltern) |
 | WF-20 | Überführung nach CMI | Escola, IDA/CONNECT, CMI | ⚠️ | 🧪 | [Escola](../apis/escola/WORKFLOWS.md#wf-20-überführung-nach-cmi) |
-| WF-21 | *(nächster Fall)* | | 💡 | | |
+| WF-21 | Pensenplanung aus dem SL-Planer übernehmen (Lehrpersonen ↔ Klassen/Fächer, Abgleich mit Escola) | SL-Planer, Escola, IDA/CONNECT | ⚠️ | 🧪 | [SL-Planer](../apis/slplaner/WORKFLOWS.md#wf-21-pensenplanung-aus-dem-sl-planer-übernehmen) |
+| WF-22 | Ressourcen Soll/Ist kontrollieren (überplante Ressourcentypen) | SL-Planer | ✅ | 🧪 | [SL-Planer](../apis/slplaner/WORKFLOWS.md#wf-22-ressourcen-sollist-kontrollieren) |
+| WF-23 | *(nächster Fall)* | | 💡 | | |
 
 ## Neuen Workflow aufnehmen
 

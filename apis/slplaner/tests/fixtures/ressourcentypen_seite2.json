@@ -1,0 +1,4 @@
+{"data": [
+  {"id": "r2", "name": "DaZ", "anstellungstyp": "Kommunal", "einh_soll": 12.0, "einh_ist": 13.0,
+   "einheit": {"name": "Wochenlektion (WL)", "name_kurz": "WL", "einheit_in_wochenlektionen": true, "einheiten_pro_vze": 28.0}}
+], "meta": {"current_page": 2, "last_page": 2}}
