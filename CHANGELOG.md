@@ -13,6 +13,10 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
 - Escola-API 1.15.0: Stundenplan-Abgleich (#6), Felder pro Klasse (#8); 1.14.0: Klassenlisten, Eltern einer Klasse,
   Import-Vorprüfung; 1.13.0: Startdateien, Login an Escola angepasst und live bestätigt, Testseite «Daten lesen»
 
+### Entfernt
+- Workflow `tests.yml`: doppelte Prüfung, `pruefungen.yml` führt dieselben Tests über `pruefen.py` aus
+
 ### Sicherheit
 - Testdaten (`apis/escola/tests/`) und Archiv `_old/` pseudonymisiert: erfundene Namen und Kürzel statt echter
-  Lehrpersonen, auch im ZIP unter `_old/pakete/`; Escola-IDs bleiben (#17)
+  Lehrpersonen, auch im ZIP unter `_old/pakete/`; Escola-IDs bleiben (#17);
+  ebenso die Kopien im Claude-Projekt ESCOLA

@@ -1,6 +1,6 @@
 # EduKSX-Connectors – Projektstand
 
-> Stand 2026-11-15 (23:55): Escola-API 1.15.0 deckt WF-01 bis WF-10 ab und Teile von WF-11 bis WF-20; Login und
+> Stand 2026-11-16 (14:00): Escola-API 1.15.1 deckt WF-01 bis WF-10 ab und Teile von WF-11 bis WF-20; Login und
 > Lesen sind live geprüft, die Schreibabläufe noch nicht. Als Nächstes: Erkundung in Escola für die offenen Issues
 > und Testläufe mit den Testobjekten (Meilenstein «0.1.0 – Escola live getestet»).
 
@@ -19,7 +19,7 @@
 ## Offen bzw. geplant
 
 - Meilenstein «0.1.0 – Escola live getestet»: #2–#15 (`_1 bereit`), davon #6 und #8 eingebaut
-- #17 Pseudonymisierung umgesetzt (`_3 Beta-Test`); offen: Git-Verlauf, Kopien im Claude-Projekt
+- #17 Pseudonymisierung umgesetzt, auch im Claude-Projekt (`_3 Beta-Test`); offen: Git-Verlauf (nur auf Auftrag)
 - Sammlungen Fehler / Verbesserungen / Funktionen: nur nach Freigabe
 
 ## Technik

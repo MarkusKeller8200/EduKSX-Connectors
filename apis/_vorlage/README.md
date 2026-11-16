@@ -5,6 +5,6 @@
 3. Aufrufe des Fremdsystems mitschneiden, echte (gekürzte) Antworten nach `tests/fixtures/`.
 4. Erst lesen, dann schreiben – Schreiben hinter `<SYSTEM>_SCHREIBEN=1`, mit `?probelauf=true` und Kontrolle.
 5. `README.md` und `WORKFLOWS.md` nach dem Muster von `apis/escola` führen.
-6. In der Haupt-README und in `.github/workflows/tests.yml` eintragen.
+6. In der Haupt-README eintragen. Die Prüfung (`pruefungen.yml` → `pruefen.py`) findet die API über ihre `api.json` von selbst.
 
 Regeln: [docs/konventionen.md](../../docs/konventionen.md)

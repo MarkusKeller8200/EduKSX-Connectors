@@ -1,6 +1,6 @@
 # Übergabe an einen neuen Chat – EduKSX-Connectors
 
-Stand: **2026-11-15 (23:55)** – GitHub-Blueprint angewendet; Escola-API 1.15.0 auf `main`, Login live bestätigt,
+Stand: **2026-11-16 (14:00)** – #17 umgesetzt (Repo und Claude-Projekt pseudonymisiert), doppelter CI-Workflow `tests` entfernt; GitHub-Blueprint angewendet; Escola-API 1.15.0 auf `main`, Login live bestätigt,
 Lesen live geprüft; Meilenstein «0.1.0 – Escola live getestet» mit #2–#15 freigegeben, noch kein Release.
 [PROJEKTSTAND.md](PROJEKTSTAND.md) (aktuell), Konzepte in `docs/KONZEPT-*.md` (noch keine).
 Kopien im Claude-Projekt ESCOLA: `claude/uebergabe.md` und `claude/projektstand.md` – bei jeder Übergabe beide Orte nachführen.
@@ -11,7 +11,7 @@ Kopien im Claude-Projekt ESCOLA: `claude/uebergabe.md` und `claude/projektstand.
 `apis/escola/WORKFLOWS.md`.
 
 **Stand Code und CI**
-- `main`: Blueprint-Commit (siehe `git log`). CI-Workflows `tests` (alt) und `pruefungen` (Blueprint) laufen beide.
+- `main`: Blueprint-Commit (siehe `git log`). CI: nur noch `pruefungen` (Blueprint, ruft `pruefen.py`); der alte Workflow `tests` ist entfernt (16.11.2026).
 - Noch kein Release; `VERSION` = 0.1.0. Nächstes Release nur auf ausdrückliche Freigabe.
 - Prüfen: `python3 pruefen.py` (Escola 89 Tests, Vorlage 1 Test, wenige Sekunden).
 
@@ -25,7 +25,7 @@ Kopien im Claude-Projekt ESCOLA: `claude/uebergabe.md` und `claude/projektstand.
 | #5 | 0.1.0 | `_1 bereit` | Mitteilungen – Versand nur mit Freigabe und genanntem Testempfänger |
 | #7, #10 | 0.1.0 | `_1 bereit` | hängen an der Antwort von Escola (Mail an Hannes/Lars) |
 | #12, #14, #15 | 0.1.0 | `_1 bereit` | Testläufe – schreiben in Escola, nur zusammen mit dem Projektverantwortlichen |
-| #17 | – | `_3 Beta-Test` | Testdaten und `_old/` pseudonymisiert; offen: Git-Verlauf bereinigen? Kopien im Claude-Projekt? |
+| #17 | – | `_3 Beta-Test` | Testdaten, `_old/` und Kopien im Claude-Projekt pseudonymisiert; offen: Git-Verlauf (nur auf ausdrücklichen Auftrag) |
 
 Schliessen erst nach «getestet ok» bzw. abgehakter Testliste.
 
@@ -50,6 +50,9 @@ Schliessen erst nach «getestet ok» bzw. abgehakter Testliste.
 - 119 Lehrpersonen in Fixtures, Tests, README-Beispiel und `_old/` (inkl. ZIP) durch erfundene Namen und Kürzel ersetzt,
   Zuordnung nur ausserhalb des Repos. Tests angepasst (Kürzel- und Schulmail-Regeln mit erfundenen Beispielen).
 - Entscheid 2026-11-16: Testdaten werden pseudonymisiert (nicht gelöscht).
+- Kopien im Claude-Projekt ESCOLA pseudonymisiert (`escola-api-readme.md` = aktuelle README 1.15.1, `escola-stundenplan-api.md`);
+  übrige Projekt-Dokumente enthalten keine echten Personennamen.
+- Workflow `tests.yml` entfernt (doppelt zu `pruefungen.yml`), Hinweis in `apis/_vorlage/README.md` angepasst.
 
 ### Sitzung 2026-11-14/15 – Escola-API bis 1.15.0, Repo, Blueprint
 
