@@ -25,6 +25,7 @@ Kopien im Claude-Projekt ESCOLA: `claude/uebergabe.md` und `claude/projektstand.
 | #5 | 0.1.0 | `_1 bereit` | Mitteilungen – Versand nur mit Freigabe und genanntem Testempfänger |
 | #7, #10 | 0.1.0 | `_1 bereit` | hängen an der Antwort von Escola (Mail an Hannes/Lars) |
 | #12, #14, #15 | 0.1.0 | `_1 bereit` | Testläufe – schreiben in Escola, nur zusammen mit dem Projektverantwortlichen |
+| #20 | Funktionen | `_3 Beta-Test` | SL-Planer-API 0.1.0 eingecheckt (3f86271); Seiten 1–8 der Doku fehlen, Annahmen in README «ZU PRÜFEN»; kein Zugang, nicht live |
 | #17 | – | `_3 Beta-Test` | Testdaten, `_old/` und Kopien im Claude-Projekt pseudonymisiert; offen: Git-Verlauf (nur auf ausdrücklichen Auftrag) |
 
 Schliessen erst nach «getestet ok» bzw. abgehakter Testliste.
@@ -44,6 +45,12 @@ Schliessen erst nach «getestet ok» bzw. abgehakter Testliste.
 - Löschen nur nach Rückfrage.
 
 ## Sitzungen
+
+### Sitzung 2026-11-16 (23:15) – SL-Planer-API (#20)
+
+- Neue API `apis/slplaner` 0.1.0 nach «SL-Planer API-Dokumentation» (Seabird AG, 18.2.2026, nur Seiten 9–18 vorhanden):
+  nur lesen, Personaldossier/MAB hinter `SLPLANER_PERSONALDOSSIER=1` + API-Key, 14 Tests. Workflows WF-21/22.
+- Nächster Schritt: Projektverantwortlicher lädt Seiten 1–8 hoch → Annahmen bestätigen/korrigieren.
 
 ### Sitzung 2026-11-16 (00:05–) – Pseudonymisierung (#17)
 
