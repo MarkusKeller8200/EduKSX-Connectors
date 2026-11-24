@@ -3,6 +3,10 @@
 > Stand 2026-11-25: CMI-API 0.1.0 eingecheckt (#23, nicht live). Davor 2026-11-16 (14:00): Escola-API 1.15.1 deckt WF-01 bis WF-10 ab und Teile von WF-11 bis WF-20; Login und
 > Lesen sind live geprüft, die Schreibabläufe noch nicht. Als Nächstes: Erkundung in Escola für die offenen Issues
 > und Testläufe mit den Testobjekten (Meilenstein «0.1.0 – Escola live getestet»).
+>
+> Stand 2026-11-24 (13:00): Escola-API 1.16.0 (Branch, noch nicht auf `main`): Klassenbeginn über die Schullaufbahn
+> (L19) und Erkenntnisse zum Escola-Personenimport (WF-11, #2). Importtests auf dem Testsystem live durchgeführt.
+> Als Nächstes: Branch prüfen und übernehmen, Klassenbeginn mit TEST_A1a live testen, Issue anlegen (gh hier nicht verfügbar).
 
 ## Umgesetzt
 
@@ -13,6 +17,8 @@
 | Escola: Fächer-Zuteilung, Klassenlehrpersonen, Stundenplan schreiben, Bezugspersonen, Mitarbeitende | eingebaut, teilweise live | Escola 1.12.0 | `apis/escola/WORKFLOWS.md` WF-01–10 |
 | Escola: Schuljahr vorbereiten (Klassenlisten, Eltern je Klasse, Import-Vorprüfung) | eingebaut, nicht live | Escola 1.14.0 | WF-11–20 |
 | Escola: Stundenplan-Abgleich, Felder pro Klasse | eingebaut, nicht live | Escola 1.15.0 | #6, #8 |
+| Escola: Schullaufbahn, Klassenbeginn pro SuS und pro Klasse (L19) | eingebaut, Escola-Aufrufe live mitgeschnitten, API nicht live | Escola 1.16.0 | README › Klassenbeginn, WF-11 |
+| Escola-Personenimport (in Escola, nicht API): Ablauf, Feldliste, Escola-Fehler „Vertreter 1 Abteilung (Firma)“ | live getestet 24.11.2026 | – | README › Personenimport, #2 |
 | Testseite, Startdateien | fertig | Escola 1.13.0 | `README.md` › Lokal starten |
 | SL-Planer: Ressourcen, Einheiten, Pensenplanung, Pensen, Personaldossier/MAB (nur lesen) | nach Doku gebaut, nicht live; Annahmen ZU PRÜFEN | SL-Planer 0.1.0 | `apis/slplaner/README.md`, #20 |
 | CMI: Kontakte synchronisieren, Schüler-/Personaldossier, Klassen ein-/umteilen, Dokumente hochladen | nach Swagger des CMI-Connectors gebaut, nicht live; Annahmen ZU PRÜFEN | CMI 0.1.0 | `apis/cmi/README.md`, #23 |

@@ -125,6 +125,8 @@ docker run -p 8080:8080 --env-file apis/escola/.env escola-api
 | GET | `/schueler/{id}` | 🔑 | Alle Felder einer Schülerin / eines Schülers, nach Reitern gruppiert |
 | PATCH | `/schueler/{id}` | 🔑 ✏️ | Felder einer Schülerin / eines Schülers ändern |
 | GET | `/schueler/{id}/klasse/optionen` | 🔑 | Wählbare Klassen für Ein-/Umteilung; `?schuljahr=1` mit den künftigen Klassennamen |
+| GET | `/schueler/{id}/schullaufbahn` | 🔑 | Schullaufbahn: Klassen je Schuljahr mit Von/Bis |
+| PUT | `/schueler/{id}/klasse/beginn` | 🔑 ✏️ | Beginn der Klassenzuteilung setzen, z. B. ab Schuljahresbeginn (nach Import/Transfer, die immer ab heute einteilen) |
 | POST | `/schueler/{id}/klasse` | 🔑 ✏️ | Klasseneinteilung und -umteilung (aktuelles SJ ab Stichtag oder kommendes SJ) |
 | DELETE | `/schueler/{id}/klasse` | 🔑 ✏️ | Schüler:in aus der Klasse nehmen (aktuelles oder kommendes SJ), danach „ohne Klasse“ |
 | POST | `/schueler/{id}/austritt` | 🔑 ✏️ | Austritt erfassen (Austrittsdatum, optional Wegzug; optional sofort deaktivieren) |
@@ -143,6 +145,7 @@ docker run -p 8080:8080 --env-file apis/escola/.env escola-api
 | GET | `/klassen/{id}/eltern` | 🔑 | Alle Bezugspersonen der Kinder einer Klasse, Kinder ohne Eltern mit leeren Feldern – für App-Onboarding und Zuteilungsbrief (WF-14, WF-15) |
 | GET | `/klassen/{id}/felder?namen=…&nur_leer=true` | 🔑 | Ausgewählte Felder aller SuS einer Klasse, z. B. Kontrollen Arzt/Zahnarzt; `nur_leer` = Liste der offenen (WF-18) |
 | POST | `/import/pruefen` | 🔑 | Importliste (Schüler:innen, Eltern) mit der Escola-Duplikatprüfung vorprüfen, legt nichts an (WF-11) |
+| POST | `/klassen/{id}/klassenbeginn` | 🔑 ✏️ | Klassenbeginn aller SuS einer Klasse setzen (Standard: 1.8. bzw. späteres Eintrittsdatum) – nach dem Import einer Klasse (WF-11) |
 
 ### Personen (Lehrpersonen, Mitarbeitende, weitere)
 
@@ -343,6 +346,58 @@ curl -X POST localhost:8080/schueler/653/klasse -H 'X-Escola-Session: …' -H 'X
   selbst ist z. B. nicht wählbar.
 - Nach dem Entfernen bleibt die Person bestehen und steht unter `GET /schueler?ohne_klasse=true`.
 - Rückgängig machen (Escola „Vorgang widerrufen“) bietet die API nicht an – stattdessen erneut zuordnen.
+- **Stichtag nur ab heute:** Escola lehnt beim Transfer ein vergangenes Datum ab, auch serverseitig
+  (`transferDate=2026-08-01` → „Ungültige Anfrage oder fehlende Eingaben.“, live geprüft 24.11.2026). Für einen
+  Beginn in der Vergangenheit danach `PUT /schueler/{id}/klasse/beginn` verwenden.
+
+### Klassenbeginn in der Schullaufbahn (L19)
+
+Import (auch direkt in eine Klasse) und Transfer teilen in Escola immer **ab heute** ein. Für die Migration bzw. den
+Import im laufenden Schuljahr soll die Klasse ab Schuljahresbeginn (1.8.) bzw. ab einem späteren Eintrittsdatum
+gelten. Escola erlaubt das nur in der Schullaufbahn (Person → Schullaufbahn → Eintrag → Bearbeiten → „Von:
+Schuljahresbeginn“). Die API macht dasselbe:
+
+```bash
+curl -X PUT 'localhost:8080/schueler/650/klasse/beginn?probelauf=true' … -d '{"ab": "schuljahresbeginn"}'
+# {"id": 650, "schuljahr": 2026, "klasse": "TEST_A1a", "von_alt": "2026-11-24", "von_neu": "2026-08-01", "bis": "2027-07-31", …}
+curl -X POST 'localhost:8080/klassen/120/klassenbeginn?probelauf=true' … -d '{"ab": "eintritt"}'
+```
+- `ab`: `schuljahresbeginn` (1.8.), `eintritt` (das spätere von 1.8. und dem Eintrittsdatum der Person) oder `JJJJ-MM-TT`.
+  Das Datum muss im Schuljahr liegen (1.8.–31.7.) und vor dem Ende des Eintrags.
+- Nur bei genau einem Klasseneintrag im Schuljahr; sonst `409` mit der Liste und `edit_id` angeben (z. B. nach einem
+  Klassenwechsel – dort den Beginn nicht vor den vorherigen Eintrag legen).
+- Die API liest danach die Schullaufbahn neu und prüft den Beginn. Escola vergibt dabei eine neue `edit_id`.
+- `POST /klassen/{id}/klassenbeginn` arbeitet alle SuS der Klasse ab; Fehler einzelner SuS stehen in der Liste
+  (`fehler`), der Rest läuft weiter.
+
+### Personenimport von Escola (WF-11, Tests 24.11.2026)
+
+Der Massenimport läuft in Escola selbst (nicht über die API): Personen → Gruppe wählen → „Import“ → ERGÄNZEN/ÜBERSCHREIBEN →
+Excel-Zeilen **inkl. Kopfzeile in ein Textfeld einfügen** (kein Datei-Upload) → Spaltenzuordnung → „Daten importieren“.
+Die Datei dafür erzeugt der CMI-Converter (`cmi2escola.py`, Claude-Projekt ESCOLA: `cmi-escola-converter.md`).
+
+| Gruppe vor dem Import | Wirkung | Zielfelder |
+|---|---|---|
+| „Schüler:innen (Klassen)“ + Klasse | SuS direkt in der Klasse (Jahrgangsstufe, Schuleinheit, Rolle), Eltern angelegt | 151 |
+| „Zukünftige Schüler:innen (ohne Klasse)“ | SuS ohne Klasse, Eltern angelegt | 141 |
+| „Schüler:innen (ohne Klasse)“ | allgemeiner Personenimport **ohne Vertreter-Felder** – nicht verwenden | 71 |
+
+- **Escola-Fehler:** Ist „Vertreter 1 Abteilung (Firma)“ zugeordnet, bricht der Klassenimport beim ersten Vertreter 2 ab
+  („Es ist ein Fehler aufgetreten.“): alle SuS angelegt, nur Vertreter 1 der ersten Zeile, alle übrigen Eltern fehlen.
+  Eingegrenzt Spalte für Spalte; alle anderen Vertreter-Felder sind unproblematisch. → Spalte nie importieren (an Escola gemeldet).
+- **Klassenbeginn = Importtag** → danach `POST /klassen/{id}/klassenbeginn`.
+- **Berechtigung der Vertreter wird ignoriert:** „ja“, „Erziehung“, „Information“ ergeben alle „erziehungsberechtigt“ →
+  informationsberechtigte Eltern danach mit `PATCH /schueler/{id}/bezugspersonen/{beziehung_id}` setzen.
+- **Vertreter-Geburtstag** wird verstümmelt (01.04.1981 → „19.4..01.0“) → nicht importieren.
+- **Auto-Matching** erkennt „Eintrittsdatum Oberstufe“, „Jahrgangsstufe (SJ …)“ und „nimmt folgende Medikamente ein“
+  nicht, obwohl die Felder existieren → in der Zuordnung von Hand wählen. Escola erwartet „Vertreter n Erstsprache“
+  (nicht Muttersprache) und „Vertreter n Abteilung (Firma)“. „Schweinefleisch-Verzicht“ landet auf „Ernährungsform“.
+- Nicht übernommen trotz Zuordnung: „Zustimmung Abgabe Jod-Tabletten“, „Jahrgangsstufe (SJ kommendes)“. Der c/o der
+  SuS wird durch den c/o von Vertreter 1 ersetzt (Adresse hängt an Vertreter 1). Mit alternativem Namen zeigt Escola
+  die SuS unter diesem Namen an.
+- Escola prüft die **AHV-Prüfziffer**: ungültige Nummern werden nicht übernommen (Meldung mit Namen), die Person wird angelegt.
+- Alle importierbaren Felder (151) und exportierbaren Felder (227, Vorlage „ALLES“ der Konfigurierbaren Liste):
+  Claude-Projekt ESCOLA `escola-import-feldtest.md` und `escola-export-alle-felder.md`.
 
 ### Neue Mitarbeitende
 
@@ -705,7 +760,8 @@ Felder abgewiesen werden und dass das Passwort nirgends gespeichert wird.
 | Bearbeitungsmodus | `POST inc/ajax/persons/ajax_functions_persons.php` `type=1&edit_mode=0\|1` |
 | Feld speichern | `POST …/ajax_functions_persons.php` `type=2` (Text/Auswahl/Knopf) bzw. `type=7` (Datum) |
 | Person anlegen | `POST rpc/collections/CaptureNewPersonAdmin/checkForDuplicatePersonsRpc.php` + `…/captureNewPersonRpc.php` (JSON) |
-| Klasse zuordnen | `POST inc/ajax/persons/personManagement.php` `mode=13` (Formular), dann `mode=14&klassen_id_transfer&transferDate&transferSchoolyear&activePersonId` |
+| Klasse zuordnen | `POST inc/ajax/persons/personManagement.php` `mode=13` (Formular), dann `mode=14&klassen_id_transfer&transferDate&transferSchoolyear&activePersonId` (Stichtag nur ab heute) |
+| Schullaufbahn | `POST rpc/collections/SchoolCareer/getSchoolCareer.php` `{parameters: {personId, modulesFilter: null}, rpcContext: {}}`; `getEntryEditFields.php` `{personId, module: "studentGroupsSchoolclass", editId, schoolyear, draft: []}`; `updateEntry.php` `{personId, module, editId, schoolyear, dateFrom, dateTo, values: [{type: "schoolclass", value}, {type: "levelYear", value}]}` (Antwort leer, neue `editId`) |
 | Rollen lesen | `POST rpc/collections/RoleAssignmentConfigurationAdmin/getAllPlainRoles.php` (JSON) |
 | Deaktivieren / Aktivieren | `POST inc/ajax/persons/personManagement.php` `mode=17&action=1\|2&element_string=:<id>:` (Rückfrage), dann `mode=36` |
 | Aus Klasse entfernen | `mode=17&action=1008\|1009&element_string=:<id>:&schoolclassId&schoolYear` (Rückfrage), dann `mode=29&isInNextSchoolyear&schoolclassId&schoolYear` |
@@ -729,6 +785,7 @@ Felder abgewiesen werden und dass das Passwort nirgends gespeichert wird.
 
 | Version | Datum | Änderungen |
 |---|---|---|
+| 1.16.0 | 24.11.2026 | Schullaufbahn und Klassenbeginn (L19): `GET /schueler/{id}/schullaufbahn`, `PUT /schueler/{id}/klasse/beginn`, `POST /klassen/{id}/klassenbeginn`; Erkenntnisse zum Escola-Personenimport (WF-11, #2) dokumentiert |
 | 1.15.1 | 16.11.2026 | Testdaten pseudonymisiert (#17): erfundene Namen und Kürzel statt echter Lehrpersonen |
 | 1.15.0 | 15.11.2026 | `POST /klassen/{id}/stundenplan/abgleich` (Issue #6), `GET /klassen/{id}/felder` (Issue #8) |
 | 1.14.0 | 15.11.2026 | Schuljahr vorbereiten: `/klassenlisten`, `/klassen/{id}/eltern`, `/import/pruefen`; Workflows WF-11 bis WF-20 aufgenommen |

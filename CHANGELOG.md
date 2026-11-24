@@ -11,6 +11,9 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
   Klassenzuteilung endet am Vortag, neue Zuteilung mit eigener Dauer
 
 ### Hinzugefügt
+- Escola-API 1.16.0: Schullaufbahn lesen, Klassenbeginn setzen (pro SuS und pro Klasse, z. B. ab 1.8.), weil
+  Import und Transfer in Escola nur ab heute einteilen (L19); Erkenntnisse zum Escola-Personenimport in README und
+  WORKFLOWS (WF-11, #2), u. a. Abbruch durch die Spalte „Vertreter 1 Abteilung (Firma)“
 - CMI-API 0.7.0 (#36): Klasseneinteilung nach dem Modell von CMI Schule (Schullaufbahn, Klassenzuteilung,
   Klassenstufe, Eintrittsgrund); Klassenstufe beim Anlegen einer Klasse
 - CMI-API 0.6.0 (#36): Schul- und Externes Schulklassendossier anlegen (`POST /klassen`); Testklassen in CMI
