@@ -369,6 +369,10 @@ curl -X POST 'localhost:8080/klassen/120/klassenbeginn?probelauf=true' … -d '{
 - Die API liest danach die Schullaufbahn neu und prüft den Beginn. Escola vergibt dabei eine neue `edit_id`.
 - `POST /klassen/{id}/klassenbeginn` arbeitet alle SuS der Klasse ab; Fehler einzelner SuS stehen in der Liste
   (`fehler`), der Rest läuft weiter.
+- **Dauer** (gemessen 24.11.2026 mit SuS SuS 650, dieselben vier Escola-Aufrufe wie die API, 6 Durchläufe alle ok):
+  lesen 0,18 s · Formular 0,16 s · speichern 0,22 s · prüfen 0,20 s = **Ø 0,76 s pro SuS** (0,65–0,92 s).
+  Mit `ab: "eintritt"` kommt das Lesen des Eintrittsdatums dazu (geschätzt 1–1,5 s pro SuS): eine Klasse à 22 SuS
+  ca. 20–30 s, alle ca. 1050 SuS ca. 15–25 min. Die API selbst ist noch nicht live gelaufen (Anmeldung mit 2FA nötig).
 
 ### Personenimport von Escola (WF-11, Tests 24.11.2026)
 

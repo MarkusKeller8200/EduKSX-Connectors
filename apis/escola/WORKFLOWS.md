@@ -56,7 +56,7 @@ Test-Arbeitsgruppe TEST 3).
 | L16 | Arzt-/Zahnarztkontrollen: Status, Liste der offenen | Lesen ✅ `GET /klassen/{id}/felder?nur_leer=true` (falls Escola-Feld); Entscheid Escola/CMI/eigene Anwendung offen ([#8](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/8)) |
 | L17 | Absenzen, Verhalten, Prüfungsresultate lesen | offen ([#9](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/9)) |
 | L18 | Prüfungen mit Note an Eltern | offen ([#10](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/10)) |
-| L19 | Klassenbeginn in der Vergangenheit (Import/Transfer teilen ab heute ein) | ✅ seit 1.16 über die Schullaufbahn (`PUT /schueler/{id}/klasse/beginn`, `POST /klassen/{id}/klassenbeginn`); Escola-Aufrufe live geprüft 24.11.2026, API-Ablauf noch nicht |
+| L19 | Klassenbeginn in der Vergangenheit (Import/Transfer teilen ab heute ein) | ✅ seit 1.16 über die Schullaufbahn (`PUT /schueler/{id}/klasse/beginn`, `POST /klassen/{id}/klassenbeginn`); Escola-Aufrufe live geprüft 24.11.2026 (SuS 650, 6 Durchläufe ok, Ø 0,76 s pro SuS), API-Ablauf noch nicht |
 
 Testläufe der Schreib-Workflows WF-01 bis WF-10: [#15](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/15).
 
@@ -275,7 +275,8 @@ Erhoben am 15.11.2026 aus dem Gesamtablauf (siehe `docs/workflows-escola.md`). T
 
 - **Live geprüft 24.11.2026** (Testklasse TEST_A1a, erfundene Testpersonen, danach gelöscht): Klassenimport mit
   SuS und 2 Vertretern ✔️ ohne „Vertreter 1 Abteilung (Firma)“, ❌ mit ihr (Escola-Fehler, gemeldet); Klassenbeginn
-  über die Schullaufbahn ✔️ (Escola-Dialog). Details: README › Personenimport.
+  über die Schullaufbahn ✔️ (Escola-Dialog und dieselben RPC-Aufrufe wie die API: 0,65–0,92 s pro SuS, mit Eintrittsdatum
+  geschätzt 1–1,5 s → Klasse à 22 SuS ca. 20–30 s, alle ca. 1050 SuS ca. 15–25 min). Details: README › Personenimport.
 
 ### WF-12: Übertrittsformular ins Schülerdossier
 

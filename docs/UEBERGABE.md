@@ -80,8 +80,10 @@ Schliessen erst nach «getestet ok» bzw. abgehakter Testliste.
   (RPC `SchoolCareer/updateEntry`, live mitgeschnitten).
 - Escola-API 1.16.0: `GET /schueler/{id}/schullaufbahn`, `PUT /schueler/{id}/klasse/beginn`,
   `POST /klassen/{id}/klassenbeginn`; 8 Tests. README (Personenimport, Klassenbeginn) und WORKFLOWS (WF-11, L10, L19).
+- Messung 24.11.2026 (13:00, eingebauter Browser, dieselben RPC-Aufrufe wie die API): Klassenbeginn setzen Ø 0,76 s
+  pro SuS, 6/6 Durchläufe ok, SuS 650 wieder ab 14.11.2026 in H_A1a.
 - **Offen:** Issue für L19 anlegen (gh-Token in der Sitzung ungültig) und mit `Refs` verknüpfen; Branch prüfen und
-  nach `main` übernehmen; Live-Test `PUT …/klasse/beginn` mit SuS SuS (650) in TEST_A1a (lesen → Probelauf → schreiben →
+  nach `main` übernehmen; Live-Test der laufenden API `PUT …/klasse/beginn` mit SuS SuS (650, aktuell H_A1a) (lesen → Probelauf → schreiben →
   zurücksetzen → lesen).
 - Converter CMI → Escola (`cmi2escola.py`, ein Blatt pro Klasse) und Feldkataloge liegen im Claude-Projekt ESCOLA
   (`cmi-escola-converter.md`, `escola-import-feldtest.md`, `escola-export-alle-felder.md`).
