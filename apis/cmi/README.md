@@ -8,6 +8,7 @@ Grundfunktionen:
   geänderte Felder werden geschrieben, Adresse inklusive
 - **Schüler- und MA/LP-Dossier erstellen** – aus Dossiervorlage, mit Duplikatprüfung
 - **SuS in Klassen einteilen und umteilen** – ab Datum, bisherige Klassenzuteilung endet am Vortag (Schullaufbahn bleibt)
+- **Zeugnisse gesammelt ablegen** – viele PDFs auf einmal, Zuordnung per `fremdkey`, Ordner Beurteilung
 - **Dokumente ins Dossier hochladen** – Ordnerpfad wird angelegt, Duplikatprüfung, Kontrolle des Inhalts
 
 Grundlage: die öffentliche REST-API des CMI-Proxys, wie sie der zertifizierte Power-Platform-Connector von
@@ -16,7 +17,7 @@ CM Informatik beschreibt (`microsoft/PowerPlatformConnectors`, Ordner `certified
 
 ## Stand
 
-Version 0.7.1 – Gerüst nach der Swagger-Beschreibung, ergänzt um die Erkundung im CMI der Sek Bülach vom 25.11.2026
+Version 0.8.0 – Gerüst nach der Swagger-Beschreibung, ergänzt um die Erkundung im CMI der Sek Bülach vom 25.11.2026
 ([ERKUNDUNG.md](ERKUNDUNG.md)). **Noch nicht live geprüft** (kein Zugang zur offiziellen Schnittstelle). Tests laufen gegen
 ein nachgebautes CMI mit erfundenen Personen.
 
@@ -71,6 +72,7 @@ Listen mit `?format=csv` (Semikolon, UTF-8 mit BOM).
 | `GET /schueler/{fremdkey}/klassen` | 🔓 ⏳ | Schullaufbahn, Zuteilung | Schullaufbahn mit Klasse, Klassenstufe, Eintrittsgrund, von–bis |
 | `POST /klassen/einteilen` | ✏️ ⏳ | Schullaufbahn + Klassenzuteilung (POST, PUT) | in die aktuelle Klasse einteilen, umteilen, korrigieren ab Datum |
 | `POST /dossiers/{guid}/dokumente` | ✏️ | `Ordner`, `Dokument`, `FileContent` | Datei hochladen (multipart) |
+| `POST /zeugnisse` | ✏️ | `Dokument`, `FileContent` | Zeugnis-PDFs gesammelt in die Lernendendossiers (Ordner `CMI_ZEUGNIS_ORDNER`) |
 | `GET /dokumente/{guid}` | 🔓 | `GET /Dokument/{guid}` | Metadaten |
 | `GET /dokumente/{guid}/inhalt` | 🔓 | `GET /Dokument/FileContent/{guid}` | Datei herunterladen (`?version=`) |
 
@@ -154,6 +156,22 @@ Felder: `datei`, `titel` (Standard: Dateiname ohne Endung), Zielordner als Pfad 
 kommt `400` mit den fehlenden Teilen; anlegen nur mit `ordner_anlegen=true` (die Vorlagen geben die Ordner vor).
 Kontrolle: Titel, Dossier und SHA-256 des heruntergeladenen Inhalts. Grösse bis `CMI_MAX_MB` (Standard 50).
 
+### Zeugnisse gesammelt ablegen
+
+```bash
+curl -H "X-API-Key: $KEY" -F dateien=@lea.pdf -F dateien=@tim.pdf \
+     -F 'zuordnung=[{"datei":"lea.pdf","fremdkey":"escola-650"},{"datei":"tim.pdf","fremdkey":"escola-651"}]' \
+     -F schuljahr=2026/27 -F semester=1 -F dokumentdatum=2027-01-29 "http://localhost:8082/zeugnisse?probelauf=true"
+```
+
+Je Datei: `datei` (Dateiname), `fremdkey` (Lernendendossier), optional `schuljahr`, `semester`, `titel`
+(sonst die gemeinsamen Werte). Abgelegt in `CMI_ZEUGNIS_ORDNER` (Standard `b_Dossier Schule/08_Beurteilung`,
+Annahme – mit `ordner` übersteuerbar; der Ordner wird nicht angelegt). Titel «Zeugnis 2026/27 1. Semester», Thema
+«Zeugnis», Schlüssel `zeugnis-<fremdkey>-2026-27-S1`. Schon abgelegte Zeugnisse (gleicher Schlüssel) meldet die
+API als `vorhanden`, ein erneuter Lauf schreibt also nichts doppelt. Vor dem Schreiben wird alles geprüft (kein
+PDF, Datei ohne Zuordnung, unbekannter fremdkey, Ordner fehlt, doppelt in der Eingabe, gleicher Titel ohne
+Schlüssel) → `400`, nichts abgelegt. Nach dem Ablegen Kontrolle wie beim Einzel-Upload (SHA-256).
+
 ## Schutz
 
 - `CMI_API_KEY`: jeder Aufruf braucht den Header `X-API-Key`; ohne Key kein Schreiben.
@@ -192,6 +210,7 @@ Token: `POST https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token`.
 
 | Version | Datum | Änderung |
 |---|---|---|
+| 0.8.0 | 2026-11-25 | `POST /zeugnisse`: Zeugnis-PDFs gesammelt ins Lernendendossier (Ordner Beurteilung), Duplikate über Schlüssel, alles vor dem Schreiben geprüft (#38) |
 | 0.7.1 | 2026-11-25 | Klassenwechsel wie «Klassenumteilung» in CMI: Schullaufbahn bleibt, bisherige Klassenzuteilung endet am Vortag, neue Zuteilung mit eigener Dauer; Wechsel _TEST_Schueler TEST_A1a → TEST_A1b aufgezeichnet (#36) |
 | 0.7.0 | 2026-11-25 | Klasseneinteilung nach dem Modell von CMI Schule (Schullaufbahn → Klassenzuteilung → Klassenstufe), Eintrittsgrund, `GET /klassen/{guid}/stufen`, Klassenstufe beim Anlegen einer Klasse (`klassenlehrplan`); Einteilung von _TEST_Schueler in TEST_A1a aufgezeichnet (#36) |
 | 0.6.0 | 2026-11-25 | `POST /klassen`: Schul- und Externes Schulklassendossier anlegen (Vorlage je Standort, Schuljahr, Beginn/Ende, externe Schule); Klassendossiers und Klasseneinteilung in CMI erkundet (#36) |

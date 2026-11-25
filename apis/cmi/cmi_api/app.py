@@ -74,6 +74,7 @@ class Einstellungen:
     # Dokumente
     upload_art: Literal["rendition", "checkin"] = "rendition"
     max_mb: float = 50.0
+    zeugnis_ordner: str = "b_Dossier Schule/08_Beurteilung"
 
 
 def _vorlagen_map(text: str) -> dict:
@@ -100,7 +101,8 @@ def einstellungen_aus_env() -> Einstellungen:
         lb_entitaet=_env("SCHULLAUFBAHN_ENTITAET", "Schullaufbahn"),
         kz_entitaet=_env("KLASSENZUTEILUNG_ENTITAET", "KlassenzuteilungLernende"),
         stufe_entitaet=_env("KLASSENSTUFE_ENTITAET", "Teilklasse"),
-        upload_art=_env("UPLOAD_ART", "rendition"), max_mb=float(_env("MAX_MB", "50")),  # type: ignore[arg-type]
+        upload_art=_env("UPLOAD_ART", "rendition"), max_mb=float(_env("MAX_MB", "50")),
+        zeugnis_ordner=_env("ZEUGNIS_ORDNER", "b_Dossier Schule/08_Beurteilung"),  # type: ignore[arg-type]
     )
 
 
@@ -1291,6 +1293,50 @@ def _ordner_finden(c: CMIClient, dossier_guid: str, pfad: str) -> tuple[str | No
     return eltern, []
 
 
+def _dokument_ablegen(c: CMIClient, dossier: str, ordner_guid: str | None, fehlend: list[str], titel: str,
+                      name: str, inhalt: bytes, felder: dict[str, Any]) -> tuple[str | None, list[dict]]:
+    """Legt fehlende Ordner und das Dokument an, lädt die Datei hoch und kontrolliert Titel, Dossier und Inhalt."""
+    schritte: list[dict] = []
+    dok_guid = None
+    sha = hashlib.sha256(inhalt).hexdigest()
+    try:
+        for t in fehlend:
+            ordner_guid = c.anlegen("Ordner", {"titel": t, "parent": ref(ordner_guid), "geschaeft": ref(dossier)})
+            schritte.append({"schritt": f"ordner_anlegen:{t}", "ok": True, "guid": ordner_guid})
+        daten: dict[str, Any] = {"titel": titel, "beschuss": False, "beschlussvorhanden": False,
+                                 "istPubliziert": False, "vip": False, "geschaeft": ref(dossier)}
+        if ordner_guid:
+            daten["ordner"] = ref(ordner_guid)
+        for feld, wert in felder.items():
+            if wert:
+                daten[feld] = wert.isoformat() if isinstance(wert, date) else wert
+        if E.upload_art == "rendition":
+            daten["eDokument"] = {"renditions": [rendition(name, inhalt)]}
+        dok_guid = c.anlegen("Dokument", daten)
+        schritte.append({"schritt": "dokument_anlegen", "ok": True, "guid": dok_guid})
+        if E.upload_art == "checkin":
+            c.auschecken(dok_guid)
+            c.einchecken(dok_guid, name, inhalt, "Upload EduKSX")
+            schritte.append({"schritt": "datei_einchecken", "ok": True})
+    except (CMIFehler, NichtGefunden) as e:
+        schritte.append({"schritt": "hochladen", "ok": False, "fehler": str(e)})
+    if dok_guid and all(s["ok"] for s in schritte):
+        try:
+            d = c.lesen("Dokument", dok_guid)
+            zurueck, _typ_ = c.datei(dok_guid)
+            abw = []
+            if (d.get("titel") or "").strip() != titel:
+                abw.append("titel")
+            if guid_von(d.get("geschaeft")) not in (None, dossier):
+                abw.append("dossier")
+            if hashlib.sha256(zurueck).hexdigest() != sha:
+                abw.append("inhalt")
+            schritte.append({"schritt": "kontrolle", "ok": not abw, **({"abweichungen": abw} if abw else {})})
+        except (CMIFehler, NichtGefunden) as e:
+            schritte.append({"schritt": "kontrolle", "ok": False, "fehler": str(e)})
+    return dok_guid, schritte
+
+
 @app.post("/dossiers/{guid}/dokumente", tags=["Dokumente"],
           summary="Datei als Dokument ins Dossier hochladen (Ordnerpfad wird bei Bedarf angelegt)")
 def dokument_hochladen(guid: str, datei: UploadFile = File(...), titel: str | None = Form(None),
@@ -1336,49 +1382,127 @@ def dokument_hochladen(guid: str, datei: UploadFile = File(...), titel: str | No
     if probelauf:
         return {"probelauf": True, **plan}
 
-    schritte: list[dict] = []
-    dok_guid = None
-    try:
-        for t in fehlend:
-            ordner_guid = c.anlegen("Ordner", {"titel": t, "parent": ref(ordner_guid), "geschaeft": ref(guid)})
-            schritte.append({"schritt": f"ordner_anlegen:{t}", "ok": True, "guid": ordner_guid})
-        daten: dict[str, Any] = {"titel": titel, "beschuss": False, "beschlussvorhanden": False,
-                                 "istPubliziert": False, "vip": False, "geschaeft": ref(guid)}
-        if ordner_guid:
-            daten["ordner"] = ref(ordner_guid)
-        for feld, wert in (("dokumentdatum", dokumentdatum), ("eingangsdatum", eingangsdatum),
-                           ("ausgangsdatum", ausgangsdatum)):
-            if wert:
-                daten[feld] = wert.isoformat()
-        for feld, wert in (("bemerkung", bemerkung), ("autor", autor), ("thema", thema)):
-            if wert:
-                daten[feld] = wert
-        if schluessel:
-            daten["schluesselFremdsystem"] = schluessel
-        if E.upload_art == "rendition":
-            daten["eDokument"] = {"renditions": [rendition(name, inhalt)]}
-        dok_guid = c.anlegen("Dokument", daten)
-        schritte.append({"schritt": "dokument_anlegen", "ok": True, "guid": dok_guid})
-        if E.upload_art == "checkin":
-            c.auschecken(dok_guid)
-            c.einchecken(dok_guid, name, inhalt, "Upload EduKSX")
-            schritte.append({"schritt": "datei_einchecken", "ok": True})
-    except (CMIFehler, NichtGefunden) as e:
-        schritte.append({"schritt": "hochladen", "ok": False, "fehler": str(e)})
-    if dok_guid and all(s["ok"] for s in schritte):
-        try:
-            d = c.lesen("Dokument", dok_guid)
-            zurueck, _typ_ = c.datei(dok_guid)
-            abw = []
-            if (d.get("titel") or "").strip() != titel:
-                abw.append("titel")
-            if guid_von(d.get("geschaeft")) not in (None, guid):
-                abw.append("dossier")
-            if hashlib.sha256(zurueck).hexdigest() != sha:
-                abw.append("inhalt")
-            schritte.append({"schritt": "kontrolle", "ok": not abw, **({"abweichungen": abw} if abw else {})})
-        except (CMIFehler, NichtGefunden) as e:
-            schritte.append({"schritt": "kontrolle", "ok": False, "fehler": str(e)})
+    felder: dict[str, Any] = {"dokumentdatum": dokumentdatum, "eingangsdatum": eingangsdatum,
+                              "ausgangsdatum": ausgangsdatum, "bemerkung": bemerkung, "autor": autor, "thema": thema,
+                              "schluesselFremdsystem": schluessel}
+    dok_guid, schritte = _dokument_ablegen(c, guid, ordner_guid, fehlend, titel, name, inhalt, felder)
     antwort = {"probelauf": False, "vollstaendig": all(s["ok"] for s in schritte), "guid": dok_guid,
                **{k: plan[k] for k in ("titel", "bytes", "sha256", "ordner")}, "schritte": schritte}
     return antwort if antwort["vollstaendig"] else JSONResponse(antwort, status_code=409)
+
+
+# ================================================================ Zeugnisse
+
+class ZeugnisZuordnung(BaseModel):
+    datei: str = Field(..., min_length=1, description="Dateiname wie hochgeladen")
+    fremdkey: str = Field(..., min_length=1, description="Schlüssel der Schülerin / des Schülers (Lernendendossier)")
+    schuljahr: str | None = Field(None, description="z. B. «2026/27»; sonst der gemeinsame Wert")
+    semester: Literal[1, 2] | None = Field(None, description="1 oder 2; sonst der gemeinsame Wert")
+    titel: str | None = Field(None, description="Standard «Zeugnis 2026/27 1. Semester»")
+
+
+def _schuljahr_norm(sj: str) -> str:
+    m = re.fullmatch(r"\s*(\d{4})\s*[/-]\s*(\d{2}|\d{4})\s*", sj or "")
+    if not m:
+        raise ValueError(f"Schuljahr {sj!r} nicht im Format «2026/27»")
+    return f"{m.group(1)}/{m.group(2)[-2:]}"
+
+
+@app.post("/zeugnisse", tags=["Dokumente"],
+          summary="Zeugnis-PDFs gesammelt in die Lernendendossiers ablegen (Ordner Beurteilung)")
+async def zeugnisse_ablegen(dateien: list[UploadFile] = File(..., description="PDF-Dateien"),
+                            zuordnung: str = Form(..., description="JSON-Liste [{datei, fremdkey, schuljahr?, semester?, titel?}]"),
+                            schuljahr: str | None = Form(None, description="gemeinsam, z. B. «2026/27»"),
+                            semester: int | None = Form(None, description="gemeinsam: 1 oder 2"),
+                            dokumentdatum: date | None = Form(None, description="Datum des Zeugnisses"),
+                            ordner: str | None = Form(None, description="Standard CMI_ZEUGNIS_ORDNER"),
+                            probelauf: bool = False, _=Depends(schreib_check)):
+    c = client()
+    try:
+        liste = [ZeugnisZuordnung(**z) for z in json.loads(zuordnung)]
+    except (ValueError, TypeError) as e:
+        raise HTTPException(400, f"zuordnung ist keine gültige JSON-Liste: {e}")
+    if len(liste) > 1000:
+        raise HTTPException(400, "höchstens 1000 Zeugnisse pro Aufruf")
+    inhalte: dict[str, bytes] = {}
+    for d in dateien:
+        inhalte[d.filename or ""] = await d.read()
+    ordnerpfad = ordner or E.zeugnis_ordner
+
+    fehler, plaene, gesehen = [], [], set()
+    zugeordnet = {z.datei for z in liste}
+    for name in inhalte:
+        if name not in zugeordnet:
+            fehler.append({"datei": name, "fehler": "keine Zuordnung"})
+    dossier_cache: dict[str, dict] = {}
+    for z in liste:
+        f: list[str] = []
+        inhalt = inhalte.get(z.datei)
+        if inhalt is None:
+            f.append("Datei fehlt im Upload")
+        elif not inhalt.startswith(b"%PDF"):
+            f.append("kein PDF")
+        elif len(inhalt) > E.max_mb * 1024 * 1024:
+            f.append(f"grösser als {E.max_mb:g} MB")
+        sem = z.semester or semester
+        sj = None
+        try:
+            sj = _schuljahr_norm(z.schuljahr or schuljahr or "")
+        except ValueError as e:
+            f.append(str(e))
+        if sem not in (1, 2):
+            f.append("semester 1 oder 2 fehlt")
+        schluessel = f"zeugnis-{z.fremdkey}-{sj.replace('/', '-') if sj else '?'}-S{sem}"
+        if schluessel in gesehen:
+            f.append("Zeugnis doppelt in der Eingabe (gleiche Person, Schuljahr, Semester)")
+        gesehen.add(schluessel)
+        dossier = dossier_cache.get(z.fremdkey)
+        if dossier is None:
+            try:
+                dossier = dossier_cache[z.fremdkey] = _lernendendossier(c, z.fremdkey)
+            except LookupError as e:
+                f.append(str(e))
+        ordner_guid, fehlend = (None, [])
+        if dossier:
+            ordner_guid, fehlend = _ordner_finden(c, dossier["guid"], ordnerpfad)
+            if fehlend:
+                f.append(f"Ordner fehlt im Dossier: {'/'.join(fehlend)}")
+        if f:
+            fehler.append({"datei": z.datei, "fremdkey": z.fremdkey, "fehler": "; ".join(f)})
+            continue
+        titel = (z.titel or f"Zeugnis {sj} {sem}. Semester").strip()
+        plan: dict[str, Any] = {"datei": z.datei, "fremdkey": z.fremdkey, "dossier": dossier["guid"],
+                                "dossier_titel": dossier.get("titel"), "ordner": ordnerpfad, "titel": titel,
+                                "schluessel": schluessel, "bytes": len(inhalt or b""),
+                                "sha256": hashlib.sha256(inhalt or b"").hexdigest(), "_ordner": ordner_guid}
+        vorhanden = _suche(c, "Dokument", schluesselFremdsystem=schluessel)
+        if vorhanden:
+            plan.update(aktion="vorhanden", guid=vorhanden[0].get("guid"))
+        else:
+            g = c.lesen("Geschaeft", dossier["guid"])
+            gleich = [d for d in g.get("dokumente") or [] if (d.get("displayName") or "").strip() == titel]
+            if gleich:
+                fehler.append({"datei": z.datei, "fremdkey": z.fremdkey,
+                               "fehler": f"im Dossier gibt es schon ein Dokument «{titel}» ohne diesen Schlüssel"})
+                continue
+            plan["aktion"] = "ablegen"
+        plaene.append(plan)
+    if fehler:
+        raise HTTPException(400, {"meldung": "Eingabe ungültig – nichts abgelegt", "betroffene": fehler})
+    zusammenfassung = {a: sum(p["aktion"] == a for p in plaene) for a in ("ablegen", "vorhanden")}
+    if probelauf:
+        return {"probelauf": True, "zusammenfassung": zusammenfassung, "zeugnisse": [_sichtbar(p) for p in plaene]}
+
+    ergebnisse = []
+    for p in plaene:
+        if p["aktion"] == "vorhanden":
+            ergebnisse.append({**_sichtbar(p), "schritte": []})
+            continue
+        dok_guid, schritte = _dokument_ablegen(
+            c, p["dossier"], p["_ordner"], [], p["titel"], p["datei"], inhalte[p["datei"]],
+            {"dokumentdatum": dokumentdatum, "thema": "Zeugnis", "schluesselFremdsystem": p["schluessel"]})
+        ergebnisse.append({**_sichtbar(p), "guid": dok_guid, "schritte": schritte})
+    vollstaendig = all(s["ok"] for e in ergebnisse for s in e["schritte"])
+    antwort = {"probelauf": False, "vollstaendig": vollstaendig, "zusammenfassung": zusammenfassung,
+               "zeugnisse": ergebnisse}
+    return antwort if vollstaendig else JSONResponse(antwort, status_code=409)
