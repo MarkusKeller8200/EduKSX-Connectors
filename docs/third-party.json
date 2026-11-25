@@ -11,6 +11,9 @@
     "vorlage": "Vorlagen, Formatbeschreibungen und Texte"
   },
   "items": [
-    {"id": "app", "group": "app", "name": "EduKSX-Connectors", "use": "Dieses Projekt", "license": "–", "url": "https://github.com/MarkusKeller8200/eduksx-connectors"}
+    {"id": "app", "group": "app", "name": "EduKSX-Connectors", "use": "Dieses Projekt", "license": "–", "url": "https://github.com/MarkusKeller8200/eduksx-connectors"},
+    {"id": "python-multipart", "group": "laufzeit", "name": "python-multipart", "use": "Datei-Upload der CMI-API (FastAPI-Formulare)", "license": "Apache-2.0", "url": "https://github.com/Kludex/python-multipart"},
+    {"id": "cmi-cloud", "group": "dienst", "name": "CMI Cloud / CMI-Proxy (CM Informatik AG)", "use": "Fremdsystem der CMI-API", "license": "proprietär (Vertrag der Schule)", "url": "https://cmiag.ch"},
+    {"id": "cmi-connector-swagger", "group": "vorlage", "name": "CMI Power-Platform-Connector, apiDefinition.swagger.json", "use": "Beschreibung der CMI-API (nur gelesen, nicht kopiert)", "license": "MIT (Repository microsoft/PowerPlatformConnectors)", "url": "https://github.com/microsoft/PowerPlatformConnectors/tree/dev/certified-connectors/CM%20Informatik%20AG"}
   ]
 }

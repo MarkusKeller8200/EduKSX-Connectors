@@ -1,6 +1,6 @@
 # Übergabe an einen neuen Chat – EduKSX-Connectors
 
-Stand: **2026-11-16 (14:00)** – #17 umgesetzt (Repo und Claude-Projekt pseudonymisiert), doppelter CI-Workflow `tests` entfernt; GitHub-Blueprint angewendet; Escola-API 1.15.0 auf `main`, Login live bestätigt,
+Stand: **2026-11-25 (12:00)** – CMI-API 0.1.0 (#23) gebaut, nicht live; davor 2026-11-16 (14:00): #17 umgesetzt (Repo und Claude-Projekt pseudonymisiert), doppelter CI-Workflow `tests` entfernt; GitHub-Blueprint angewendet; Escola-API 1.15.0 auf `main`, Login live bestätigt,
 Lesen live geprüft; Meilenstein «0.1.0 – Escola live getestet» mit #2–#15 freigegeben, noch kein Release.
 [PROJEKTSTAND.md](PROJEKTSTAND.md) (aktuell), Konzepte in `docs/KONZEPT-*.md` (noch keine).
 Kopien im Claude-Projekt ESCOLA: `claude/uebergabe.md` und `claude/projektstand.md` – bei jeder Übergabe beide Orte nachführen.
@@ -13,7 +13,7 @@ Kopien im Claude-Projekt ESCOLA: `claude/uebergabe.md` und `claude/projektstand.
 **Stand Code und CI**
 - `main`: Blueprint-Commit (siehe `git log`). CI: nur noch `pruefungen` (Blueprint, ruft `pruefen.py`); der alte Workflow `tests` ist entfernt (16.11.2026).
 - Noch kein Release; `VERSION` = 0.1.0. Nächstes Release nur auf ausdrückliche Freigabe.
-- Prüfen: `python3 pruefen.py` (Escola 89 Tests, Vorlage 1 Test, wenige Sekunden).
+- Prüfen: `python3 pruefen.py` (Escola 89, CMI 30, SL-Planer 14, Vorlage 1 Test, wenige Sekunden).
 
 **Offene Issues und ihr Status**
 
@@ -25,6 +25,7 @@ Kopien im Claude-Projekt ESCOLA: `claude/uebergabe.md` und `claude/projektstand.
 | #5 | 0.1.0 | `_1 bereit` | Mitteilungen – Versand nur mit Freigabe und genanntem Testempfänger |
 | #7, #10 | 0.1.0 | `_1 bereit` | hängen an der Antwort von Escola (Mail an Hannes/Lars) |
 | #12, #14, #15 | 0.1.0 | `_1 bereit` | Testläufe – schreiben in Escola, nur zusammen mit dem Projektverantwortlichen |
+| #23 | Funktionen | `_3 Beta-Test` | CMI-API 0.1.0: Kontakte-Sync, Schüler-/Personaldossier, Klassen ein-/umteilen, Dokument-Upload; nach Swagger des CMI-Connectors, Annahmen in README «ZU PRÜFEN»; kein Zugang, nicht live |
 | #20 | Funktionen | `_3 Beta-Test` | SL-Planer-API 0.1.0 eingecheckt (3f86271); Seiten 1–8 der Doku fehlen, Annahmen in README «ZU PRÜFEN»; kein Zugang, nicht live |
 | #17 | – | `_3 Beta-Test` | Testdaten, `_old/` und Kopien im Claude-Projekt pseudonymisiert; offen: Git-Verlauf (nur auf ausdrücklichen Auftrag) |
 
@@ -45,6 +46,17 @@ Schliessen erst nach «getestet ok» bzw. abgehakter Testliste.
 - Löschen nur nach Rückfrage.
 
 ## Sitzungen
+
+### Sitzung 2026-11-25 – CMI-API (#23)
+
+- Neue API `apis/cmi` 0.1.0 nach der Swagger-Beschreibung des zertifizierten Power-Platform-Connectors von
+  CM Informatik (Entitäten Kontakt, Adresse, Geschaeft, Ordner, Dokument; TentaQl-Suche; Mandant im Header
+  `X-CMI-TENANT-NAME`; Entra-Anmeldung über `aadbridge.prod.cmicloud.ch`).
+- Endpunkte: `/kontakte/sync`, `/dossiers/schueler|personal`, `/klassen/einteilen`, `/dossiers/{guid}/dokumente`,
+  dazu Lesen und `/suche/{entitaet}` zum Erkunden. Probelauf, Prüfung vor dem Schreiben, Kontrolle danach, kein Löschen.
+- Klassenzuteilung und Beteiligung sind in der öffentlichen API nicht beschrieben → konfigurierbar, bis dahin `501`.
+- Nächster Schritt: Zugang bei CM Informatik beantragen (Proxy-Gruppe, App-only-Anmeldung, Mandant), TentaQl-Syntax,
+  Dossiervorlagen und Modell der Klassenzuteilung in CMI Schule klären; dann Live-Test mit erfundenem Testkontakt.
 
 ### Sitzung 2026-11-16 (23:15) – SL-Planer-API (#20)
 

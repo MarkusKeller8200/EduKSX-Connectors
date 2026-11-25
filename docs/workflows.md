@@ -28,10 +28,14 @@ neue Fälle unten anfügen, Nummer fortlaufend (`WF-xx`), auch wenn sie mehrere 
 | WF-17 | ICT: Klassenlisten, Zugänge, Geräte, Nutzungsvereinbarung | Escola, Entra, Apple School Manager, Inventar | ⚠️ | 🧪 | [Escola](../apis/escola/WORKFLOWS.md#wf-17-ict--klassenlisten-zugänge-geräte-nutzungsvereinbarung) |
 | WF-18 | Arzt- und Zahnarztkontrollen | Escola, IDA/CONNECT (oder CMI) | ❌ | – | [Escola](../apis/escola/WORKFLOWS.md#wf-18-arzt--und-zahnarztkontrollen) |
 | WF-19 | Prüfungen mit Note an Eltern | IDA/CONNECT (Scan), Escola-App | ❌ | – | [Escola](../apis/escola/WORKFLOWS.md#wf-19-prüfungen-mit-note-an-eltern) |
-| WF-20 | Überführung nach CMI | Escola, IDA/CONNECT, CMI | ⚠️ | 🧪 | [Escola](../apis/escola/WORKFLOWS.md#wf-20-überführung-nach-cmi) |
+| WF-20 | Überführung nach CMI | Escola, IDA/CONNECT, CMI | ⚠️ | 🧪 | [Escola](../apis/escola/WORKFLOWS.md#wf-20-überführung-nach-cmi) · [CMI](../apis/cmi/WORKFLOWS.md#wf-20-überführung-nach-cmi-cmi-seite) |
 | WF-21 | Pensenplanung aus dem SL-Planer übernehmen (Lehrpersonen ↔ Klassen/Fächer, Abgleich mit Escola) | SL-Planer, Escola, IDA/CONNECT | ⚠️ | 🧪 | [SL-Planer](../apis/slplaner/WORKFLOWS.md#wf-21-pensenplanung-aus-dem-sl-planer-übernehmen) |
 | WF-22 | Ressourcen Soll/Ist kontrollieren (überplante Ressourcentypen) | SL-Planer | ✅ | 🧪 | [SL-Planer](../apis/slplaner/WORKFLOWS.md#wf-22-ressourcen-sollist-kontrollieren) |
-| WF-23 | *(nächster Fall)* | | 💡 | | |
+| WF-23 | Kontakte aus Escola nach CMI synchronisieren | Escola, CMI | ✅ | 🧪 | [CMI](../apis/cmi/WORKFLOWS.md#wf-23-kontakte-aus-escola-nach-cmi-synchronisieren) |
+| WF-24 | Schüler- bzw. Personaldossier in CMI eröffnen | CMI | ✅ | 🧪 | [CMI](../apis/cmi/WORKFLOWS.md#wf-24-schüler--bzw-personaldossier-eröffnen) |
+| WF-25 | Klasseneinteilung und Klassenwechsel in CMI nachführen | Escola, CMI | ⚠️ | 🧪 | [CMI](../apis/cmi/WORKFLOWS.md#wf-25-klasseneinteilung-und-klassenwechsel-in-cmi-nachführen) |
+| WF-26 | Dokumente (z. B. Zeugnisse) ins CMI-Dossier ablegen | Escola/IDA, CMI | ✅ | 🧪 | [CMI](../apis/cmi/WORKFLOWS.md#wf-26-dokumente-ins-dossier-ablegen) |
+| WF-27 | *(nächster Fall)* | | 💡 | | |
 
 ## Neuen Workflow aufnehmen
 

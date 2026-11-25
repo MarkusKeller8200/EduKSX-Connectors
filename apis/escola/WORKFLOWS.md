@@ -331,7 +331,7 @@ Erhoben am 15.11.2026 aus dem Gesamtablauf (siehe `docs/workflows-escola.md`). T
 ### WF-20: Überführung nach CMI
 
 - **Ziel:** Zentrales Dossier und Archiv in CMI. Überführt werden Stammdaten/Klassenzuteilung (Mutationen), Absenzen/Verhalten/Prüfungsresultate (Einzeldatensätze oder mindestens PDF pro SJ), Dokumente des Dossiers (täglich, mindestens Semesterende, v. a. Zeugnisse), Schuljahresdossier (Absenzen, Zeugnisse, Klassenlisten als PDF).
-- **Status:** ⚠️ – Stammdaten ✅ (`/schueler`, `/klassenlisten`, `/schueler/{id}/bezugspersonen`); L17, L11; CMI-Seite: IDA/CONNECT.
+- **Status:** ⚠️ – Stammdaten ✅ (`/schueler`, `/klassenlisten`, `/schueler/{id}/bezugspersonen`); L17, L11; CMI-Seite: CMI-API (`apis/cmi`, #23) bzw. IDA/CONNECT.
 
 ---
 

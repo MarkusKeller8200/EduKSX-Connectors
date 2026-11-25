@@ -7,6 +7,9 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
 ## [Unveröffentlicht]
 
 ### Hinzugefügt
+- CMI-API 0.1.0 (`apis/cmi`, #23): Kontakte synchronisieren bzw. anlegen, Schüler- und Personaldossier
+  erstellen, SuS in Klassen einteilen/umteilen, Dokumente ins Dossier hochladen; Probelauf, Kontrolle nach dem
+  Schreiben, keine Lösch-Endpunkte; nach Swagger des CMI-Connectors, Tests gegen nachgebautes CMI; Workflows WF-23–26
 - SL-Planer-API 0.1.0 (`apis/slplaner`, nur lesen): Ressourcen Soll/Ist, Einheiten, Personen, Pensenplanung aller
   Bereiche, Pensen, Personaldossier/MAB hinter eigenem Schalter; CSV-Ausgabe; Tests gegen nachgebauten SL-Planer
 - GitHub-Blueprint angewendet: Labels, Meilensteine, Formulare, Workflows (Prüfungen, Release, Installer-ZIP,
