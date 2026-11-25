@@ -107,3 +107,24 @@ Weitere Erstellungsaktionen im Mandanten (Auszug): `cmi-creation.Lernendedossier
 Daraus für die CMI-API: Vorlagenpfade für `CMI_KONTAKT_VORLAGE` (`Vorlage/Standard/Kontakt`) und
 `CMI_DOSSIER_SCHUELER_VORLAGE` (`Vorlage/Global/Schulverwaltung`, Schreibweise in der offiziellen API ZU PRÜFEN);
 der Kontakt kennt zusätzlich `geschlecht` (Verweis). Die CMI-API löscht weiterhin nicht.
+
+## Dossiers anlegen (Test «_TEST_Schueler» und «_TEST_Mitarbeiter», 25.11.2026)
+
+Zuerst je ein Kontakt (Vorlage «Kontakt mit Adresse», Geschlecht über Stammdaten «Geschlecht»: männlich/weiblich,
+im Assistenten `obj_1_geschlecht: ["<guid>"]`), dann das Dossier über «+» der Hauptmaske. Beide bleiben als
+Testobjekte bestehen.
+
+| Dossier | Aktion | Vorlagen im Mandanten | Felder im Assistenten |
+|---|---|---|---|
+| Lernendendossier | `cmi-creation.Lernendedossier` | «Lernendendossier (Vorlage/Global/Schulverwaltung)» | `obj_1_beginn` (Pflicht, Vorgabe heute), `obj_1_person` (Pflicht, Kontakt), `obj_1_bemerkung`, `obj_1_geschaeftseigner` (Pflicht, Vorgabe «Sekundarschule Bülach; Sekbülach») |
+| Personaldossier | `cmi-creation.Personaldossier` | «Personaldossier Hinterbirch (Vorlage/Global/Schulverwaltung)», «Personaldossier Mettmenriet (…)» | `obj_1_beginn` (Pflicht), `obj_1_person` (Pflicht), `obj_1_bemerkung`, `obj_1_geschaeftseigner` (Vorgabe aus Vorlage, z. B. «HR Hinterbirch; HRH») |
+
+- Beim Erstellen legt CMI die Ordnerstruktur der Vorlage mit an (Lernendendossier 16 Ordner, Personaldossier 22).
+- Die Person hängt am Dossier im Feld **`person`**; der Titel wird aus dem Namen gebildet.
+- Personaldossier: Felder `person`, `geschaeftsstatus`, `customEffektiverEintritt`, `customFiktiverEintritt`; Reiter
+  Übersicht, Personalanstellungen, Personalentwicklung, Zuteilungen, Absenzen, Dokumente, Aufgaben, Notizen,
+  Explizite Berechtigung, Dossierdetails.
+- Lernendendossier: Übersicht mit aktueller Schulklasse, Schulklassendossier, Klassenlehrperson und
+  **Schullaufbahneinträgen** («Neue Schullaufbahn») – dort hängt die Klassenzuteilung (nächster Schritt).
+- Kontakt (zusätzlich gesehen): `rufname`, `geschlecht`, `heimatorte`, `nationalitaeten`, `korrespondenzsprache`,
+  `aufenthaltsbewilligungen`, `sozialversNr` (AHV – besonders schützenswert, von der CMI-API nicht bearbeitet).

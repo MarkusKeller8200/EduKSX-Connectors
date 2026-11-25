@@ -370,6 +370,68 @@ def test_dossier_nicht_eingerichtet_501(fake, api, monkeypatch):
     assert api.post("/dossiers/schueler", json={"fremdkey": "E1"}).status_code == 501
 
 
+# ================================================================ Erstellen wie bei Escola (POST /kontakte, /schueler, /mitarbeitende)
+# Abläufe wie am 25.11.2026 in der CMI-Oberfläche mit _TEST_Schueler und _TEST_Mitarbeiter geprüft (erfundene Werte).
+
+WEIBLICH, MAENNLICH = "geschlecht-w", "geschlecht-m"
+
+
+def test_kontakt_anlegen_und_doppelt_409(fake, api):
+    body = {"fremdkey": "T2", "anrede": "Herr", "name": "_TEST2", "vorname": "_TEST2", "geburtsdatum": "2000-01-01",
+            "geschlecht": MAENNLICH, "email2": "test2.privat@example.org",
+            "adresse": {"strasse": "Testweg 2", "plz": "9999", "ort": "Testdorf"}}
+    assert api.post("/kontakte?probelauf=true", json=body).json()["aktion"] == "anlegen"
+    assert fake.schreibaufrufe() == []
+    r = api.post("/kontakte", json=body)
+    assert r.status_code == 201 and r.json()["vollstaendig"], r.text
+    k = fake.daten["Kontakt"][r.json()["guid"]]
+    assert k["geschlecht"] == {"guid": MAENNLICH} and k["fremdkey"] == "T2"
+    assert api.post("/kontakte", json=body).status_code == 409
+
+
+def test_kontakt_patch_per_guid(fake, api):
+    g = fake.neu("Kontakt", name="_TEST", vorname="_TEST", anrede="Herr", titel="Dr.", fremdkey=None)
+    r = api.patch(f"/kontakte/{g}", json={"funktion": "TEST Funktion", "leeren": ["titel"], "fremdkey": "T9"})
+    assert r.status_code == 200 and r.json()["vollstaendig"], r.text
+    k = fake.daten["Kontakt"][g]
+    assert k["funktion"] == "TEST Funktion" and k["titel"] is None and k["fremdkey"] == "T9" and k["name"] == "_TEST"
+    vorher = len(fake.schreibaufrufe())
+    assert api.patch(f"/kontakte/{g}", json={"funktion": "TEST Funktion"}).json()["aktion"] == "unveraendert"
+    assert len(fake.schreibaufrufe()) == vorher
+
+
+def test_schueler_anlegen_kontakt_und_dossier(fake, api):
+    body = {"fremdkey": "escola-650", "name": "_TEST_Schueler", "vorname": "_TEST_Schueler",
+            "geburtsdatum": "2012-01-01", "geschlecht": WEIBLICH, "beginn": "2026-11-25",
+            "bemerkung": "TEST Schnittstelle EduKSX"}
+    p = api.post("/schueler?probelauf=true", json=body).json()
+    assert p["kontakt"]["aktion"] == "anlegen" and p["dossier"]["vorlage"] == "Vorlagen/Schuelerdossier"
+    r = api.post("/schueler", json=body)
+    assert r.status_code == 201, r.text
+    d = r.json()
+    g = fake.daten["Geschaeft"][d["dossier_guid"]]
+    assert g["person"] == {"guid": d["kontakt_guid"]} and g["bemerkung"] == "TEST Schnittstelle EduKSX"
+    assert g["typeName"] == "Schuelerdossier" and g["beginn"] == "2026-11-25"
+    assert [s["teil"] for s in d["schritte"]].count("kontakt") >= 2
+    assert api.post("/schueler", json=body).status_code == 409  # Dossier gibt es schon
+
+
+def test_mitarbeitende_mit_standort_vorlage(fake, api, monkeypatch):
+    monkeypatch.setattr(A.E, "personal_vorlagen", {"hinterbirch": "Vorlagen/Personal HB", "mettmenriet": "Vorlagen/Personal MR"})
+    _kontakt(fake, fremdkey="LP7", name="_TEST_Mitarbeiter", vorname="_TEST_Mitarbeiter", geburtsdatum="1990-01-01")
+    body = {"fremdkey": "LP7", "standort": "Hinterbirch"}
+    assert api.post("/mitarbeitende", json={**body, "standort": "Zürich"}).status_code == 400
+    r = api.post("/mitarbeitende", json=body)
+    assert r.status_code == 201 and r.json()["kontakt_aktion"] == "unveraendert", r.text
+    assert fake.schreibaufrufe()[0].url.params["Vorlage"] == "Vorlagen/Personal HB"
+
+
+def test_schueler_ohne_einrichtung_501_ohne_schreiben(fake, api, monkeypatch):
+    monkeypatch.setattr(A, "E", A.Einstellungen())
+    r = api.post("/schueler", json={"fremdkey": "X1", "name": "_TEST"})
+    assert r.status_code == 501 and fake.schreibaufrufe() == []
+
+
 # ================================================================ Klassen
 
 def _klassen_setup(fake):
