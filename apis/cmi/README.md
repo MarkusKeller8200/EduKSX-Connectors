@@ -16,7 +16,7 @@ CM Informatik beschreibt (`microsoft/PowerPlatformConnectors`, Ordner `certified
 
 ## Stand
 
-Version 0.2.0 – Gerüst nach der Swagger-Beschreibung, ergänzt um die Erkundung im CMI der Sek Bülach vom 25.11.2026
+Version 0.3.0 – Gerüst nach der Swagger-Beschreibung, ergänzt um die Erkundung im CMI der Sek Bülach vom 25.11.2026
 ([ERKUNDUNG.md](ERKUNDUNG.md)). **Noch nicht live geprüft** (kein Zugang zur offiziellen Schnittstelle). Tests laufen gegen
 ein nachgebautes CMI mit erfundenen Personen.
 
@@ -84,8 +84,15 @@ nur die abweichenden Felder ändern; Adresse: erste aktive Adresse ändern bzw. 
 vergleichen. Antwort je Kontakt: `aktion`, `aenderungen {feld: [alt, neu]}`, `schritte[]`; `vollstaendig`.
 Übernimmt CMI etwas nicht → `409`.
 
-Felder: `name`, `vorname`, `anrede`, `email`, `email2`, `natel`, `telefonPrivat`, `telefonGeschaeft`,
-`geburtsdatum`, `organisation`, `mitarbeiter`, `inaktiv` (Namen wie in CMI). Leere Felder ändern nichts.
+Felder (Namen wie in CMI): `anrede`, `briefanrede`, `titel`, `name`, `vorname`, `organisation`, `funktion`,
+`email` (geschäftlich), `email2` (privat), `natel`, `telefonPrivat`, `telefonGeschaeft`, `faxPrivat`, `faxGeschaeft`,
+`homepage`, `unternehmensId`, `unternehmensIdKategorie`, `geburtsdatum`, `mitarbeiter`, `inaktiv`,
+`subjektart` (`Natürlich`/`Juristisch`), `kategorien` (GUIDs der Personenkategorien, ersetzt die bisherigen).
+Nicht genannte Felder bleiben unverändert; **leeren** mit `"leeren": ["titel", "homepage", …]`.
+
+Adressen: `adresse` oder `adressen` (bis 10) mit `adressart` (GUID; bestimmt, welche aktive Adresse geändert wird –
+ohne Adressart die erste aktive), `strasse`, `plz`, `ort`, `land`, `adresskategorie`, `gueltig_von`, `gueltig_bis`,
+`inaktiv`. Eine Adresse beenden: `gueltig_bis` setzen oder `inaktiv: true`. Gelöscht wird nichts.
 
 ### Dossier erstellen
 
@@ -157,5 +164,6 @@ Token: `POST https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token`.
 
 | Version | Datum | Änderung |
 |---|---|---|
+| 0.3.0 | 2026-11-25 | Kontakt-Sync mit allen Feldern der CMI-Oberfläche (Titel, Briefanrede, Funktion, Fax, Homepage, Unternehmens-ID, Subjektart, Kategorien), Felder leeren, mehrere Adressen nach Adressart mit Land, Kategorie und Gültigkeit; Schreibweise aus Test am Kontakt _TEST (#27) |
 | 0.2.0 | 2026-11-25 | Kontakt vollständig lesen (`/kontakte/{guid}/vollstaendig`, `/adressen`, `/dossiers`), Schalter `CMI_SCHUETZENSWERT`; Erkundung im CMI der Sek Bülach (`ERKUNDUNG.md`) (#25) |
 | 0.1.0 | 2026-11-25 | Erste Fassung nach Swagger des CMI-Connectors: Kontakte synchronisieren, Schüler-/Personaldossier, Klassen einteilen/umteilen, Dokumente hochladen; Probelauf, Kontrolle nach dem Schreiben; Tests gegen nachgebautes CMI (#23) |

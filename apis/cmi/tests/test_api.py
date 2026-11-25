@@ -132,7 +132,7 @@ class FakeCMI:
             if not self.ignoriere_put:
                 alt = self.daten[e][teile[1]]
                 body = json.loads(req.content)
-                listen = {k: v for k, v in alt.items() if isinstance(v, list)}
+                listen = {k: v for k, v in alt.items() if isinstance(v, list) and k not in body}
                 self.daten[e][teile[1]] = {**body, **listen, "version": alt["version"] + 1}
             return httpx.Response(200)
         return httpx.Response(405)
@@ -239,12 +239,59 @@ def test_kontakt_nur_geaenderte_felder(fake, api):
     neu = {**LEA, "email": "lea.muster@example.org", "adresse": {**LEA["adresse"], "strasse": "Neuweg 2"}}
     p = api.post("/kontakte/sync?probelauf=true", json={"kontakte": [neu]}).json()["kontakte"][0]
     assert p["aktion"] == "aendern" and list(p["aenderungen"]) == ["email"]
-    assert p["adresse"]["aenderungen"] == {"strasse": ["Testweg 1", "Neuweg 2"]}
+    assert p["adressen"][0]["aenderungen"] == {"strasse": ["Testweg 1", "Neuweg 2"]}
     d = api.post("/kontakte/sync", json={"kontakte": [neu]}).json()
     assert d["vollstaendig"]
     k = next(iter(fake.daten["Kontakt"].values()))
     assert k["email"] == "lea.muster@example.org" and k["vorname"] == "Lea" and k["adressen"]
     assert next(iter(fake.daten["Adresse"].values()))["strasse"] == "Neuweg 2"
+
+
+PRIVAT, GESCHAEFT, KAT1, KAT2 = "art-privat", "art-geschaeft", "kat-1", "kat-2"
+ALLES = {"fremdkey": "T1", "anrede": "Herr", "briefanrede": "Sehr geehrter Herr Test", "titel": "Dr. TEST",
+         "name": "_TEST", "vorname": "_TEST", "organisation": "TEST Organisation", "funktion": "TEST Funktion",
+         "email": "test.geschaeft@example.org", "email2": "test.privat@example.org", "natel": "079 000 00 03",
+         "telefonPrivat": "000 000 00 01", "telefonGeschaeft": "000 000 00 04", "faxPrivat": "000 000 00 02",
+         "faxGeschaeft": "000 000 00 05", "homepage": "https://example.org", "unternehmensId": "TEST-UID",
+         "subjektart": "Natürlich", "kategorien": [KAT1],
+         "adressen": [{"adressart": PRIVAT, "strasse": "Testweg 99", "plz": "9999", "ort": "Testdorf",
+                       "gueltig_von": "2026-01-01"},
+                      {"adressart": GESCHAEFT, "strasse": "Schulweg 1", "plz": "9998", "ort": "Testdorf"}]}
+
+
+def test_kontakt_alle_felder_schreiben_und_leeren(fake, api):
+    # Felder wie am Testkontakt _TEST in der CMI-Oberfläche am 25.11.2026 beschrieben (erfundene Werte)
+    d = api.post("/kontakte/sync", json={"kontakte": [ALLES]}).json()
+    assert d["vollstaendig"], d
+    k = next(iter(fake.daten["Kontakt"].values()))
+    for f in ("titel", "funktion", "faxPrivat", "faxGeschaeft", "homepage", "unternehmensId", "briefanrede"):
+        assert k[f] == ALLES[f], f
+    assert k["subjektart"] == "Natürlich" and k["kategorie"] == [{"guid": KAT1}]
+    adr = {a["strasse"]: a for a in fake.daten["Adresse"].values()}
+    assert adr["Testweg 99"]["adressart"] == {"guid": PRIVAT} and adr["Testweg 99"]["gueltigVonBis"] == "01.01.2026 -"
+    assert adr["Schulweg 1"]["adressart"] == {"guid": GESCHAEFT}
+    # zweiter Lauf: unverändert
+    assert api.post("/kontakte/sync", json={"kontakte": [ALLES]}).json()["kontakte"][0]["aktion"] == "unveraendert"
+    # Kategorie wechseln, Geschäftsadresse gezielt ändern, Felder leeren
+    neu = {"fremdkey": "T1", "kategorien": [KAT2], "leeren": ["titel", "funktion", "homepage", "subjektart"],
+           "adressen": [{"adressart": GESCHAEFT, "strasse": "Schulweg 2", "gueltig_bis": "2026-12-31"}]}
+    p = api.post("/kontakte/sync?probelauf=true", json={"kontakte": [neu]}).json()["kontakte"][0]
+    assert set(p["aenderungen"]) == {"kategorie", "titel", "funktion", "homepage", "subjektart"}
+    assert p["adressen"][0]["aenderungen"]["strasse"] == ["Schulweg 1", "Schulweg 2"]
+    d = api.post("/kontakte/sync", json={"kontakte": [neu]}).json()
+    assert d["vollstaendig"], d
+    k = next(iter(fake.daten["Kontakt"].values()))
+    assert k["titel"] is None and k["homepage"] is None and k["subjektart"] is None and k["kategorie"] == [{"guid": KAT2}]
+    assert k["organisation"] == "TEST Organisation"  # nicht genannt → bleibt
+    adr = {a["strasse"]: a for a in fake.daten["Adresse"].values()}
+    assert adr["Schulweg 2"]["gueltigVonBis"] == "- 31.12.2026" and "Testweg 99" in adr
+
+
+def test_kontakt_leeren_unbekanntes_feld_400(fake, api):
+    r = api.post("/kontakte/sync", json={"kontakte": [{"fremdkey": "T1", "name": "X", "leeren": ["fremdkey"]}]})
+    assert r.status_code == 400
+    zwei = [{"strasse": "A"}, {"strasse": "B"}]
+    assert api.post("/kontakte/sync", json={"kontakte": [{"fremdkey": "T1", "name": "X", "adressen": zwei}]}).status_code == 400
 
 
 def test_kontakt_cmi_uebernimmt_nicht_409(fake, api):
