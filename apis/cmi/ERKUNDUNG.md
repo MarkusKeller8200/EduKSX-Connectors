@@ -90,3 +90,20 @@ angelegt und gelöscht. Der Kontakt ist wieder im Ausgangszustand.
 Die CMI-API übernimmt daraus Feldnamen, das Leeren mit `null` und die Gültigkeit als «TT.MM.JJJJ - TT.MM.JJJJ».
 Wie die offizielle Schnittstelle Auswahlfelder und Verweislisten erwartet, ist ZU PRÜFEN (angenommen: Text bzw.
 Liste von `{guid}` beim `PUT` des ganzen Objekts).
+
+## Kontakt anlegen und löschen (Test «_TEST2 _TEST2», 25.11.2026)
+
+Kontakt mit Adresse über die Oberfläche angelegt und gleich wieder gelöscht (erfundene Werte).
+
+| Schritt | Aufruf | Inhalt |
+|---|---|---|
+| Start | `POST core/Menu/ExecuteAction`, `actionId: "cmi-creation.Kontakt"`, `contextId: "global"` | Auswahl der Erstellungsoption: Vorlage **«Kontakt mit Adresse (Vorlage/Standard/Kontakt)»**, «Keine Vorlage», Ordner Standard/Global |
+| Felder | dito mit `state` und `stepIndex` | Kontakt: `obj_1_anrede`, `obj_1_name`, `obj_1_vorname`, `obj_1_geburtsdatum` («TT.MM.JJJJ»), `obj_1_geschlecht`, `obj_1_organisation`, `obj_1_telefonPrivat`, `obj_1_telefonGeschaeft`, `obj_1_natel`, `obj_1_email2`, `obj_1_email` · Adresse: `obj_2_adressart`, `obj_2_adresskategorie`, `obj_2_strasse`, `obj_2_pLZ`, `obj_2_ort`, `obj_2_land`, `obj_2_gueltigVonBis` |
+| Erstellen | dito, letzter Schritt mit `takenotice_step_4: true` | Antwort `progressInfoToken`; `core/Menu/GetProgressInfo` meldet `Complete` und die GUID des neuen Kontakts |
+| Löschen | `core/Save/GetDeletability` → `core/Save/Delete` | Löschen des Kontakts nimmt seine Adressen mit (`willDelete`: Adresse + Kontakt) |
+
+Weitere Erstellungsaktionen im Mandanten (Auszug): `cmi-creation.Lernendedossier` mit Vorlage
+**«Lernendendossier (Vorlage/Global/Schulverwaltung)»**, `cmi-creation.Schuljahr`, `cmi-creation.Personalkategorie` u. a.
+Daraus für die CMI-API: Vorlagenpfade für `CMI_KONTAKT_VORLAGE` (`Vorlage/Standard/Kontakt`) und
+`CMI_DOSSIER_SCHUELER_VORLAGE` (`Vorlage/Global/Schulverwaltung`, Schreibweise in der offiziellen API ZU PRÜFEN);
+der Kontakt kennt zusätzlich `geschlecht` (Verweis). Die CMI-API löscht weiterhin nicht.
