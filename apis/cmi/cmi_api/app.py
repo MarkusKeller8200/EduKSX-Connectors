@@ -19,6 +19,7 @@ import hashlib
 import io
 import json
 import os
+import re
 from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
@@ -244,35 +245,60 @@ def suche(entitaet: str, tentaql: str = Query(..., min_length=1), format: Format
 
 # ================================================================ Kontakte
 
-KONTAKT_FELDER = ("name", "vorname", "anrede", "email", "email2", "natel", "telefonPrivat", "telefonGeschaeft",
-                  "geburtsdatum", "organisation", "mitarbeiter", "inaktiv")
+# Felder wie in der CMI-Weboberfläche (Erkundung 25.11.2026, Schreiben am Testkontakt _TEST geprüft)
+KONTAKT_TEXT = ("anrede", "briefanrede", "titel", "name", "vorname", "organisation", "funktion", "email", "email2",
+                "natel", "telefonPrivat", "telefonGeschaeft", "faxPrivat", "faxGeschaeft", "homepage",
+                "unternehmensId", "unternehmensIdKategorie", "geburtsdatum")
+KONTAKT_BOOL = ("mitarbeiter", "inaktiv")
+KONTAKT_FELDER = KONTAKT_TEXT + KONTAKT_BOOL + ("subjektart", "kategorie")
+KONTAKT_LEERBAR = KONTAKT_TEXT + ("subjektart", "kategorie")
 KONTAKT_PFLICHT_BOOL = ("inaktiv", "mitarbeiter", "istPubliziert", "googleAuthKonfiguriert", "behindert",
                         "erhoehterBetreuungsbedarf", "aufenthaltUnbekannt")
-ADRESS_FELDER = ("strasse", "plz", "ort")
+ADRESS_TEXT = ("strasse", "plz", "ort")
+ADRESS_VERWEISE = ("adressart", "adresskategorie", "land")
 
 
 class AdresseEingabe(BaseModel):
+    adressart: str | None = Field(None, description="GUID der Adressart (z. B. Privat-, Geschäfts-, Hauptadresse); "
+                                                    "bestimmt, welche bestehende Adresse geändert wird")
     strasse: str | None = None
     plz: str | None = None
     ort: str | None = None
+    land: str | None = Field(None, description="GUID des Landes")
+    adresskategorie: str | None = Field(None, description="GUID der Adresskategorie")
+    gueltig_von: date | None = None
+    gueltig_bis: date | None = None
+    inaktiv: bool | None = None
 
 
 class KontaktEingabe(BaseModel):
     fremdkey: str = Field(..., min_length=1, description="Schlüssel aus dem Quellsystem (z. B. Escola-ID), "
                                                          "wird in CMI als `fremdkey` geführt")
+    anrede: str | None = None
+    briefanrede: str | None = None
+    titel: str | None = None
     name: str | None = None
     vorname: str | None = None
-    anrede: str | None = None
-    email: str | None = None
-    email2: str | None = None
+    organisation: str | None = None
+    funktion: str | None = None
+    email: str | None = Field(None, description="E-Mail geschäftlich")
+    email2: str | None = Field(None, description="E-Mail privat")
     natel: str | None = None
     telefonPrivat: str | None = None
     telefonGeschaeft: str | None = None
+    faxPrivat: str | None = None
+    faxGeschaeft: str | None = None
+    homepage: str | None = None
+    unternehmensId: str | None = None
+    unternehmensIdKategorie: str | None = None
     geburtsdatum: str | None = Field(None, description="JJJJ-MM-TT")
-    organisation: str | None = None
     mitarbeiter: bool | None = None
     inaktiv: bool | None = None
+    subjektart: Literal["Natürlich", "Juristisch"] | None = None
+    kategorien: list[str] | None = Field(None, description="GUIDs der Personenkategorien (ersetzt die bisherigen)")
+    leeren: list[str] = Field([], description=f"Felder, die geleert werden: {', '.join(KONTAKT_LEERBAR)}")
     adresse: AdresseEingabe | None = None
+    adressen: list[AdresseEingabe] = Field([], max_length=10)
 
 
 class KontaktListe(BaseModel):
@@ -344,10 +370,18 @@ def _zeitraum(v: Any) -> dict:
             x = x.get("value") if isinstance(x, dict) else x
             return _norm(x)
         return {"von": tag(v.get("start")), "bis": tag(v.get("end"))}
-    if isinstance(v, str) and "-" in v and not v[:4].isdigit():
-        von, _, bis = v.partition("-")
-        return {"von": von.strip() or None, "bis": bis.strip() or None}
-    return {"von": _norm(v), "bis": None}
+    m = re.fullmatch(r"\s*(\d\d\.\d\d\.\d{4})?\s*-\s*(\d\d\.\d\d\.\d{4})?\s*", v) if isinstance(v, str) else None
+    if m:
+        return {"von": _iso(m.group(1)), "bis": _iso(m.group(2))}
+    return {"von": _iso(v) if isinstance(v, str) else _norm(v), "bis": None}
+
+
+def _iso(t: str | None) -> str | None:
+    """«01.01.2026» bzw. «2026-01-01T…» → «2026-01-01»."""
+    t = (t or "").strip()
+    if len(t) >= 10 and t[2] == "." and t[5] == ".":
+        return f"{t[6:10]}-{t[3:5]}-{t[0:2]}"
+    return _norm(t)
 
 
 def _bereinigt(o: dict) -> dict:
@@ -432,43 +466,101 @@ def kontakt_dossiers(guid: str, format: Format = "json"):
     return _antwort(kontakt_vollstaendig_lesen(client(), guid, False)["dossiers"], format, "dossiers")
 
 
+def _adressen_eingabe(k: KontaktEingabe) -> list[AdresseEingabe]:
+    return ([k.adresse] if k.adresse else []) + list(k.adressen)
+
+
+def _kontakt_eingabe(k: KontaktEingabe) -> dict:
+    eingabe: dict[str, Any] = {f: getattr(k, f) for f in KONTAKT_TEXT + KONTAKT_BOOL + ("subjektart",)
+                               if getattr(k, f) is not None}
+    if k.kategorien is not None:
+        eingabe["kategorie"] = sorted(k.kategorien)
+    for f in k.leeren:
+        eingabe[f] = [] if f == "kategorie" else None
+    return eingabe
+
+
+def _kontakt_vergleich(alt: dict, f: str) -> Any:
+    v = alt.get(f)
+    if f == "kategorie":
+        return sorted(_verweise(v))
+    if f == "subjektart":
+        return _anzeige(v) or None
+    return _norm(v)
+
+
+def _adress_ist(a: dict) -> dict:
+    zr = _zeitraum(a.get("gueltigVonBis"))
+    return {"strasse": a.get("strasse"), "plz": a.get("plz") or a.get("pLZ"), "ort": a.get("ort"),
+            "adressart": guid_von(a.get("adressart")), "adresskategorie": guid_von(a.get("adresskategorie")),
+            "land": guid_von(a.get("land")), "gueltig_von": zr["von"], "gueltig_bis": zr["bis"],
+            "inaktiv": a.get("inaktiv")}
+
+
+def _adress_plan(neu: AdresseEingabe, bestehende: list[dict], vergeben: set) -> dict:
+    soll = {f: (v.isoformat() if isinstance(v, date) else v) for f, v in neu.model_dump(exclude_none=True).items()}
+    kandidaten = [a for a in bestehende if not a.get("inaktiv") and a["guid"] not in vergeben
+                  and (neu.adressart is None or guid_von(a.get("adressart")) == neu.adressart)]
+    if not kandidaten:
+        return {"aktion": "anlegen", "soll": soll}
+    alt = kandidaten[0]
+    vergeben.add(alt["guid"])
+    ist = _adress_ist(alt)
+    diff = {f: [ist.get(f), v] for f, v in soll.items() if _norm(ist.get(f)) != _norm(v)}
+    return {"aktion": "aendern" if diff else "unveraendert", "guid": alt["guid"], "aenderungen": diff,
+            "soll": soll, "_alt": alt}
+
+
+def _adress_daten(soll: dict, alt: dict | None = None) -> dict:
+    """Werte für CMI: Verweise als {guid}, Gültigkeit als «TT.MM.JJJJ - TT.MM.JJJJ» (Swagger: Text; ZU PRÜFEN)."""
+    d: dict[str, Any] = {f: soll[f] for f in ADRESS_TEXT + ("inaktiv",) if f in soll}
+    d.update({f: ref(soll[f]) for f in ADRESS_VERWEISE if f in soll})
+    if "gueltig_von" in soll or "gueltig_bis" in soll:
+        ist = _adress_ist(alt) if alt else {}
+        von, bis = soll.get("gueltig_von", ist.get("gueltig_von")), soll.get("gueltig_bis", ist.get("gueltig_bis"))
+        d["gueltigVonBis"] = f"{_ch_datum(von)} - {_ch_datum(bis)}".strip()
+    return d
+
+
+def _ch_datum(iso: str | None) -> str:
+    return f"{iso[8:10]}.{iso[5:7]}.{iso[:4]}" if iso else ""
+
+
 def _kontakt_plan(c: CMIClient, k: KontaktEingabe) -> dict:
     """Vergleicht Eingabe und CMI – ohne zu schreiben."""
-    eingabe = {f: getattr(k, f) for f in KONTAKT_FELDER if getattr(k, f) is not None}
+    eingabe = _kontakt_eingabe(k)
     treffer = _kontakt_per_fremdkey(c, k.fremdkey)
     plan: dict[str, Any] = {"fremdkey": k.fremdkey, "guid": None, "aktion": None, "aenderungen": {},
-                            "adresse": None, "_alt": None, "_adresse_alt": None}
+                            "adressen": [], "_alt": None}
     if len(treffer) > 1:
         plan["aktion"] = "konflikt"
         plan["guids"] = [t.get("guid") for t in treffer]
         return plan
     if not treffer:
         plan["aktion"] = "anlegen"
-        plan["aenderungen"] = {f: [None, v] for f, v in eingabe.items()}
-        if k.adresse:
-            plan["adresse"] = {"aktion": "anlegen", **k.adresse.model_dump(exclude_none=True)}
+        plan["aenderungen"] = {f: [None, v] for f, v in eingabe.items() if v not in (None, [])}
+        plan["adressen"] = [{"aktion": "anlegen", "soll": {f: (v.isoformat() if isinstance(v, date) else v)
+                                                           for f, v in a.model_dump(exclude_none=True).items()}}
+                            for a in _adressen_eingabe(k)]
         return plan
     alt = c.lesen("Kontakt", treffer[0]["guid"])
     plan["guid"], plan["_alt"] = alt["guid"], alt
-    plan["aenderungen"] = {f: [alt.get(f), v] for f, v in eingabe.items() if _norm(alt.get(f)) != _norm(v)}
-    if k.adresse:
-        neu = k.adresse.model_dump(exclude_none=True)
-        adr_alt = None
-        for r in alt.get("adressen") or []:
-            a = c.lesen("Adresse", guid_von(r))
-            if not a.get("inaktiv"):
-                adr_alt = a
-                break
-        if adr_alt is None:
-            plan["adresse"] = {"aktion": "anlegen", **neu}
-        else:
-            diff = {f: [adr_alt.get(f), v] for f, v in neu.items() if _norm(adr_alt.get(f)) != _norm(v)}
-            plan["_adresse_alt"] = adr_alt
-            plan["adresse"] = {"aktion": "aendern" if diff else "unveraendert", "guid": adr_alt["guid"],
-                               "aenderungen": diff}
-    adr_aktion = (plan["adresse"] or {}).get("aktion")
-    plan["aktion"] = "aendern" if plan["aenderungen"] or adr_aktion in ("anlegen", "aendern") else "unveraendert"
+    plan["aenderungen"] = {f: [_kontakt_vergleich(alt, f), v] for f, v in eingabe.items()
+                           if _kontakt_vergleich(alt, f) != (_norm(v) if not isinstance(v, list) else v)}
+    if _adressen_eingabe(k):
+        bestehende = [c.lesen("Adresse", g) for g in _verweise(alt.get("adressen"))]
+        vergeben: set = set()
+        plan["adressen"] = [_adress_plan(a, bestehende, vergeben) for a in _adressen_eingabe(k)]
+    adr_geaendert = any(a["aktion"] in ("anlegen", "aendern") for a in plan["adressen"])
+    plan["aktion"] = "aendern" if plan["aenderungen"] or adr_geaendert else "unveraendert"
     return plan
+
+
+def _kontakt_werte(neu_werte: dict) -> dict:
+    d = dict(neu_werte)
+    if "kategorie" in d:
+        d["kategorie"] = [ref(g) for g in d["kategorie"] or []]
+    return d
 
 
 def _kontakt_schreiben(c: CMIClient, k: KontaktEingabe, plan: dict) -> list[dict]:
@@ -482,7 +574,7 @@ def _kontakt_schreiben(c: CMIClient, k: KontaktEingabe, plan: dict) -> list[dict
             schritte.append({"schritt": name, "ok": False, "fehler": str(e)})
             raise
 
-    neu_werte = {f: v[1] for f, v in plan["aenderungen"].items()}
+    neu_werte = _kontakt_werte({f: v[1] for f, v in plan["aenderungen"].items()})
     try:
         if plan["aktion"] == "anlegen":
             daten = {b: False for b in KONTAKT_PFLICHT_BOOL}
@@ -494,32 +586,33 @@ def _kontakt_schreiben(c: CMIClient, k: KontaktEingabe, plan: dict) -> list[dict
                 plan["guid"] = c.anlegen("Kontakt", daten, E.kontakt_vorlage or None)
             schritt("kontakt_anlegen", anlegen)
         elif neu_werte:
-            alt = {f: v for f, v in plan["_alt"].items() if not isinstance(v, list)}
+            alt = {f: v for f, v in plan["_alt"].items() if not isinstance(v, list) or f in neu_werte}
             schritt("kontakt_aendern", lambda: c.aendern("Kontakt", plan["guid"], {**alt, **neu_werte}))
-        adr = plan.get("adresse") or {}
-        werte = {f: adr[f] for f in ADRESS_FELDER if f in adr}
-        if adr.get("aktion") == "anlegen":
-            schritt("adresse_anlegen", lambda: c.anlegen(
-                "Adresse", {"inaktiv": False, "kontakt": ref(plan["guid"]), **werte}))
-        elif adr.get("aktion") == "aendern":
-            neu = {f: v[1] for f, v in adr["aenderungen"].items()}
-            alt = {f: v for f, v in plan["_adresse_alt"].items() if not isinstance(v, list)}
-            schritt("adresse_aendern", lambda: c.aendern("Adresse", adr["guid"], {**alt, **neu}))
+        for adr in plan["adressen"]:
+            if adr["aktion"] == "anlegen":
+                daten_a = {"inaktiv": False, "kontakt": ref(plan["guid"]), **_adress_daten(adr["soll"])}
+                schritt("adresse_anlegen", lambda d=daten_a: c.anlegen("Adresse", d))
+            elif adr["aktion"] == "aendern":
+                neu = _adress_daten({f: v[1] for f, v in adr["aenderungen"].items()}, adr["_alt"])
+                alt = {f: v for f, v in adr["_alt"].items() if not isinstance(v, list)}
+                schritt("adresse_aendern", lambda g=adr["guid"], d={**alt, **neu}: c.aendern("Adresse", g, d))
     except (CMIFehler, NichtGefunden):
         return schritte
     # Kontrolle: neu lesen und vergleichen
     kontrolle = _kontakt_plan(c, k)
     if kontrolle["aktion"] != "unveraendert":
-        schritte.append({"schritt": "kontrolle", "ok": False,
-                         "fehler": "CMI hat nicht alles übernommen",
-                         "abweichungen": kontrolle["aenderungen"] or kontrolle.get("adresse")})
+        schritte.append({"schritt": "kontrolle", "ok": False, "fehler": "CMI hat nicht alles übernommen",
+                         "abweichungen": kontrolle["aenderungen"] or [_sichtbar(a) for a in kontrolle["adressen"]]})
     else:
         schritte.append({"schritt": "kontrolle", "ok": True})
     return schritte
 
 
 def _sichtbar(plan: dict) -> dict:
-    return {k: v for k, v in plan.items() if not k.startswith("_")}
+    aus = {k: v for k, v in plan.items() if not k.startswith("_")}
+    if "adressen" in aus:
+        aus["adressen"] = [{k: v for k, v in a.items() if not k.startswith("_")} for a in aus["adressen"]]
+    return aus
 
 
 @app.post("/kontakte/sync", tags=["Kontakte"],
@@ -529,6 +622,12 @@ def kontakte_sync(body: KontaktListe, probelauf: bool = False, _=Depends(schreib
     doppelt = sorted({k.fremdkey for k in body.kontakte if [x.fremdkey for x in body.kontakte].count(k.fremdkey) > 1})
     if doppelt:
         raise HTTPException(400, {"meldung": "fremdkey mehrfach in der Eingabe", "betroffene": doppelt})
+    for k in body.kontakte:
+        falsch = [f for f in k.leeren if f not in KONTAKT_LEERBAR]
+        ohne_art = [a for a in _adressen_eingabe(k) if not a.adressart]
+        if falsch or len(ohne_art) > 1:
+            raise HTTPException(400, {"meldung": f"leeren: unbekannte Felder {falsch}" if falsch else
+                                      "Mehrere Adressen brauchen je eine adressart", "betroffene": [k.fremdkey]})
     plaene = [_kontakt_plan(c, k) for k in body.kontakte]
     for p, k in zip(plaene, body.kontakte):
         if p["aktion"] == "anlegen" and not (k.name or k.organisation):

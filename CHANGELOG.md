@@ -7,6 +7,8 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
 ## [Unveröffentlicht]
 
 ### Hinzugefügt
+- CMI-API 0.3.0 (#27): Kontakt-Sync mit allen Feldern der CMI-Oberfläche, Felder leeren, mehrere Adressen nach
+  Adressart mit Gültigkeit; Schreibweise der CMI-Oberfläche in `apis/cmi/ERKUNDUNG.md` (Test am Kontakt _TEST)
 - CMI-API 0.2.0 (#25): Kontakt vollständig lesen (Adressen, Dossiers, Schule, Bezugspersonen, Notfallkontakte,
   Haushalt, technische Details; Zahlungs- und Gesundheitsdaten nur mit `CMI_SCHUETZENSWERT=1`); Erkundung des
   CMI-Mandanten in `apis/cmi/ERKUNDUNG.md` (nur Typen und Felder, keine Personendaten)

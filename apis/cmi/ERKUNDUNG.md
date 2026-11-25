@@ -64,3 +64,29 @@ Fremdkey Mapping · `adressdatensperre` · `externeBenutzer` → Fremdbenutzer:i
   `beteiligungen`. Die CMI-API liest beide.
 - Für die Escola-ID ist **Fremdkey Mapping** wahrscheinlich besser als das einfache Feld `fremdkey` (ZU PRÜFEN mit CMI).
 - Datum in Antworten der Oberfläche als `TT.MM.JJJJ hh:mm`, in Zeiträumen als ISO-Wert (`value`).
+
+## Schreiben (geprüft am Testkontakt «_TEST _TEST», 25.11.2026)
+
+Alle Felder des Kontakts mit erfundenen Werten beschrieben, gespeichert, danach wieder geleert; eine Testadresse
+angelegt und gelöscht. Der Kontakt ist wieder im Ausgangszustand.
+
+| Vorgang | Aufruf der Weboberfläche | Inhalt |
+|---|---|---|
+| Ändern | `POST core/Save/InsertOrUpdate` | `{"<guid>": {"guid", "objVersion", "typeKey": "kontakt", <nur geänderte Felder>}}` – Antwort `{"errors": null}`; `objVersion` steigt je Speichern (Schutz gegen gleichzeitiges Ändern) |
+| Feld leeren | dito | Feld mit `null` |
+| Auswahlfeld | dito | `subjektart: {"value": 0, "text": "Natürlich"}`, leeren mit `{"value": null}` |
+| Verweisliste | dito | `kategorie: {"added": ["<guid>"], "removed": ["<guid>"]}` |
+| Neu (Adresse) | `POST core/Menu/ExecuteAction` mit `actionId: "cmi-assoc-new"`, `typeKey: "Adresse"` | Assistent: Felder `adressart` (Liste GUIDs), `adresskategorie`, `strasse`, `pLZ`, `ort`, `land`, `gueltigVonBis` als Text «01.01.2026 - »; Fortschritt über `core/Menu/GetProgressInfo` |
+| Datum prüfen | `POST core/Parser/Date` | «01.01.2026» → `{value: "2026-01-01 00:00:00.000", precision: "Day"}` |
+| Löschen | `POST core/Save/GetDeletability` → `POST core/Save/Delete` | `{"ids": ["<guid>"]}`; vorher Liste der mitgelöschten Objekte |
+
+**Kontaktfelder, die schreibbar sind:** `anrede`, `briefanrede`, `titel`, `name`, `vorname`, `organisation`, `funktion`,
+`kategorie` (Personenkategorien), `unternehmensIdKategorie`, `unternehmensId`, `subjektart` (Natürlich/Juristisch),
+`kontaktschutzstufe`, `telefonPrivat`, `telefonGeschaeft`, `email` (geschäftlich), `email2` (privat), `faxPrivat`,
+`faxGeschaeft`, `natel`, `homepage`.
+
+**Adressarten** im Mandanten: Geschäftsadresse, Hauptadresse, Privatadresse.
+
+Die CMI-API übernimmt daraus Feldnamen, das Leeren mit `null` und die Gültigkeit als «TT.MM.JJJJ - TT.MM.JJJJ».
+Wie die offizielle Schnittstelle Auswahlfelder und Verweislisten erwartet, ist ZU PRÜFEN (angenommen: Text bzw.
+Liste von `{guid}` beim `PUT` des ganzen Objekts).
