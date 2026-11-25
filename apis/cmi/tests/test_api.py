@@ -485,6 +485,38 @@ def test_einteilen_kontrolle_409(fake, api):
     assert r.status_code == 409  # alte Zuteilung nicht beendet → zwei aktive
 
 
+SJ = "schuljahr-2026-27"
+
+
+def test_klasse_anlegen_mit_standort_und_doppelt(fake, api, monkeypatch):
+    # wie TEST_A1a in der CMI-Oberfläche am 25.11.2026 (Vorlage Hinterbirch)
+    monkeypatch.setattr(A.E, "klasse_vorlagen", {"hinterbirch": "Vorlagen/Klasse HB", "mettmenriet": "Vorlagen/Klasse MR"})
+    body = {"titel": "TEST_A1a", "schuljahr": SJ, "beginn": "2026-08-01", "ende": "2027-07-31", "standort": "Hinterbirch"}
+    assert api.post("/klassen", json={**body, "standort": None}).status_code == 400
+    p = api.post("/klassen?probelauf=true", json=body).json()
+    assert p["vorlage"] == "Vorlagen/Klasse HB" and fake.schreibaufrufe() == []
+    r = api.post("/klassen", json=body)
+    assert r.status_code == 201, r.text
+    k = fake.daten["Geschaeft"][r.json()["guid"]]
+    assert k["typeName"] == "Klassendossier" and k["schuljahr"] == {"guid": SJ} and k["ende"] == "2027-07-31"
+    assert fake.schreibaufrufe()[0].url.params["Vorlage"] == "Vorlagen/Klasse HB"
+    k["titel"] = "TEST_A1a 2026/27"  # CMI hängt das Schuljahr an
+    assert api.post("/klassen", json=body).status_code == 409
+
+
+def test_externe_klasse(fake, api, monkeypatch):
+    monkeypatch.setattr(A.E, "klasse_extern_typ", "ExternesSchulklassendossier")
+    monkeypatch.setattr(A.E, "klasse_extern_vorlage", "Vorlagen/Externe Klasse")
+    body = {"titel": "TEST_Extern", "schuljahr": SJ, "beginn": "2026-08-01", "extern": True,
+            "geschaeftseigner": "klassen-weitere"}
+    assert api.post("/klassen", json=body).status_code == 400  # externe_schule fehlt
+    r = api.post("/klassen", json={**body, "externe_schule": "schule-extern"})
+    assert r.status_code == 201, r.text
+    k = fake.daten["Geschaeft"][r.json()["guid"]]
+    assert k["typeName"] == "ExternesSchulklassendossier" and k["externeSchule"] == {"guid": "schule-extern"}
+    assert k["geschaeftseigner"] == {"guid": "klassen-weitere"}
+
+
 def test_klassenzuteilung_nicht_eingerichtet_501(fake, api, monkeypatch):
     monkeypatch.setattr(A.E, "kz_entitaet", "")
     assert api.post("/klassen/einteilen", json={"zuteilungen": [{"fremdkey": "E1", "klasse": "1a"}]}).status_code == 501

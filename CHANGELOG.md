@@ -7,6 +7,7 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
 ## [Unveröffentlicht]
 
 ### Hinzugefügt
+- CMI-API 0.6.0 (#36): Schul- und Externes Schulklassendossier anlegen (`POST /klassen`); Testklassen in CMI
 - CMI-API 0.5.0 (#32): Dokumente in beliebigen Ordner/Unterordner eines Dossiers ablegen (Pfad oder GUID),
   Ordner der Vorlagen werden nicht neu angelegt; Ablage in CMI erkundet (`ERKUNDUNG.md`)
 - CMI-API 0.4.0 (#30): `POST /kontakte`, `PATCH /kontakte/{guid}`, `POST /schueler` (Kontakt + Lernendendossier),

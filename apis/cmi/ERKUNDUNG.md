@@ -179,3 +179,25 @@ im Mandanten gibt es keine Testklasse.
 - Das Ergebnis erscheint im Lernendendossier unter **Schullaufbahneinträge**; Aufbau des Eintrags (Typ
   «Klassenzuteilung Lernende» / «Schullaufbahn») noch offen.
 - Für den letzten Schritt braucht es eine **Testklasse** (Schulklassendossier) und eine **Test-Sammelklasse**.
+
+## Klassendossiers anlegen (Testklassen, 25.11.2026)
+
+Anwendung «Schule» → Klassen → «+» bietet: Externes Schulklassendossier, Fachklassendossier, Sammelklassendossier,
+Schulklassendossier (verwendet werden Schul- und Externes Schulklassendossier). Angelegt als Testobjekte, bleiben bestehen:
+
+| Testklasse | Typ | Vorlage | Geschäftseigner |
+|---|---|---|---|
+| TEST_A1a 2026/27 | Schulklassendossier | «Schulklassendossier Hinterbirch (Vorlage/Global/Schulverwaltung)» | Klassen Hinterbirch; KLH |
+| TEST_A1b 2026/27 | Schulklassendossier | «Schulklassendossier Mettmenriet (…)» | Klassen Mettmenriet; KLM |
+| TEST_Extern 2026/27 | Externes Schulklassendossier | «Externes Schulklassendossier (Vorlage/Global/Schulverwaltung)» | Klassen weitere; KLW |
+
+| Aktion | Felder (`obj_1_*`) |
+|---|---|
+| `cmi-creation.Schulklassendossier` | `titel` (Pflicht), `schuljahr` (Verweis Schuljahr), `beginn` (Pflicht), `ende`, `geschaeftseigner` (Pflicht; Organisationseinheit, Schulträger, Schulkreis, Schuleinheit, Benutzer oder Kontakt) |
+| `cmi-creation.ExternesSchulklassendossier` | dieselben plus `externeSchule` (Pflicht, Stammdaten «Externe Schule», z. B. «Extern», «Gymnasium») |
+
+- CMI hängt das Schuljahr an den Titel: «TEST_A1a» → «TEST_A1a 2026/27».
+- **Regel SCV102:** ein Externes Schulklassendossier muss einer **Schuleinheit** gehören; die Vorgabe der Vorlage
+  («Sekundarschule Bülach», ein Schulträger) wird abgelehnt. «Klassen weitere» geht.
+- Nach dem Anlegen warnt CMI «Es sind noch keine Schulstufen zugewiesen» (Schulstufe separat).
+- Schuljahre im Mandanten: 2021/22 bis 2026/27.

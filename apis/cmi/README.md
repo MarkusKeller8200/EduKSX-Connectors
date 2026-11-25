@@ -16,7 +16,7 @@ CM Informatik beschreibt (`microsoft/PowerPlatformConnectors`, Ordner `certified
 
 ## Stand
 
-Version 0.5.0 – Gerüst nach der Swagger-Beschreibung, ergänzt um die Erkundung im CMI der Sek Bülach vom 25.11.2026
+Version 0.6.0 – Gerüst nach der Swagger-Beschreibung, ergänzt um die Erkundung im CMI der Sek Bülach vom 25.11.2026
 ([ERKUNDUNG.md](ERKUNDUNG.md)). **Noch nicht live geprüft** (kein Zugang zur offiziellen Schnittstelle). Tests laufen gegen
 ein nachgebautes CMI mit erfundenen Personen.
 
@@ -64,6 +64,7 @@ Listen mit `?format=csv` (Semikolon, UTF-8 mit BOM).
 | `GET /dossiers/{guid}/dokumente` | 🔓 | `GET /Geschaeft/{guid}` | Dokumente des Dossiers |
 | `POST /dossiers/schueler` | ✏️ ⏳ | `POST /Geschaeft?Vorlage=` | Schülerdossier zu einem Kontakt |
 | `POST /dossiers/personal` | ✏️ ⏳ | `POST /Geschaeft?Vorlage=` | Personaldossier (Mitarbeitende, Lehrperson) |
+| `POST /klassen` | ✏️ ⏳ | `POST /Geschaeft?Vorlage=` | Schulklassendossier (Vorlage je `standort`) oder mit `extern: true` Externes Schulklassendossier (`externe_schule`, Eigner = Schuleinheit); `409` bei gleichem Titel im Schuljahr |
 | `GET /klassen` | 🔓 ⏳ | `POST /Geschaeft/Search` | Klassendossiers |
 | `GET /klassen/{guid}/schueler` | 🔓 ⏳ | Klassenzuteilung | Zuteilungen am Stichtag (`?stichtag=`, `?alle=true`) |
 | `GET /schueler/{fremdkey}/klassen` | 🔓 ⏳ | Klassenzuteilung | Schullaufbahn einer Schülerin / eines Schülers |
@@ -176,6 +177,7 @@ Token: `POST https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token`.
 
 | Version | Datum | Änderung |
 |---|---|---|
+| 0.6.0 | 2026-11-25 | `POST /klassen`: Schul- und Externes Schulklassendossier anlegen (Vorlage je Standort, Schuljahr, Beginn/Ende, externe Schule); Klassendossiers und Klasseneinteilung in CMI erkundet (#36) |
 | 0.5.0 | 2026-11-25 | Dokument-Upload in beliebigen Ordner/Unterordner: Zielordner per Pfad oder `ordner_guid`, fehlende Ordner nur mit `ordner_anlegen=true`, Felder Autor, Thema, Eingangs-/Ausgangsdatum; Ablage in CMI erkundet (#32) |
 | 0.4.0 | 2026-11-25 | Erstellen wie bei Escola: `POST /kontakte`, `PATCH /kontakte/{guid}`, `POST /schueler`, `POST /mitarbeitende`; Dossier verknüpft die Person über `person`, Bemerkung, Personaldossier-Vorlage je Standort; Kontakt mit `geschlecht`, `rufname` (#30) |
 | 0.3.0 | 2026-11-25 | Kontakt-Sync mit allen Feldern der CMI-Oberfläche (Titel, Briefanrede, Funktion, Fax, Homepage, Unternehmens-ID, Subjektart, Kategorien), Felder leeren, mehrere Adressen nach Adressart mit Land, Kategorie und Gültigkeit; Schreibweise aus Test am Kontakt _TEST (#27) |

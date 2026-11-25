@@ -57,6 +57,9 @@ class Einstellungen:
     personal_vorlagen: dict | None = None   # Standort → Vorlage, z. B. Hinterbirch/Mettmenriet
     personal_typ: str = ""
     klasse_typ: str = ""
+    klasse_vorlagen: dict | None = None      # Standort → Vorlage Schulklassendossier
+    klasse_extern_typ: str = ""
+    klasse_extern_vorlage: str = ""
     dossier_zugriff: str = "Restriktiv"   # Offen | Restriktiv – Personendossiers standardmässig restriktiv
     geschaeftseigner: str = ""            # GUID, falls die Vorlage keinen Eigner setzt
     # Verknüpfung Kontakt ↔ Dossier (optional): Entität und Feldnamen
@@ -90,7 +93,9 @@ def einstellungen_aus_env() -> Einstellungen:
         schueler_vorlage=_env("DOSSIER_SCHUELER_VORLAGE"), schueler_typ=_env("DOSSIER_SCHUELER_TYP"),
         personal_vorlage=_env("DOSSIER_PERSONAL_VORLAGE"), personal_typ=_env("DOSSIER_PERSONAL_TYP"),
         personal_vorlagen=_vorlagen_map(_env("DOSSIER_PERSONAL_VORLAGEN")),
-        klasse_typ=_env("DOSSIER_KLASSE_TYP"), dossier_zugriff=_env("DOSSIER_ZUGRIFF", "Restriktiv"),
+        klasse_typ=_env("DOSSIER_KLASSE_TYP"), klasse_vorlagen=_vorlagen_map(_env("DOSSIER_KLASSE_VORLAGEN")),
+        klasse_extern_typ=_env("DOSSIER_KLASSE_EXTERN_TYP"), klasse_extern_vorlage=_env("DOSSIER_KLASSE_EXTERN_VORLAGE"),
+        dossier_zugriff=_env("DOSSIER_ZUGRIFF", "Restriktiv"),
         geschaeftseigner=_env("DOSSIER_EIGNER"),
         beteiligung_entitaet=_env("BETEILIGUNG_ENTITAET"), beteiligung_rolle=_env("BETEILIGUNG_ROLLE"),
         kz_entitaet=_env("KLASSENZUTEILUNG_ENTITAET"), kz_schueler=_env("KZ_FELD_SCHUELER", "schueler"),
@@ -933,6 +938,71 @@ def _klassen(c: CMIClient) -> list[dict]:
     if not E.klasse_typ:
         raise HTTPException(501, f"Typname der Klassendossiers nicht eingerichtet ({PRAEFIX}DOSSIER_KLASSE_TYP)")
     return _suche(c, "Geschaeft", typeName=E.klasse_typ)
+
+
+class KlasseEingabe(BaseModel):
+    titel: str = Field(..., min_length=1, description="z. B. «2a» – CMI hängt das Schuljahr an («2a 2026/27»)")
+    schuljahr: str = Field(..., description="GUID des Schuljahres (Stammdaten «Schuljahr»)")
+    beginn: date
+    ende: date | None = None
+    extern: bool = Field(False, description="Externes Schulklassendossier (andere Schule)")
+    standort: str | None = Field(None, description="Vorlage je Standort, z. B. Hinterbirch, Mettmenriet")
+    geschaeftseigner: str | None = Field(None, description="GUID; extern: muss eine Schuleinheit sein "
+                                                           "(z. B. «Klassen weitere»), sonst setzt ihn die Vorlage")
+    externe_schule: str | None = Field(None, description="GUID der externen Schule – Pflicht bei extern")
+
+
+@app.post("/klassen", tags=["Klassen"], status_code=201,
+          summary="Schulklassendossier bzw. Externes Schulklassendossier anlegen")
+def klasse_anlegen(body: KlasseEingabe, probelauf: bool = False, _=Depends(schreib_check)):
+    c = client()
+    if body.extern:
+        typ, vorlage = E.klasse_extern_typ, E.klasse_extern_vorlage
+        if not body.externe_schule:
+            raise HTTPException(400, "Externes Schulklassendossier braucht externe_schule")
+    else:
+        typ = E.klasse_typ
+        karte = E.klasse_vorlagen or {}
+        if karte and (not body.standort or body.standort.lower() not in karte):
+            raise HTTPException(400, f"standort muss einer sein von: {', '.join(karte)}")
+        vorlage = karte.get((body.standort or "").lower(), "")
+    if not typ and not vorlage:
+        raise HTTPException(501, f"Klassendossier nicht eingerichtet ({PRAEFIX}DOSSIER_KLASSE"
+                                 f"{'_EXTERN' if body.extern else ''}_TYP bzw. Vorlage)")
+    if body.ende and body.ende < body.beginn:
+        raise HTTPException(400, "ende liegt vor beginn")
+    # Duplikat: gleicher Titel im gleichen Schuljahr (CMI hängt das Schuljahr an den Titel)
+    vorhanden = [k for k in _suche(c, "Geschaeft", typeName=typ or None, **{"schuljahr.guid": body.schuljahr})
+                 if (k.get("titel") or "").strip().lower().split(" ")[0] == body.titel.strip().lower()]
+    if vorhanden:
+        raise _konflikt("Klasse gibt es in diesem Schuljahr schon",
+                        [{"guid": k.get("guid"), "titel": k.get("titel")} for k in vorhanden])
+    daten: dict[str, Any] = {"titel": body.titel, "beginn": body.beginn.isoformat(), "schuljahr": ref(body.schuljahr),
+                             "zugriffsteuerung": "Offen", "geschaeftsstatus": "InBearbeitung",
+                             "lifecycleStatus": "InBearbeitung"}
+    if body.ende:
+        daten["ende"] = body.ende.isoformat()
+    if typ:
+        daten["typeName"] = typ
+    if body.geschaeftseigner:
+        daten["geschaeftseigner"] = ref(body.geschaeftseigner)
+    if body.extern:
+        daten["externeSchule"] = ref(body.externe_schule)
+    if probelauf:
+        return {"probelauf": True, "vorlage": vorlage or None, "klasse": daten}
+    schritte: list[dict] = []
+    try:
+        guid = c.anlegen("Geschaeft", daten, vorlage or None)
+        schritte.append({"schritt": "klasse_anlegen", "ok": True, "guid": guid})
+    except CMIFehler as e:
+        # z. B. SCV102: Geschäftseigner muss eine Schuleinheit sein
+        return JSONResponse({"probelauf": False, "vollstaendig": False,
+                             "schritte": [{"schritt": "klasse_anlegen", "ok": False, "fehler": str(e)}]}, status_code=409)
+    neu = c.lesen("Geschaeft", guid)
+    ok = (neu.get("titel") or "").lower().startswith(body.titel.lower())
+    schritte.append({"schritt": "kontrolle", "ok": ok, **({} if ok else {"titel_cmi": neu.get("titel")})})
+    return JSONResponse({"probelauf": False, "vollstaendig": ok, "guid": guid, "titel": neu.get("titel"),
+                         "schritte": schritte}, status_code=201 if ok else 409)
 
 
 @app.get("/klassen", tags=["Klassen"], summary="Klassen (Klassendossiers)")
