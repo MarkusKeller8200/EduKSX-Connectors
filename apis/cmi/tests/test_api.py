@@ -460,16 +460,42 @@ def test_einteilen_umteilen(fake, api):
     kz = next(iter(fake.daten["KlassenzuteilungLernende"].values()))
     assert kz["teilklasse"] == {"guid": sa}
     assert [x["lernendendossier"] for x in api.get(f"/klassen/{a}/schueler?stichtag=2026-09-01").json()] == [d]
-    # Klassenwechsel ab 1.2.2027: bisheriger Eintrag endet am Vortag
+    assert kz["vonBis"] == "01.08.2026 - 31.07.2027"
+    # Klassenwechsel ab 1.2.2027 wie «Klassenumteilung» in CMI (aufgezeichnet 25.11.2026):
+    # Schullaufbahn bleibt, bisherige Zuteilung endet am Vortag, neue Zuteilung in derselben Schullaufbahn
     r = api.post("/klassen/einteilen", json={"ab": "2027-02-01", "zuteilungen": [{"fremdkey": "E1", "klasse": b}]}).json()
     assert r["vollstaendig"] and r["zuteilungen"][0]["aktion"] == "umteilen", r
+    assert [s["schritt"] for s in r["zuteilungen"][0]["schritte"]] == [
+        "bisherige_zuteilung_beenden", "zuteilung_anlegen", "kontrolle"]
+    assert len(fake.daten["Schullaufbahn"]) == 1 and lb["vonBis"] == "01.08.2026 - 31.07.2027"
     laufbahn = api.get("/schueler/E1/klassen").json()
-    assert [(x["klasse_titel"], x["von"], x["bis"], x["eintrittsgrund"]) for x in laufbahn] == [
-        ("TEST_A1a 2026/27", "2026-08-01", "2027-01-31", "schuleintritt"),
-        ("TEST_A1b 2026/27", "2027-02-01", "2027-07-31", "klassenwechsel")]
+    assert [(x["klasse_titel"], x["von"], x["bis"], x["schullaufbahn"]) for x in laufbahn] == [
+        ("TEST_A1a 2026/27", "2026-08-01", "2027-01-31", lb["guid"]),
+        ("TEST_A1b 2026/27", "2027-02-01", "2027-07-31", lb["guid"])]
+    assert api.get(f"/klassen/{a}/schueler?stichtag=2027-03-01").json() == []
+    assert [x["lernendendossier"] for x in api.get(f"/klassen/{b}/schueler?stichtag=2027-03-01").json()] == [d]
     vorher = len(fake.schreibaufrufe())
     r = api.post("/klassen/einteilen", json={"ab": "2027-03-01", "zuteilungen": [{"fremdkey": "E1", "klasse": "TEST_A1b"}]}).json()
     assert r["zuteilungen"][0]["aktion"] == "unveraendert" and len(fake.schreibaufrufe()) == vorher
+
+
+def test_einteilen_neues_schuljahr(fake, api):
+    """Wechsel in eine Klasse eines anderen Schuljahrs: alte Schullaufbahn endet, neue wird angelegt."""
+    a, b, sa, sb, d = _klassen_setup(fake)
+    c2 = fake.neu("Geschaeft", titel="TEST_A2a 2027/28", typeName="Klassendossier", schuljahr={"guid": "sj2"},
+                  ende="2028-07-31")
+    s2 = fake.neu("Teilklasse", titel="2. SST", schulklassendossier={"guid": c2})
+    api.post("/klassen/einteilen", json={"ab": "2026-08-01", "bis": "2027-07-31",
+                                         "zuteilungen": [{"fremdkey": "E1", "klasse": "TEST_A1a"}]})
+    r = api.post("/klassen/einteilen", json={"ab": "2027-06-01", "zuteilungen": [{"fremdkey": "E1", "klasse": c2}]}).json()
+    assert r["vollstaendig"], r
+    assert [s["schritt"] for s in r["zuteilungen"][0]["schritte"]] == [
+        "bisherige_zuteilung_beenden", "bisherige_schullaufbahn_beenden", "schullaufbahn_anlegen",
+        "zuteilung_anlegen", "kontrolle"]
+    laufbahn = api.get("/schueler/E1/klassen").json()
+    assert [(x["klassenstufe"], x["von"], x["bis"]) for x in laufbahn] == [
+        (sa, "2026-08-01", "2027-05-31"), (s2, "2027-06-01", "2028-07-31")]
+    assert len({x["schullaufbahn"] for x in laufbahn}) == 2
 
 
 def test_einteilen_am_selben_tag_korrigiert(fake, api):

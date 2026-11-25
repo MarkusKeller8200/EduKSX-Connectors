@@ -1023,12 +1023,6 @@ EINTRITTSGRUENDE = ("schuleintritt", "zuzug", "klassenwechsel", "umteilung", "ki
 Eintrittsgrund = Literal[EINTRITTSGRUENDE]  # type: ignore[valid-type]
 
 
-def _laufbahn_aktiv(lb: dict, stichtag: date) -> bool:
-    zr = _zeitraum(lb.get("vonBis"))
-    t = stichtag.isoformat()
-    return (not zr["von"] or zr["von"] <= t) and (not zr["bis"] or zr["bis"] >= t)
-
-
 def _klassenstufen(c: CMIClient, klasse_guid: str) -> list[dict]:
     return _suche(c, E.stufe_entitaet, **{"schulklassendossier.guid": klasse_guid})
 
@@ -1041,20 +1035,34 @@ def _lernendendossier(c: CMIClient, fremdkey: str) -> dict:
 
 
 def _laufbahn(c: CMIClient, dossier_guid: str) -> list[dict]:
-    """Schullaufbahneinträge mit ihrer Klassenzuteilung (Klassenstufe → Klasse)."""
+    """Klassenzuteilungen der Schullaufbahn, je mit eigener Dauer (wie in CMI «Zuteilungen»).
+
+    CMI führt pro Schuljahr eine Schullaufbahn; ein Klassenwechsel beendet nur die Klassenzuteilung
+    (Dauer bis Vortag) und legt eine neue Zuteilung in derselben Schullaufbahn an."""
     aus = []
     for lb in _suche(c, E.lb_entitaet, **{"lernendedossier.guid": dossier_guid}):
-        kz = _suche(c, E.kz_entitaet, **{"schullaufbahn.guid": lb["guid"]})
-        stufe_guid = guid_von(kz[0].get("teilklasse")) if kz else None
-        stufe = c.lesen(E.stufe_entitaet, stufe_guid) if stufe_guid else {}
-        zr = _zeitraum(lb.get("vonBis"))
-        aus.append({"guid": lb["guid"], "titel": lb.get("titel"), "schuljahr": _anzeige(lb.get("schuljahr")),
-                    "status": _anzeige(lb.get("status")), "eintrittsgrund": _anzeige(lb.get("eintrittsgrund")),
-                    "von": zr["von"], "bis": zr["bis"], "zuteilung": kz[0]["guid"] if kz else None,
-                    "klassenstufe": stufe_guid, "klassenstufe_titel": stufe.get("titel"),
-                    "klasse": guid_von(stufe.get("schulklassendossier")),
-                    "klasse_titel": _anzeige(stufe.get("schulklassendossier")), "_lb": lb, "_kz": kz[0] if kz else None})
-    return sorted(aus, key=lambda x: x["von"] or "")
+        lb_zr = _zeitraum(lb.get("vonBis"))
+        basis = {"schullaufbahn": lb["guid"], "titel": lb.get("titel"), "schuljahr": _anzeige(lb.get("schuljahr")),
+                 "schuljahr_guid": guid_von(lb.get("schuljahr")), "status": _anzeige(lb.get("status")),
+                 "eintrittsgrund": _anzeige(lb.get("eintrittsgrund")),
+                 "laufbahn_von": lb_zr["von"], "laufbahn_bis": lb_zr["bis"], "_lb": lb}
+        zuteilungen = _suche(c, E.kz_entitaet, **{"schullaufbahn.guid": lb["guid"]})
+        if not zuteilungen:
+            aus.append({**basis, "zuteilung": None, "von": lb_zr["von"], "bis": lb_zr["bis"], "klassenstufe": None,
+                        "klassenstufe_titel": None, "klasse": None, "klasse_titel": None, "_kz": None})
+        for kz in zuteilungen:
+            kz_zr = _zeitraum(kz.get("vonBis"))
+            stufe_guid = guid_von(kz.get("teilklasse"))
+            stufe = c.lesen(E.stufe_entitaet, stufe_guid) if stufe_guid else {}
+            aus.append({**basis, "zuteilung": kz["guid"], "von": kz_zr["von"] or lb_zr["von"],
+                        "bis": kz_zr["bis"] or lb_zr["bis"], "klassenstufe": stufe_guid,
+                        "klassenstufe_titel": stufe.get("titel"), "klasse": guid_von(stufe.get("schulklassendossier")),
+                        "klasse_titel": _anzeige(stufe.get("schulklassendossier")), "_kz": kz})
+    return sorted(aus, key=lambda x: (x["von"] or "", x["bis"] or ""))
+
+
+def _aktiv_am(eintraege: list[dict], tag: str) -> list[dict]:
+    return [x for x in eintraege if x["von"] and x["von"] <= tag and (not x["bis"] or x["bis"] >= tag)]
 
 
 def _ohne_intern(x: dict) -> dict:
@@ -1087,9 +1095,9 @@ def klasse_schueler(guid: str, stichtag: date | None = None, alle: bool = False,
     for st in _klassenstufen(c, guid):
         for kz in _suche(c, E.kz_entitaet, **{"teilklasse.guid": st["guid"]}):
             lb = c.lesen(E.lb_entitaet, guid_von(kz.get("schullaufbahn")))
-            if not alle and not _laufbahn_aktiv(lb, tag):
+            zr = _zeitraum(kz.get("vonBis") or lb.get("vonBis"))
+            if not alle and not _aktiv_am([zr], tag.isoformat()):
                 continue
-            zr = _zeitraum(lb.get("vonBis"))
             aus.append({"zuteilung": kz.get("guid"), "lernendendossier": guid_von(lb.get("lernendedossier")),
                         "name": kz.get("computedPersonName"), "vorname": kz.get("computedPersonVorname"),
                         "klassenstufe": st.get("titel"), "von": zr["von"], "bis": zr["bis"]})
@@ -1150,25 +1158,41 @@ def klassen_einteilen(body: EinteilungListe, probelauf: bool = False, _=Depends(
             fehler.append({"fremdkey": e.fremdkey, "fehler": str(ex)})
             continue
         laufbahn = _laufbahn(c, dossier["guid"])
-        aktiv = [x for x in laufbahn if x["von"] and (x["von"] <= ab.isoformat()) and (not x["bis"] or x["bis"] >= ab.isoformat())]
+        tag = ab.isoformat()
+        aktiv = _aktiv_am([x for x in laufbahn if x["zuteilung"]], tag)
         if len(aktiv) > 1:
             konflikte.append({"fremdkey": e.fremdkey, "eintraege": [_ohne_intern(x) for x in aktiv]})
             continue
+        schuljahr = guid_von(klasse.get("schuljahr"))
         plan: dict[str, Any] = {"fremdkey": e.fremdkey, "lernendendossier": dossier["guid"], "klasse": klasse["guid"],
                                 "klasse_titel": klasse.get("titel"), "klassenstufe": stufen[0]["guid"],
-                                "schuljahr": guid_von(klasse.get("schuljahr")), "ab": ab.isoformat(),
+                                "schuljahr": schuljahr, "ab": tag,
                                 "bis": (body.bis.isoformat() if body.bis else _ende_standard(klasse, ab))}
-        if not aktiv:
-            plan["aktion"] = "einteilen"
-            plan["eintrittsgrund"] = e.eintrittsgrund or "schuleintritt"
-        elif aktiv[0]["klassenstufe"] == stufen[0]["guid"]:
+        # Schullaufbahn des Schuljahrs, die am Stichtag läuft (in CMI eine pro Schuljahr)
+        lb_jahr = [x for x in _aktiv_am([{**x, "von": x["laufbahn_von"], "bis": x["laufbahn_bis"]} for x in laufbahn], tag)
+                   if x["schuljahr_guid"] == schuljahr]
+        lb_guids = {x["schullaufbahn"] for x in lb_jahr}
+        if len(lb_guids) > 1:
+            konflikte.append({"fremdkey": e.fremdkey, "fehler": "mehrere Schullaufbahnen im Schuljahr",
+                              "eintraege": [_ohne_intern(x) for x in lb_jahr]})
+            continue
+        if lb_guids:
+            plan["schullaufbahn"] = lb_jahr[0]["schullaufbahn"]
+            if not body.bis and lb_jahr[0]["laufbahn_bis"]:
+                plan["bis"] = lb_jahr[0]["laufbahn_bis"]
+        if aktiv and aktiv[0]["klassenstufe"] == stufen[0]["guid"]:
             plan["aktion"] = "unveraendert"
-        elif aktiv[0]["von"] == ab.isoformat():
-            plan["aktion"] = "korrigieren"  # Eintrag beginnt am selben Tag: Klassenstufe ersetzen
-        else:
+        elif aktiv and aktiv[0]["von"] == tag:
+            plan["aktion"] = "korrigieren"  # Zuteilung beginnt am selben Tag: Klassenstufe ersetzen
+        elif aktiv:
             plan["aktion"] = "umteilen"
             plan["eintrittsgrund"] = e.eintrittsgrund or "klassenwechsel"
             plan["bisher_bis"] = (ab - timedelta(days=1)).isoformat()
+            if aktiv[0]["schullaufbahn"] != plan.get("schullaufbahn"):
+                plan["neues_schuljahr"] = True  # Wechsel über das Schuljahr: alte Schullaufbahn endet ebenfalls
+        else:
+            plan["aktion"] = "einteilen"
+            plan["eintrittsgrund"] = e.eintrittsgrund or "schuleintritt"
         if aktiv:
             plan["bisher"] = _ohne_intern(aktiv[0])
             plan["_alt"] = aktiv[0]
@@ -1176,7 +1200,8 @@ def klassen_einteilen(body: EinteilungListe, probelauf: bool = False, _=Depends(
     if fehler:
         raise HTTPException(400, {"meldung": "Eingabe ungültig", "betroffene": fehler})
     if konflikte:
-        raise _konflikt("Mehrere aktive Schullaufbahneinträge am Stichtag – bitte in CMI bereinigen", konflikte)
+        raise _konflikt("Mehrere aktive Klassenzuteilungen bzw. Schullaufbahnen am Stichtag – bitte in CMI bereinigen",
+                        konflikte)
     zusammenfassung = {a: sum(p["aktion"] == a for p in plaene)
                        for a in ("einteilen", "umteilen", "korrigieren", "unveraendert")}
     if probelauf:
@@ -1184,6 +1209,9 @@ def klassen_einteilen(body: EinteilungListe, probelauf: bool = False, _=Depends(
 
     def ohne_listen(d: dict) -> dict:
         return {k: v for k, v in d.items() if not isinstance(v, list)}
+
+    def dauer(von: str | None, bis: str | None) -> str:
+        return f"{_ch_datum(von)} - {_ch_datum(bis)}"
 
     ergebnisse = []
     for p in plaene:
@@ -1194,23 +1222,29 @@ def klassen_einteilen(body: EinteilungListe, probelauf: bool = False, _=Depends(
                 c.aendern(E.kz_entitaet, kz["guid"], {**ohne_listen(kz), "teilklasse": ref(p["klassenstufe"])})
                 schritte.append({"schritt": "zuteilung_korrigieren", "ok": True})
             if p["aktion"] == "umteilen":
-                lb = p["_alt"]["_lb"]
-                von = p["_alt"]["von"]
-                c.aendern(E.lb_entitaet, lb["guid"], {**ohne_listen(lb),
-                          "vonBis": f"{_ch_datum(von)} - {_ch_datum(p['bisher_bis'])}"})
-                schritte.append({"schritt": "bisherigen_eintrag_beenden", "ok": True})
+                alt = p["_alt"]
+                kz = alt["_kz"]
+                c.aendern(E.kz_entitaet, kz["guid"], {**ohne_listen(kz), "vonBis": dauer(alt["von"], p["bisher_bis"])})
+                schritte.append({"schritt": "bisherige_zuteilung_beenden", "ok": True})
+                if p.get("neues_schuljahr"):
+                    lb = alt["_lb"]
+                    c.aendern(E.lb_entitaet, lb["guid"], {**ohne_listen(lb),
+                              "vonBis": dauer(alt["laufbahn_von"], p["bisher_bis"])})
+                    schritte.append({"schritt": "bisherige_schullaufbahn_beenden", "ok": True})
             if p["aktion"] in ("einteilen", "umteilen"):
-                lb_guid = c.anlegen(E.lb_entitaet, {
-                    "lernendedossier": ref(p["lernendendossier"]), "schuljahr": ref(p["schuljahr"]),
-                    "vonBis": f"{_ch_datum(p['ab'])} - {_ch_datum(p['bis'])}", "eintrittsgrund": p["eintrittsgrund"]})
-                schritte.append({"schritt": "schullaufbahn_anlegen", "ok": True, "guid": lb_guid})
-                kz_guid = c.anlegen(E.kz_entitaet, {"schullaufbahn": ref(lb_guid), "teilklasse": ref(p["klassenstufe"])})
+                lb_guid = p.get("schullaufbahn")
+                if not lb_guid:
+                    lb_guid = c.anlegen(E.lb_entitaet, {
+                        "lernendedossier": ref(p["lernendendossier"]), "schuljahr": ref(p["schuljahr"]),
+                        "vonBis": dauer(p["ab"], p["bis"]), "eintrittsgrund": p["eintrittsgrund"]})
+                    schritte.append({"schritt": "schullaufbahn_anlegen", "ok": True, "guid": lb_guid})
+                kz_guid = c.anlegen(E.kz_entitaet, {"schullaufbahn": ref(lb_guid), "teilklasse": ref(p["klassenstufe"]),
+                                                    "vonBis": dauer(p["ab"], p["bis"])})
                 schritte.append({"schritt": "zuteilung_anlegen", "ok": True, "guid": kz_guid})
         except (CMIFehler, NichtGefunden) as ex:
             schritte.append({"schritt": p["aktion"], "ok": False, "fehler": str(ex)})
         if p["aktion"] != "unveraendert" and all(s["ok"] for s in schritte):
-            aktiv = [x for x in _laufbahn(c, p["lernendendossier"]) if x["von"] and x["von"] <= p["ab"]
-                     and (not x["bis"] or x["bis"] >= p["ab"])]
+            aktiv = _aktiv_am([x for x in _laufbahn(c, p["lernendendossier"]) if x["zuteilung"]], p["ab"])
             ok = len(aktiv) == 1 and aktiv[0]["klassenstufe"] == p["klassenstufe"]
             schritte.append({"schritt": "kontrolle", "ok": ok,
                              **({} if ok else {"fehler": "CMI zeigt am Stichtag nicht die neue Klasse",

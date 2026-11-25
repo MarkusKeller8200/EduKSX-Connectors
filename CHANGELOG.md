@@ -6,6 +6,10 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
 
 ## [Unveröffentlicht]
 
+### Geändert
+- CMI-API 0.7.1 (#36): Klassenwechsel wie «Klassenumteilung» in CMI – Schullaufbahn bleibt, bisherige
+  Klassenzuteilung endet am Vortag, neue Zuteilung mit eigener Dauer
+
 ### Hinzugefügt
 - CMI-API 0.7.0 (#36): Klasseneinteilung nach dem Modell von CMI Schule (Schullaufbahn, Klassenzuteilung,
   Klassenstufe, Eintrittsgrund); Klassenstufe beim Anlegen einer Klasse

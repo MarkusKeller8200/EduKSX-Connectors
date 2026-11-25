@@ -7,7 +7,7 @@ Grundfunktionen:
 - **Kontakte synchronisieren bzw. anlegen** – Abgleich über den Schlüssel des Quellsystems (`fremdkey`), nur
   geänderte Felder werden geschrieben, Adresse inklusive
 - **Schüler- und MA/LP-Dossier erstellen** – aus Dossiervorlage, mit Duplikatprüfung
-- **SuS in Klassen einteilen und umteilen** – ab Datum, bisherige Zuteilung endet am Vortag
+- **SuS in Klassen einteilen und umteilen** – ab Datum, bisherige Klassenzuteilung endet am Vortag (Schullaufbahn bleibt)
 - **Dokumente ins Dossier hochladen** – Ordnerpfad wird angelegt, Duplikatprüfung, Kontrolle des Inhalts
 
 Grundlage: die öffentliche REST-API des CMI-Proxys, wie sie der zertifizierte Power-Platform-Connector von
@@ -16,7 +16,7 @@ CM Informatik beschreibt (`microsoft/PowerPlatformConnectors`, Ordner `certified
 
 ## Stand
 
-Version 0.7.0 – Gerüst nach der Swagger-Beschreibung, ergänzt um die Erkundung im CMI der Sek Bülach vom 25.11.2026
+Version 0.7.1 – Gerüst nach der Swagger-Beschreibung, ergänzt um die Erkundung im CMI der Sek Bülach vom 25.11.2026
 ([ERKUNDUNG.md](ERKUNDUNG.md)). **Noch nicht live geprüft** (kein Zugang zur offiziellen Schnittstelle). Tests laufen gegen
 ein nachgebautes CMI mit erfundenen Personen.
 
@@ -129,8 +129,12 @@ die Klasse mehrere hat; `eintrittsgrund` = `schuleintritt` (Standard beim Eintei
 (Standard beim Umteilen), `umteilung`, `kindergarteneintritt`, `primareintritt`, `sekundareintritt`; `bis` Standard
 Ende der Klasse bzw. 31.7. Voraussetzung: Lernendendossier mit `fremdkey` (`POST /schueler`).
 
-Aktionen: `einteilen` (kein aktiver Eintrag), `umteilen` (bisheriger Eintrag endet am Vortag, neuer ab Datum),
-`korrigieren` (bisheriger beginnt am selben Tag → Klassenstufe ersetzen), `unveraendert`. Unbekannte Klasse,
+Aktionen: `einteilen` (keine aktive Zuteilung; Schullaufbahn des Schuljahrs wird verwendet oder angelegt),
+`umteilen` (wie «Klassenumteilung» in CMI: bisherige Klassenzuteilung endet am Vortag, neue Zuteilung ab Datum in
+derselben Schullaufbahn; nur beim Wechsel in ein anderes Schuljahr endet auch die Schullaufbahn),
+`korrigieren` (bisherige Zuteilung beginnt am selben Tag → Klassenstufe ersetzen), `unveraendert`.
+`GET /schueler/{fremdkey}/klassen` liefert eine Zeile pro Klassenzuteilung (mit `schullaufbahn`, `von`, `bis`).
+Nicht nachgebildet: Übertragung offener Zeugnisse («Bestehende Leistungen übertragen» im CMI-Assistenten). Unbekannte Klasse,
 Klasse ohne Klassenstufe oder fehlendes Lernendendossier → `400`, mehrere aktive Einträge → `409`, alles vor dem
 Schreiben. Klassen ohne Klassenstufe: beim Anlegen `klassenlehrplan` mitgeben (`POST /klassen`).
 
@@ -188,6 +192,7 @@ Token: `POST https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token`.
 
 | Version | Datum | Änderung |
 |---|---|---|
+| 0.7.1 | 2026-11-25 | Klassenwechsel wie «Klassenumteilung» in CMI: Schullaufbahn bleibt, bisherige Klassenzuteilung endet am Vortag, neue Zuteilung mit eigener Dauer; Wechsel _TEST_Schueler TEST_A1a → TEST_A1b aufgezeichnet (#36) |
 | 0.7.0 | 2026-11-25 | Klasseneinteilung nach dem Modell von CMI Schule (Schullaufbahn → Klassenzuteilung → Klassenstufe), Eintrittsgrund, `GET /klassen/{guid}/stufen`, Klassenstufe beim Anlegen einer Klasse (`klassenlehrplan`); Einteilung von _TEST_Schueler in TEST_A1a aufgezeichnet (#36) |
 | 0.6.0 | 2026-11-25 | `POST /klassen`: Schul- und Externes Schulklassendossier anlegen (Vorlage je Standort, Schuljahr, Beginn/Ende, externe Schule); Klassendossiers und Klasseneinteilung in CMI erkundet (#36) |
 | 0.5.0 | 2026-11-25 | Dokument-Upload in beliebigen Ordner/Unterordner: Zielordner per Pfad oder `ordner_guid`, fehlende Ordner nur mit `ordner_anlegen=true`, Felder Autor, Thema, Eingangs-/Ausgangsdatum; Ablage in CMI erkundet (#32) |
