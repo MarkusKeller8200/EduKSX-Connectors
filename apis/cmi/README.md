@@ -16,7 +16,7 @@ CM Informatik beschreibt (`microsoft/PowerPlatformConnectors`, Ordner `certified
 
 ## Stand
 
-Version 0.4.0 – Gerüst nach der Swagger-Beschreibung, ergänzt um die Erkundung im CMI der Sek Bülach vom 25.11.2026
+Version 0.5.0 – Gerüst nach der Swagger-Beschreibung, ergänzt um die Erkundung im CMI der Sek Bülach vom 25.11.2026
 ([ERKUNDUNG.md](ERKUNDUNG.md)). **Noch nicht live geprüft** (kein Zugang zur offiziellen Schnittstelle). Tests laufen gegen
 ein nachgebautes CMI mit erfundenen Personen.
 
@@ -127,12 +127,15 @@ POST /klassen/einteilen?probelauf=true
 ### Dokument hochladen
 
 ```bash
-curl -H "X-API-Key: $KEY" -F datei=@zeugnis.pdf -F ordner="Zeugnisse/2025-26" -F dokumentdatum=2026-07-03 \
-     -F schluessel=zeugnis-650-2026-S2 "http://localhost:8082/dossiers/$GUID/dokumente?probelauf=true"
+curl -H "X-API-Key: $KEY" -F datei=@zeugnis.pdf -F ordner="b_Dossier Schule/08_Beurteilung" \
+     -F dokumentdatum=2026-07-03 -F schluessel=zeugnis-650-2026-S2 "http://localhost:8082/dossiers/$GUID/dokumente?probelauf=true"
 ```
 
-Felder: `datei`, `titel` (Standard: Dateiname ohne Endung), `ordner`, `dokumentdatum`, `bemerkung`, `schluessel`.
-Duplikat (gleicher `schluessel` irgendwo oder gleicher Titel im Dossier) → `409`. Fehlende Ordner werden angelegt.
+Felder: `datei`, `titel` (Standard: Dateiname ohne Endung), Zielordner als Pfad `ordner` (z. B.
+`b_Dossier Schule/08_Beurteilung`, Gross-/Kleinschreibung egal) oder direkt `ordner_guid` (aus
+`GET /dossiers/{guid}/ordner`), `dokumentdatum`, `eingangsdatum`, `ausgangsdatum`, `bemerkung`, `autor`, `thema`,
+`schluessel`. Duplikat (gleicher `schluessel` irgendwo oder gleicher Titel im Dossier) → `409`. Fehlt ein Ordner,
+kommt `400` mit den fehlenden Teilen; anlegen nur mit `ordner_anlegen=true` (die Vorlagen geben die Ordner vor).
 Kontrolle: Titel, Dossier und SHA-256 des heruntergeladenen Inhalts. Grösse bis `CMI_MAX_MB` (Standard 50).
 
 ## Schutz
@@ -173,6 +176,7 @@ Token: `POST https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token`.
 
 | Version | Datum | Änderung |
 |---|---|---|
+| 0.5.0 | 2026-11-25 | Dokument-Upload in beliebigen Ordner/Unterordner: Zielordner per Pfad oder `ordner_guid`, fehlende Ordner nur mit `ordner_anlegen=true`, Felder Autor, Thema, Eingangs-/Ausgangsdatum; Ablage in CMI erkundet (#32) |
 | 0.4.0 | 2026-11-25 | Erstellen wie bei Escola: `POST /kontakte`, `PATCH /kontakte/{guid}`, `POST /schueler`, `POST /mitarbeitende`; Dossier verknüpft die Person über `person`, Bemerkung, Personaldossier-Vorlage je Standort; Kontakt mit `geschlecht`, `rufname` (#30) |
 | 0.3.0 | 2026-11-25 | Kontakt-Sync mit allen Feldern der CMI-Oberfläche (Titel, Briefanrede, Funktion, Fax, Homepage, Unternehmens-ID, Subjektart, Kategorien), Felder leeren, mehrere Adressen nach Adressart mit Land, Kategorie und Gültigkeit; Schreibweise aus Test am Kontakt _TEST (#27) |
 | 0.2.0 | 2026-11-25 | Kontakt vollständig lesen (`/kontakte/{guid}/vollstaendig`, `/adressen`, `/dossiers`), Schalter `CMI_SCHUETZENSWERT`; Erkundung im CMI der Sek Bülach (`ERKUNDUNG.md`) (#25) |

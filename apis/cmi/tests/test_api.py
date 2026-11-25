@@ -504,7 +504,8 @@ def test_dokument_hochladen_mit_ordnerpfad(fake, api):
     g = _dossier(fake)
     oben = fake.neu("Ordner", titel="Zeugnisse", parent=None, geschaeft={"guid": g})
     files = {"datei": ("zeugnis.pdf", PDF, "application/pdf")}
-    form = {"ordner": "Zeugnisse/2025-26", "dokumentdatum": "2026-07-03", "schluessel": "zeugnis-E1-2026-S2"}
+    form = {"ordner": "Zeugnisse/2025-26", "ordner_anlegen": "true", "dokumentdatum": "2026-07-03",
+            "schluessel": "zeugnis-E1-2026-S2"}
     p = api.post(f"/dossiers/{g}/dokumente?probelauf=true", files=files, data=form).json()
     assert p["ordner_anlegen"] == ["2025-26"] and p["titel"] == "zeugnis" and fake.schreibaufrufe() == []
     r = api.post(f"/dossiers/{g}/dokumente", files=files, data=form)
@@ -521,6 +522,26 @@ def test_dokument_hochladen_mit_ordnerpfad(fake, api):
     # gleicher Schlüssel nochmals → 409
     r2 = api.post(f"/dossiers/{g}/dokumente", files=files, data={**form, "titel": "anders"})
     assert r2.status_code == 409
+
+
+def test_dokument_in_vorhandenen_unterordner(fake, api):
+    # Ordner wie im Lernendendossier der Sek Bülach (Erkundung 25.11.2026)
+    g = _dossier(fake)
+    b = fake.neu("Ordner", titel="b_Dossier Schule", parent=None, geschaeft={"guid": g})
+    beurteilung = fake.neu("Ordner", titel="08_Beurteilung", parent={"guid": b}, geschaeft={"guid": g})
+    files = {"datei": ("TEST_Zeugnis.pdf", PDF, "application/pdf")}
+    # fehlender Ordner ohne ordner_anlegen → 400, nichts geschrieben
+    r = api.post(f"/dossiers/{g}/dokumente", files=files, data={"ordner": "b_Dossier Schule/99_Neu"})
+    assert r.status_code == 400 and r.json()["detail"]["fehlend"] == ["99_Neu"] and fake.schreibaufrufe() == []
+    d = api.post(f"/dossiers/{g}/dokumente", files=files,
+                 data={"ordner": "b_dossier schule/08_Beurteilung", "autor": "TEST Autor", "thema": "Zeugnis"}).json()
+    assert d["vollstaendig"], d
+    dok = fake.daten["Dokument"][d["guid"]]
+    assert dok["ordner"] == {"guid": beurteilung} and dok["autor"] == "TEST Autor" and dok["titel"] == "TEST_Zeugnis"
+    # direkt per ordner_guid; fremde GUID → 400
+    assert api.post(f"/dossiers/{g}/dokumente", files={"datei": ("b.pdf", PDF)}, data={"ordner_guid": "fremd"}).status_code == 400
+    d2 = api.post(f"/dossiers/{g}/dokumente", files={"datei": ("b.pdf", PDF)}, data={"ordner_guid": b}).json()
+    assert fake.daten["Dokument"][d2["guid"]]["ordner"] == {"guid": b}
 
 
 def test_dokument_gleicher_titel_409(fake, api):

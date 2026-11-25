@@ -1119,8 +1119,12 @@ def _ordner_finden(c: CMIClient, dossier_guid: str, pfad: str) -> tuple[str | No
 @app.post("/dossiers/{guid}/dokumente", tags=["Dokumente"],
           summary="Datei als Dokument ins Dossier hochladen (Ordnerpfad wird bei Bedarf angelegt)")
 def dokument_hochladen(guid: str, datei: UploadFile = File(...), titel: str | None = Form(None),
-                       ordner: str | None = Form(None, description="z. B. «Zeugnisse/2025-26»"),
-                       dokumentdatum: date | None = Form(None), bemerkung: str | None = Form(None),
+                       ordner: str | None = Form(None, description="Pfad, z. B. «b_Dossier Schule/08_Beurteilung»"),
+                       ordner_guid: str | None = Form(None, description="Zielordner direkt (statt Pfad)"),
+                       ordner_anlegen: bool = Form(False, description="fehlende Ordner anlegen (sonst 400)"),
+                       dokumentdatum: date | None = Form(None), eingangsdatum: date | None = Form(None),
+                       ausgangsdatum: date | None = Form(None), bemerkung: str | None = Form(None),
+                       autor: str | None = Form(None), thema: str | None = Form(None),
                        schluessel: str | None = Form(None, description="Schlüssel im Quellsystem gegen Duplikate"),
                        probelauf: bool = False, _=Depends(schreib_check)):
     c = client()
@@ -1141,7 +1145,15 @@ def dokument_hochladen(guid: str, datei: UploadFile = File(...), titel: str | No
     if gleicher_titel:
         raise _konflikt("Im Dossier gibt es schon ein Dokument mit diesem Titel",
                         [guid_von(d) for d in gleicher_titel])
-    ordner_guid, fehlend = _ordner_finden(c, guid, ordner or "")
+    if ordner_guid:
+        if ordner_guid not in {o["guid"] for o in _ordnerbaum(c, guid)}:
+            raise HTTPException(400, "ordner_guid gehört nicht zu diesem Dossier")
+        fehlend: list[str] = []
+    else:
+        ordner_guid, fehlend = _ordner_finden(c, guid, ordner or "")
+        if fehlend and not ordner_anlegen:
+            raise HTTPException(400, {"meldung": "Ordner nicht im Dossier (ordner_anlegen=true zum Anlegen)",
+                                      "fehlend": fehlend})
     sha = hashlib.sha256(inhalt).hexdigest()
     plan = {"dossier": guid, "dossier_titel": g.get("titel"), "titel": titel, "dateiname": name,
             "bytes": len(inhalt), "sha256": sha, "ordner": ordner, "ordner_anlegen": fehlend,
@@ -1159,10 +1171,13 @@ def dokument_hochladen(guid: str, datei: UploadFile = File(...), titel: str | No
                                  "istPubliziert": False, "vip": False, "geschaeft": ref(guid)}
         if ordner_guid:
             daten["ordner"] = ref(ordner_guid)
-        if dokumentdatum:
-            daten["dokumentdatum"] = dokumentdatum.isoformat()
-        if bemerkung:
-            daten["bemerkung"] = bemerkung
+        for feld, wert in (("dokumentdatum", dokumentdatum), ("eingangsdatum", eingangsdatum),
+                           ("ausgangsdatum", ausgangsdatum)):
+            if wert:
+                daten[feld] = wert.isoformat()
+        for feld, wert in (("bemerkung", bemerkung), ("autor", autor), ("thema", thema)):
+            if wert:
+                daten[feld] = wert
         if schluessel:
             daten["schluesselFremdsystem"] = schluessel
         if E.upload_art == "rendition":
