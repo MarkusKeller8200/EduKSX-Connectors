@@ -128,3 +128,33 @@ Testobjekte bestehen.
   **Schullaufbahneinträgen** («Neue Schullaufbahn») – dort hängt die Klassenzuteilung (nächster Schritt).
 - Kontakt (zusätzlich gesehen): `rufname`, `geschlecht`, `heimatorte`, `nationalitaeten`, `korrespondenzsprache`,
   `aufenthaltsbewilligungen`, `sozialversNr` (AHV – besonders schützenswert, von der CMI-API nicht bearbeitet).
+
+## Dokumente in Ordner und Unterordner ablegen (Test, 25.11.2026)
+
+Am Personaldossier «_TEST_Mitarbeiter» und am Lernendendossier «_TEST_Schueler» geprüft, mit erfundenen Testdateien.
+Die drei Testdokumente bleiben bestehen.
+
+**Ordner der Vorlagen**
+
+| Dossier | Ordner (Unterordner) |
+|---|---|
+| Personaldossier (Vorlage Hinterbirch) | a_Grunddaten (01_Bewerbungsunterlagen, 02_Personalausweis, 03_Adressen, 04_Familienverhältnis) · b_Verfügungen · c_Entwicklung · d_Administratives · e_Korrespondenz (je mit Unterordnern) |
+| Lernendendossier | a_Akten Verwaltung (01_Laufbahn, 02_Schulgeld, 03_Korrespondenz, 04_Gesuche) · b_Dossier Schule (05_Schulbesuche, 06_Kommunikation, 07_Unterricht, 08_Beurteilung, 09_Weiteres) · c_Sonderpädagogik · d_Diverses |
+
+**Drei Wege in der Oberfläche**
+
+| Weg | Aufrufe | Ergebnis |
+|---|---|---|
+| Datei in den Ordner ziehen | **ein** Aufruf: `POST core/Dokument/AddNew?atGuid=<Ordner-GUID>&fieldKey=children`, multipart mit Feld `file` | Dokument mit Datei im Ordner, Titel = Dateiname ohne Endung, Art aus der Endung (Pdf, Text) |
+| «Neues Dokument» (ohne Vorlage) | Assistent `cmi-assoc-new`, `typeKey: "Dokument"`, Felder `titel` (Pflicht), `bemerkung`, `kategorie`, `autor`, `thema`, `standort`, `dokumentdatum`, `eingangsdatum`, `ausgangsdatum` | Dokument nur mit Metadaten, ohne Datei |
+| Datei nachreichen | Menü «Neue Version hochladen»: `POST core/Dokument/AddNewVersion?objGuid=<Dokument-GUID>`, multipart `file` | neue Version mit Datei |
+
+- Der Ordnerbaum kommt über `core/CustomTree/GetChildren` mit `treeKey: "DokumenteExplorerTree.<Dossier-GUID>"`
+  und `parentKey` (Antwort: `guid`, `displayName`, `childrenCount`, `parentGuid`).
+- «Neues Dokument» bietet auch Vorlagen an (z. B. «Antrag Personal Anstellung», «Antrag SuS IBR»); die erzeugen
+  ein Dokument aus einer Word-Vorlage, nicht aus einer Datei.
+- Dokumentfelder in Listen: `titel`, `art`, `fileSize`, `lastCheckInDate`, `dokumentVersion`, `downloadUrl`.
+
+**Für die CMI-API:** Upload mit Zielordner per Pfad (`b_Dossier Schule/08_Beurteilung`) oder per `ordner_guid`;
+Ordner aus der Vorlage werden nicht neu angelegt (nur mit `ordner_anlegen=true`). Offiziell entspricht das
+`POST /Dokument` mit Verweis auf Dossier und Ordner und der Datei (Format ZU PRÜFEN) bzw. Check-in.
