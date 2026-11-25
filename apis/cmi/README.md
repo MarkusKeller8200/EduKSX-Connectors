@@ -16,7 +16,7 @@ CM Informatik beschreibt (`microsoft/PowerPlatformConnectors`, Ordner `certified
 
 ## Stand
 
-Version 0.6.0 – Gerüst nach der Swagger-Beschreibung, ergänzt um die Erkundung im CMI der Sek Bülach vom 25.11.2026
+Version 0.7.0 – Gerüst nach der Swagger-Beschreibung, ergänzt um die Erkundung im CMI der Sek Bülach vom 25.11.2026
 ([ERKUNDUNG.md](ERKUNDUNG.md)). **Noch nicht live geprüft** (kein Zugang zur offiziellen Schnittstelle). Tests laufen gegen
 ein nachgebautes CMI mit erfundenen Personen.
 
@@ -30,7 +30,7 @@ ein nachgebautes CMI mit erfundenen Personen.
 | TentaQl | `feld = "wert"`, verknüpft mit ` AND `; Suchtext als JSON-String | `CMI_TENTAQL_GLEICH`, `CMI_TENTAQL_UND`, `CMI_SUCHE_ALS_JSON` |
 | Dossiervorlagen und Typnamen | **Typen bestätigt:** `Lernendendossier`, `Personaldossier`, `Schulklassendossier`; Vorlagen offen. Schüler-, Personal- und Klassendossier über Vorlage (`?Vorlage=`) und `typeName`; Vorlage setzt Laufnummer, Registraturplan und Eigner | `CMI_DOSSIER_*` |
 | Verknüpfung Kontakt ↔ Dossier | über `schluesselFremdsystem` = `fremdkey`; optional zusätzlich eine Beteiligung | `CMI_BETEILIGUNG_ENTITAET`, `CMI_BETEILIGUNG_ROLLE` |
-| Klassenzuteilung | **bestätigt:** eigener Typ «Klassenzuteilung Lernende» (Entitätsname der offiziellen API offen); eigene Entität mit Verweisen auf Schüler:in und Klasse und Datum von/bis; nicht im Swagger – über den allgemeinen Proxy-Pfad | `CMI_KLASSENZUTEILUNG_ENTITAET`, `CMI_KZ_*` |
+| Klassenzuteilung | **bestätigt (Test 25.11.2026):** Lernendendossier → Schullaufbahn (Schuljahr, von–bis, Eintrittsgrund) → Klassenzuteilung Lernende → Klassenstufe («Teilklasse») → Schulklassendossier; Entitätsnamen der offiziellen API offen | `CMI_SCHULLAUFBAHN_ENTITAET`, `CMI_KLASSENZUTEILUNG_ENTITAET`, `CMI_KLASSENSTUFE_ENTITAET` |
 | Ordner | Ordner der obersten Ebene haben keinen Eltern-Ordner im Dossier; Dokument kennt Feld `ordner` | – |
 | Datei beim Anlegen | Base64 in `eDokument.renditions[]` (`fileName`, `file`); Alternative: anlegen, auschecken, einchecken (multipart, im Swagger belegt) | `CMI_UPLOAD_ART=rendition\|checkin` |
 | Rate-Limit | Connector: 100 Aufrufe pro Minute und Verbindung | – |
@@ -66,9 +66,10 @@ Listen mit `?format=csv` (Semikolon, UTF-8 mit BOM).
 | `POST /dossiers/personal` | ✏️ ⏳ | `POST /Geschaeft?Vorlage=` | Personaldossier (Mitarbeitende, Lehrperson) |
 | `POST /klassen` | ✏️ ⏳ | `POST /Geschaeft?Vorlage=` | Schulklassendossier (Vorlage je `standort`) oder mit `extern: true` Externes Schulklassendossier (`externe_schule`, Eigner = Schuleinheit); `409` bei gleichem Titel im Schuljahr |
 | `GET /klassen` | 🔓 ⏳ | `POST /Geschaeft/Search` | Klassendossiers |
-| `GET /klassen/{guid}/schueler` | 🔓 ⏳ | Klassenzuteilung | Zuteilungen am Stichtag (`?stichtag=`, `?alle=true`) |
-| `GET /schueler/{fremdkey}/klassen` | 🔓 ⏳ | Klassenzuteilung | Schullaufbahn einer Schülerin / eines Schülers |
-| `POST /klassen/einteilen` | ✏️ ⏳ | Klassenzuteilung (POST, PUT) | einteilen, umteilen, korrigieren ab Datum |
+| `GET /klassen/{guid}/stufen` | 🔓 | Teilklasse | Klassenstufen einer Klasse |
+| `GET /klassen/{guid}/schueler` | 🔓 ⏳ | Klassenstufe → Zuteilung → Schullaufbahn | Schüler:innen am Stichtag (`?stichtag=`, `?alle=true`) |
+| `GET /schueler/{fremdkey}/klassen` | 🔓 ⏳ | Schullaufbahn, Zuteilung | Schullaufbahn mit Klasse, Klassenstufe, Eintrittsgrund, von–bis |
+| `POST /klassen/einteilen` | ✏️ ⏳ | Schullaufbahn + Klassenzuteilung (POST, PUT) | in die aktuelle Klasse einteilen, umteilen, korrigieren ab Datum |
 | `POST /dossiers/{guid}/dokumente` | ✏️ | `Ordner`, `Dokument`, `FileContent` | Datei hochladen (multipart) |
 | `GET /dokumente/{guid}` | 🔓 | `GET /Dokument/{guid}` | Metadaten |
 | `GET /dokumente/{guid}/inhalt` | 🔓 | `GET /Dokument/FileContent/{guid}` | Datei herunterladen (`?version=`) |
@@ -121,9 +122,19 @@ POST /klassen/einteilen?probelauf=true
 {"ab": "2027-02-01", "zuteilungen": [{"fremdkey": "escola-650", "klasse": "2b"}]}
 ```
 
-`klasse` = GUID oder Titel des Klassendossiers. Aktionen: `einteilen` (keine aktive Zuteilung), `umteilen`
-(bisherige endet am Vortag, neue ab Datum), `korrigieren` (bisherige beginnt am selben Tag → Klasse ersetzen),
-`unveraendert`. Unbekannte Klasse oder Schüler:in → `400`, mehrere aktive Zuteilungen → `409`, beides vor dem Schreiben.
+Wie «Klasseneinteilung → Direkte Schulklasseneinteilung» in CMI: pro Schüler:in ein **Schullaufbahneintrag**
+(Schuljahr der Klasse, von–bis, Eintrittsgrund) mit **Klassenzuteilung** auf eine **Klassenstufe** der Klasse.
+`klasse` = GUID oder Titel (mit oder ohne Schuljahr, z. B. «2b» oder «2b 2026/27»); `klassenstufe` nur nötig, wenn
+die Klasse mehrere hat; `eintrittsgrund` = `schuleintritt` (Standard beim Einteilen), `zuzug`, `klassenwechsel`
+(Standard beim Umteilen), `umteilung`, `kindergarteneintritt`, `primareintritt`, `sekundareintritt`; `bis` Standard
+Ende der Klasse bzw. 31.7. Voraussetzung: Lernendendossier mit `fremdkey` (`POST /schueler`).
+
+Aktionen: `einteilen` (kein aktiver Eintrag), `umteilen` (bisheriger Eintrag endet am Vortag, neuer ab Datum),
+`korrigieren` (bisheriger beginnt am selben Tag → Klassenstufe ersetzen), `unveraendert`. Unbekannte Klasse,
+Klasse ohne Klassenstufe oder fehlendes Lernendendossier → `400`, mehrere aktive Einträge → `409`, alles vor dem
+Schreiben. Klassen ohne Klassenstufe: beim Anlegen `klassenlehrplan` mitgeben (`POST /klassen`).
+
+Noch nicht in der API: «In Planung für Schuljahreswechsel aufnehmen» (Sammelklassendossier).
 
 ### Dokument hochladen
 
@@ -177,6 +188,7 @@ Token: `POST https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token`.
 
 | Version | Datum | Änderung |
 |---|---|---|
+| 0.7.0 | 2026-11-25 | Klasseneinteilung nach dem Modell von CMI Schule (Schullaufbahn → Klassenzuteilung → Klassenstufe), Eintrittsgrund, `GET /klassen/{guid}/stufen`, Klassenstufe beim Anlegen einer Klasse (`klassenlehrplan`); Einteilung von _TEST_Schueler in TEST_A1a aufgezeichnet (#36) |
 | 0.6.0 | 2026-11-25 | `POST /klassen`: Schul- und Externes Schulklassendossier anlegen (Vorlage je Standort, Schuljahr, Beginn/Ende, externe Schule); Klassendossiers und Klasseneinteilung in CMI erkundet (#36) |
 | 0.5.0 | 2026-11-25 | Dokument-Upload in beliebigen Ordner/Unterordner: Zielordner per Pfad oder `ordner_guid`, fehlende Ordner nur mit `ordner_anlegen=true`, Felder Autor, Thema, Eingangs-/Ausgangsdatum; Ablage in CMI erkundet (#32) |
 | 0.4.0 | 2026-11-25 | Erstellen wie bei Escola: `POST /kontakte`, `PATCH /kontakte/{guid}`, `POST /schueler`, `POST /mitarbeitende`; Dossier verknüpft die Person über `person`, Bemerkung, Personaldossier-Vorlage je Standort; Kontakt mit `geschlecht`, `rufname` (#30) |

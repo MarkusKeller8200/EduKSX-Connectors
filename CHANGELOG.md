@@ -7,6 +7,8 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
 ## [Unveröffentlicht]
 
 ### Hinzugefügt
+- CMI-API 0.7.0 (#36): Klasseneinteilung nach dem Modell von CMI Schule (Schullaufbahn, Klassenzuteilung,
+  Klassenstufe, Eintrittsgrund); Klassenstufe beim Anlegen einer Klasse
 - CMI-API 0.6.0 (#36): Schul- und Externes Schulklassendossier anlegen (`POST /klassen`); Testklassen in CMI
 - CMI-API 0.5.0 (#32): Dokumente in beliebigen Ordner/Unterordner eines Dossiers ablegen (Pfad oder GUID),
   Ordner der Vorlagen werden nicht neu angelegt; Ablage in CMI erkundet (`ERKUNDUNG.md`)

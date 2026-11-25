@@ -201,3 +201,27 @@ Schulklassendossier (verwendet werden Schul- und Externes Schulklassendossier). 
   («Sekundarschule Bülach», ein Schulträger) wird abgelehnt. «Klassen weitere» geht.
 - Nach dem Anlegen warnt CMI «Es sind noch keine Schulstufen zugewiesen» (Schulstufe separat).
 - Schuljahre im Mandanten: 2021/22 bis 2026/27.
+
+## Klasseneinteilung ausgeführt (_TEST_Schueler → TEST_A1a, 25.11.2026)
+
+1. **Klassenstufe nötig:** Eine neue Klasse hat keine Klassenstufe; die Einteilung fragt danach («Klassenstufe»,
+   Pflicht) und findet sonst nichts. Anlegen im Klassendossier unter Dossierdetails → Klassenstufen → «Neue
+   Klassenstufe»: Assistent `cmi-assoc-new` mit `typeKey: "Teilklasse"`, einziges Feld `klassenlehrplan`
+   (Stammdaten «Klassenlehrplan», z. B. «1. Sekundarschule», «2. Sekundarschule Abteilung B»). Ergebnis «1. SST».
+2. **Einteilung:** Assistent `…einschulung.klasseneinteilungcommand` mit
+   `direkteKlasseneinteilung`, `schuljahr`, `eintrittsgrund: "schuleintritt"`, `vonBis: "01.08.2026 - 31.07.2027"`,
+   `einteilungSchulklassendossier`, `einteilungTeilklasse` (bei nur einer Stufe automatisch), Zusammenfassung mit
+   `einschulungSummaryTakeNotice: true`. Meldung «Einschulung ausgeführt.»
+
+**Datenmodell danach**
+
+| Objekt (`typeKey`) | Wichtige Felder |
+|---|---|
+| Lernendendossier (`lernendedossier`) | `person`, `schullaufbahneintraege` |
+| Schullaufbahn (`schullaufbahn`) | `titel` (= Klassenlehrplan, z. B. «1. Sekundarschule»), `schuljahr`, `status` (InBearbeitung), `vonBis` |
+| Klassenzuteilung Lernende (`klassenzuteilungLernende`) | Verweis auf die Klassenstufe, `computedPersonName`, `computedPersonVorname` |
+| Klassenstufe (`teilklasse`) | `titel` («1. SST»), `klassenlehrplan`, `klassenzuteilungenLernende`, gehört zum Schulklassendossier |
+
+Im Lernendendossier zeigt die Übersicht danach «Aktuelle Schullaufbahn: 1. Sekundarschule», «Aktuelles
+Schulklassendossier: TEST_A1a 2026/27», «Anzahl Schuljahre: 1». Die CMI-API bildet das so nach (`/klassen/einteilen`).
+Offen: Klassenwechsel und «In Planung aufnehmen» (Sammelklassendossier) live aufzeichnen.
