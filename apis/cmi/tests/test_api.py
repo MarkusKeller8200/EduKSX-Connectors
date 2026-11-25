@@ -21,7 +21,8 @@ from fastapi.testclient import TestClient
 from cmi_api import app as A
 from cmi_api.client import CMIClient, CMIConfig
 
-ENTITAETEN = ("Kontakt", "Adresse", "Geschaeft", "Ordner", "Dokument", "Klassenzuteilung", "Beteiligung")
+ENTITAETEN = ("Kontakt", "Adresse", "Geschaeft", "Ordner", "Dokument", "Klassenzuteilung", "Beteiligung",
+              "Dossierkontakt", "Beziehung", "Zahlungsinformation", "MedizinischerInformationseintrag")
 
 
 class FakeCMI:
@@ -439,6 +440,67 @@ def test_dokument_hochladen_per_checkin(fake, api, monkeypatch):
     assert d["vollstaendig"], d
     assert [s["schritt"] for s in d["schritte"]] == ["dokument_anlegen", "datei_einchecken", "kontrolle"]
     assert fake.dateien[d["guid"]] == PDF
+
+
+# ================================================================ Kontakt vollständig lesen
+# Aufbau wie in der Erkundung vom 25.11.2026 (ERKUNDUNG.md), Person und Adressen erfunden.
+
+def _kontakt_mit_allem(fake):
+    k = fake.neu("Kontakt", name="Muster", vorname="Lea", anrede="Frau", email="lea@example.org", inaktiv=False,
+                 fremdkey=None, kategorie={"guid": "kat1", "displayName": "Fachstelle Test"},
+                 subjektart={"iconId": None, "text": None, "value": None})
+    a1 = fake.neu("Adresse", strasse="Testweg 1", pLZ="8180", ort="Bülach", inaktiv=False,
+                  adressart={"guid": "aa1", "displayName": "Privatadresse"},
+                  gueltigVonBis={"start": {"precision": "Day", "value": "2024-10-21T00:00:00"},
+                                 "end": {"precision": None, "value": None}})
+    a2 = fake.neu("Adresse", strasse="Altweg 3", plz="8180", ort="Bülach", inaktiv=True,
+                  adressart={"guid": "aa2", "displayName": "Geschäftsadresse"},
+                  gueltigVonBis={"start": {"value": "2020-08-01T00:00:00"}, "end": {"value": "2026-01-31T23:59:59"}})
+    d1 = fake.neu("Dossierkontakt", rolle="Person", computedDossier={"guid": "pd1", "displayName": "Lea Muster"},
+                  dossierLaufnummer="2024-0001", dossierStatus="InBearbeitung", dossiertitel="Lea Muster",
+                  dossierTyp="Personaldossier", dauer={"start": None, "end": None})
+    z1 = fake.neu("Zahlungsinformation", iban="CH00 0000 0000 0000 0000 0")
+    o = fake.daten["Kontakt"][k]
+    o.update(adressen=f"{a1};{a2}", dossierkontakte=[{"guid": d1}], zahlungsinformationen=[{"guid": z1}],
+             medizinischeInformationen="", beziehungenA="", gebiete=[{"guid": "fehlt"}],
+             notizen=[{"guid": "n1", "displayName": "Notiz"}])
+    return k
+
+
+def test_kontakt_vollstaendig(fake, api):
+    k = _kontakt_mit_allem(fake)
+    d = api.get(f"/kontakte/{k}/vollstaendig").json()
+    assert d["kontakt"]["name"] == "Muster" and d["kontakt"]["kategorie"] == "Fachstelle Test"
+    assert [(a["strasse"], a["plz"], a["adressart"], a["gueltig_von"], a["gueltig_bis"]) for a in d["adressen"]] == [
+        ("Testweg 1", "8180", "Privatadresse", "2024-10-21", None),
+        ("Altweg 3", "8180", "Geschäftsadresse", "2020-08-01", "2026-01-31")]
+    assert d["dossiers"] == [{"guid": d["dossiers"][0]["guid"], "rolle": "Person", "dossier_guid": "pd1",
+                              "dossiertitel": "Lea Muster", "laufnummer": "2024-0001", "dossiertyp": "Personaldossier",
+                              "status": "InBearbeitung", "von": None, "bis": None}]
+    # schützenswert: ohne Schalter nur Anzahl, keine IBAN
+    assert d["geschuetzt"]["zahlungsinformationen"] == {"anzahl": 1}
+    assert "CH00" not in json.dumps(d)
+    # nicht lesbare Beziehung wird gemeldet, unbekannte nur als Verweis
+    assert d["nicht_lesbar"][0]["beziehung"] == "gebiete"
+    assert d["weitere_beziehungen"] == {"notizen": [{"guid": "n1", "name": "Notiz"}]}
+    assert fake.schreibaufrufe() == []
+
+
+def test_kontakt_vollstaendig_schuetzenswert(fake, api, monkeypatch):
+    k = _kontakt_mit_allem(fake)
+    monkeypatch.setattr(A, "SCHUETZENSWERT", True)
+    d = api.get(f"/kontakte/{k}/vollstaendig").json()
+    assert d["geschuetzt"]["zahlungsinformationen"]["eintraege"][0]["iban"].startswith("CH00")
+    monkeypatch.setattr(A, "API_KEY", "")  # ohne API-Key nie
+    d = TestClient(A.app).get(f"/kontakte/{k}/vollstaendig").json()
+    assert "eintraege" not in d["geschuetzt"]["zahlungsinformationen"]
+
+
+def test_kontakt_adressen_und_dossiers(fake, api):
+    k = _kontakt_mit_allem(fake)
+    assert [a["strasse"] for a in api.get(f"/kontakte/{k}/adressen?nur_aktive=true").json()] == ["Testweg 1"]
+    assert api.get(f"/kontakte/{k}/dossiers").json()[0]["dossiertyp"] == "Personaldossier"
+    assert "Testweg 1" in api.get(f"/kontakte/{k}/adressen?format=csv").text
 
 
 # ================================================================ Lesen schreibt nie
