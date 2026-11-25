@@ -179,3 +179,80 @@ im Mandanten gibt es keine Testklasse.
 - Das Ergebnis erscheint im Lernendendossier unter **Schullaufbahneinträge**; Aufbau des Eintrags (Typ
   «Klassenzuteilung Lernende» / «Schullaufbahn») noch offen.
 - Für den letzten Schritt braucht es eine **Testklasse** (Schulklassendossier) und eine **Test-Sammelklasse**.
+
+## Klassendossiers anlegen (Testklassen, 25.11.2026)
+
+Anwendung «Schule» → Klassen → «+» bietet: Externes Schulklassendossier, Fachklassendossier, Sammelklassendossier,
+Schulklassendossier (verwendet werden Schul- und Externes Schulklassendossier). Angelegt als Testobjekte, bleiben bestehen:
+
+| Testklasse | Typ | Vorlage | Geschäftseigner |
+|---|---|---|---|
+| TEST_A1a 2026/27 | Schulklassendossier | «Schulklassendossier Hinterbirch (Vorlage/Global/Schulverwaltung)» | Klassen Hinterbirch; KLH |
+| TEST_A1b 2026/27 | Schulklassendossier | «Schulklassendossier Mettmenriet (…)» | Klassen Mettmenriet; KLM |
+| TEST_Extern 2026/27 | Externes Schulklassendossier | «Externes Schulklassendossier (Vorlage/Global/Schulverwaltung)» | Klassen weitere; KLW |
+
+| Aktion | Felder (`obj_1_*`) |
+|---|---|
+| `cmi-creation.Schulklassendossier` | `titel` (Pflicht), `schuljahr` (Verweis Schuljahr), `beginn` (Pflicht), `ende`, `geschaeftseigner` (Pflicht; Organisationseinheit, Schulträger, Schulkreis, Schuleinheit, Benutzer oder Kontakt) |
+| `cmi-creation.ExternesSchulklassendossier` | dieselben plus `externeSchule` (Pflicht, Stammdaten «Externe Schule», z. B. «Extern», «Gymnasium») |
+
+- CMI hängt das Schuljahr an den Titel: «TEST_A1a» → «TEST_A1a 2026/27».
+- **Regel SCV102:** ein Externes Schulklassendossier muss einer **Schuleinheit** gehören; die Vorgabe der Vorlage
+  («Sekundarschule Bülach», ein Schulträger) wird abgelehnt. «Klassen weitere» geht.
+- Nach dem Anlegen warnt CMI «Es sind noch keine Schulstufen zugewiesen» (Schulstufe separat).
+- Schuljahre im Mandanten: 2021/22 bis 2026/27.
+
+## Klasseneinteilung ausgeführt (_TEST_Schueler → TEST_A1a, 25.11.2026)
+
+1. **Klassenstufe nötig:** Eine neue Klasse hat keine Klassenstufe; die Einteilung fragt danach («Klassenstufe»,
+   Pflicht) und findet sonst nichts. Anlegen im Klassendossier unter Dossierdetails → Klassenstufen → «Neue
+   Klassenstufe»: Assistent `cmi-assoc-new` mit `typeKey: "Teilklasse"`, einziges Feld `klassenlehrplan`
+   (Stammdaten «Klassenlehrplan», z. B. «1. Sekundarschule», «2. Sekundarschule Abteilung B»). Ergebnis «1. SST».
+2. **Einteilung:** Assistent `…einschulung.klasseneinteilungcommand` mit
+   `direkteKlasseneinteilung`, `schuljahr`, `eintrittsgrund: "schuleintritt"`, `vonBis: "01.08.2026 - 31.07.2027"`,
+   `einteilungSchulklassendossier`, `einteilungTeilklasse` (bei nur einer Stufe automatisch), Zusammenfassung mit
+   `einschulungSummaryTakeNotice: true`. Meldung «Einschulung ausgeführt.»
+
+**Datenmodell danach**
+
+| Objekt (`typeKey`) | Wichtige Felder |
+|---|---|
+| Lernendendossier (`lernendedossier`) | `person`, `schullaufbahneintraege` |
+| Schullaufbahn (`schullaufbahn`) | `titel` (= Klassenlehrplan, z. B. «1. Sekundarschule»), `schuljahr`, `status` (InBearbeitung), `vonBis` |
+| Klassenzuteilung Lernende (`klassenzuteilungLernende`) | `teilklasse` (Klassenstufe), `schullaufbahn`, `schulklassendossier` (abgeleitet, schreibgeschützt), **`vonBis`** (eigene Dauer), `computedIstPerHeuteZugeteilt`, `computedPersonName`, `computedPersonVorname` |
+| Klassenstufe (`teilklasse`) | `titel` («1. SST»), `klassenlehrplan`, `klassenzuteilungenLernende`, gehört zum Schulklassendossier |
+
+Im Lernendendossier zeigt die Übersicht danach «Aktuelle Schullaufbahn: 1. Sekundarschule», «Aktuelles
+Schulklassendossier: TEST_A1a 2026/27», «Anzahl Schuljahre: 1». Die CMI-API bildet das so nach (`/klassen/einteilen`).
+
+## Klassenwechsel ausgeführt (_TEST_Schueler: TEST_A1a → TEST_A1b, 25.11.2026)
+
+Nach der ersten Einteilung bietet das Menü des Lernendendossiers keine «Klasseneinteilung» mehr an. Der Wechsel
+läuft über das **Menü des Schullaufbahneintrags** (Übersicht → Schullaufbahneinträge → «⋮») → **Klassenumteilung**.
+Vorher in TEST_A1b die Klassenstufe «1. SST» angelegt (wie oben).
+
+| Schritt | Felder |
+|---|---|
+| 1 Option | `klasseneinteilungsoptionWizardOptionChoice`: `direkteKlasseneinteilung` oder `planungSchuljahreswechsel` |
+| 2 Umteilung | `umteilungPer` (Pflicht, Vorgabe morgen, z. B. «26.11.2026»), `schulklassendossier` (Pflicht), `eintrittsgrund` (Vorgabe `umteilung`, gewählt `klassenwechsel`), `bestehendeLeistungenUebertragen` (Vorgabe ja) |
+| 3 Zusammenfassung | `klassenumteilungSummaryTakeNotice: true`; Hinweis «Bestehende offene Zeugnisse werden in den neuen Schulklassenkontext weitergeführt» |
+
+`actionId: "workspaces.cmiaxioma.schulverwaltung.klassenumteilung.klassenumteilunglernendecommand"`,
+`actionArguments: "<Schullaufbahn-GUID>"`, `contextId: "assocentry.<id>;schullaufbahneintraege"`.
+
+**Ergebnis**
+
+- Die **Schullaufbahn bleibt** (gleiche GUID, Dauer unverändert, weiterhin ein Eintrag «1. Sekundarschule 2026/27»).
+- Die **bisherige Klassenzuteilung** (TEST_A1a) endet am **Vortag** des Stichtags: Dauer «25.11.2026 - 25.11.2026».
+- Eine **neue Klassenzuteilung** (TEST_A1b, Klassenstufe «1. SST») in derselben Schullaufbahn ab Stichtag:
+  «26.11.2026 - 31.07.2027».
+- Übersicht danach: «Aktuelles Schulklassendossier: TEST_A1b 2026/27». Die Schullaufbahn zeigt unter
+  «Klassenzuteilungen» beide Zuteilungen.
+- Wo `eintrittsgrund` und `bestehendeLeistungenUebertragen` landen, zeigt die Oberfläche nicht (ZU PRÜFEN).
+
+**Für die CMI-API (0.7.1):** `umteilen` im selben Schuljahr = PUT `KlassenzuteilungLernende.vonBis` (Ende Vortag)
+und POST neue `KlassenzuteilungLernende` mit `schullaufbahn`, `teilklasse`, `vonBis`. Nur beim Wechsel in ein
+anderes Schuljahr endet auch die Schullaufbahn und eine neue wird angelegt. Die Übertragung offener Zeugnisse macht
+nur der Assistent; über das Objektmodell ist sie nicht nachgebildet (ZU PRÜFEN).
+
+Offen: «In Planung aufnehmen» (Sammelklassendossier) live aufzeichnen.

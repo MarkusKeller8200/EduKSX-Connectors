@@ -57,18 +57,20 @@ class Einstellungen:
     personal_vorlagen: dict | None = None   # Standort → Vorlage, z. B. Hinterbirch/Mettmenriet
     personal_typ: str = ""
     klasse_typ: str = ""
+    klasse_vorlagen: dict | None = None      # Standort → Vorlage Schulklassendossier
+    klasse_extern_typ: str = ""
+    klasse_extern_vorlage: str = ""
     dossier_zugriff: str = "Restriktiv"   # Offen | Restriktiv – Personendossiers standardmässig restriktiv
     geschaeftseigner: str = ""            # GUID, falls die Vorlage keinen Eigner setzt
     # Verknüpfung Kontakt ↔ Dossier (optional): Entität und Feldnamen
     beteiligung_entitaet: str = ""
     beteiligung_rolle: str = ""
     # Klassenzuteilung (CMI Schule): Entität und Feldnamen; leer = nicht eingerichtet (501)
-    kz_entitaet: str = ""
-    kz_schueler: str = "schueler"
-    kz_klasse: str = "klasse"
-    kz_von: str = "von"
-    kz_bis: str = "bis"
-    kz_schueler_ref: Literal["kontakt", "dossier"] = "kontakt"
+    # Schullaufbahn (CMI Schule, Erkundung 25.11.2026): Lernendendossier → Schullaufbahn → Klassenzuteilung
+    # Lernende → Klassenstufe («Teilklasse») → Schulklassendossier. Entitätsnamen der offiziellen API ZU PRÜFEN.
+    lb_entitaet: str = "Schullaufbahn"
+    kz_entitaet: str = "KlassenzuteilungLernende"
+    stufe_entitaet: str = "Teilklasse"
     # Dokumente
     upload_art: Literal["rendition", "checkin"] = "rendition"
     max_mb: float = 50.0
@@ -90,12 +92,14 @@ def einstellungen_aus_env() -> Einstellungen:
         schueler_vorlage=_env("DOSSIER_SCHUELER_VORLAGE"), schueler_typ=_env("DOSSIER_SCHUELER_TYP"),
         personal_vorlage=_env("DOSSIER_PERSONAL_VORLAGE"), personal_typ=_env("DOSSIER_PERSONAL_TYP"),
         personal_vorlagen=_vorlagen_map(_env("DOSSIER_PERSONAL_VORLAGEN")),
-        klasse_typ=_env("DOSSIER_KLASSE_TYP"), dossier_zugriff=_env("DOSSIER_ZUGRIFF", "Restriktiv"),
+        klasse_typ=_env("DOSSIER_KLASSE_TYP"), klasse_vorlagen=_vorlagen_map(_env("DOSSIER_KLASSE_VORLAGEN")),
+        klasse_extern_typ=_env("DOSSIER_KLASSE_EXTERN_TYP"), klasse_extern_vorlage=_env("DOSSIER_KLASSE_EXTERN_VORLAGE"),
+        dossier_zugriff=_env("DOSSIER_ZUGRIFF", "Restriktiv"),
         geschaeftseigner=_env("DOSSIER_EIGNER"),
         beteiligung_entitaet=_env("BETEILIGUNG_ENTITAET"), beteiligung_rolle=_env("BETEILIGUNG_ROLLE"),
-        kz_entitaet=_env("KLASSENZUTEILUNG_ENTITAET"), kz_schueler=_env("KZ_FELD_SCHUELER", "schueler"),
-        kz_klasse=_env("KZ_FELD_KLASSE", "klasse"), kz_von=_env("KZ_FELD_VON", "von"),
-        kz_bis=_env("KZ_FELD_BIS", "bis"), kz_schueler_ref=_env("KZ_SCHUELER_REF", "kontakt"),  # type: ignore[arg-type]
+        lb_entitaet=_env("SCHULLAUFBAHN_ENTITAET", "Schullaufbahn"),
+        kz_entitaet=_env("KLASSENZUTEILUNG_ENTITAET", "KlassenzuteilungLernende"),
+        stufe_entitaet=_env("KLASSENSTUFE_ENTITAET", "Teilklasse"),
         upload_art=_env("UPLOAD_ART", "rendition"), max_mb=float(_env("MAX_MB", "50")),  # type: ignore[arg-type]
     )
 
@@ -238,7 +242,7 @@ def status():
             "schreiben": SCHREIBEN, "schuetzenswert": SCHUETZENSWERT and bool(API_KEY), "aufrufe_cmi": {"lesen": c.zaehler.lesen, "schreiben": c.zaehler.schreiben},
             "eingerichtet": {
                 "dossier_schueler": bool(E.schueler_vorlage), "dossier_personal": bool(E.personal_vorlage),
-                "klassen": bool(E.klasse_typ), "klassenzuteilung": bool(E.kz_entitaet),
+                "klassen": bool(E.klasse_typ), "klassenzuteilung": bool(E.klasse_typ and E.schueler_typ),
                 "beteiligung": bool(E.beteiligung_entitaet), "upload_art": E.upload_art}}
 
 
@@ -924,9 +928,9 @@ def mitarbeitende_anlegen(body: PersonMitDossier, probelauf: bool = False, _=Dep
 # ================================================================ Klassen und Klassenzuteilung
 
 def _kz_check():
-    if not E.kz_entitaet:
-        raise HTTPException(501, f"Klassenzuteilung nicht eingerichtet ({PRAEFIX}KLASSENZUTEILUNG_ENTITAET; "
-                                 "Modell in CMI Schule ZU PRÜFEN)")
+    if not (E.klasse_typ and E.schueler_typ):
+        raise HTTPException(501, f"Klassenzuteilung braucht {PRAEFIX}DOSSIER_KLASSE_TYP und "
+                                 f"{PRAEFIX}DOSSIER_SCHUELER_TYP")
 
 
 def _klassen(c: CMIClient) -> list[dict]:
@@ -935,146 +939,317 @@ def _klassen(c: CMIClient) -> list[dict]:
     return _suche(c, "Geschaeft", typeName=E.klasse_typ)
 
 
+class KlasseEingabe(BaseModel):
+    titel: str = Field(..., min_length=1, description="z. B. «2a» – CMI hängt das Schuljahr an («2a 2026/27»)")
+    schuljahr: str = Field(..., description="GUID des Schuljahres (Stammdaten «Schuljahr»)")
+    beginn: date
+    ende: date | None = None
+    extern: bool = Field(False, description="Externes Schulklassendossier (andere Schule)")
+    standort: str | None = Field(None, description="Vorlage je Standort, z. B. Hinterbirch, Mettmenriet")
+    geschaeftseigner: str | None = Field(None, description="GUID; extern: muss eine Schuleinheit sein "
+                                                           "(z. B. «Klassen weitere»), sonst setzt ihn die Vorlage")
+    externe_schule: str | None = Field(None, description="GUID der externen Schule – Pflicht bei extern")
+    klassenlehrplan: str | None = Field(None, description="GUID des Klassenlehrplans (z. B. «1. Sekundarschule»): "
+                                                          "legt die Klassenstufe an – ohne sie kann CMI nicht einteilen")
+
+
+@app.post("/klassen", tags=["Klassen"], status_code=201,
+          summary="Schulklassendossier bzw. Externes Schulklassendossier anlegen")
+def klasse_anlegen(body: KlasseEingabe, probelauf: bool = False, _=Depends(schreib_check)):
+    c = client()
+    if body.extern:
+        typ, vorlage = E.klasse_extern_typ, E.klasse_extern_vorlage
+        if not body.externe_schule:
+            raise HTTPException(400, "Externes Schulklassendossier braucht externe_schule")
+    else:
+        typ = E.klasse_typ
+        karte = E.klasse_vorlagen or {}
+        if karte and (not body.standort or body.standort.lower() not in karte):
+            raise HTTPException(400, f"standort muss einer sein von: {', '.join(karte)}")
+        vorlage = karte.get((body.standort or "").lower(), "")
+    if not typ and not vorlage:
+        raise HTTPException(501, f"Klassendossier nicht eingerichtet ({PRAEFIX}DOSSIER_KLASSE"
+                                 f"{'_EXTERN' if body.extern else ''}_TYP bzw. Vorlage)")
+    if body.ende and body.ende < body.beginn:
+        raise HTTPException(400, "ende liegt vor beginn")
+    # Duplikat: gleicher Titel im gleichen Schuljahr (CMI hängt das Schuljahr an den Titel)
+    vorhanden = [k for k in _suche(c, "Geschaeft", typeName=typ or None, **{"schuljahr.guid": body.schuljahr})
+                 if (k.get("titel") or "").strip().lower().split(" ")[0] == body.titel.strip().lower()]
+    if vorhanden:
+        raise _konflikt("Klasse gibt es in diesem Schuljahr schon",
+                        [{"guid": k.get("guid"), "titel": k.get("titel")} for k in vorhanden])
+    daten: dict[str, Any] = {"titel": body.titel, "beginn": body.beginn.isoformat(), "schuljahr": ref(body.schuljahr),
+                             "zugriffsteuerung": "Offen", "geschaeftsstatus": "InBearbeitung",
+                             "lifecycleStatus": "InBearbeitung"}
+    if body.ende:
+        daten["ende"] = body.ende.isoformat()
+    if typ:
+        daten["typeName"] = typ
+    if body.geschaeftseigner:
+        daten["geschaeftseigner"] = ref(body.geschaeftseigner)
+    if body.extern:
+        daten["externeSchule"] = ref(body.externe_schule)
+    if probelauf:
+        return {"probelauf": True, "vorlage": vorlage or None, "klasse": daten}
+    schritte: list[dict] = []
+    try:
+        guid = c.anlegen("Geschaeft", daten, vorlage or None)
+        schritte.append({"schritt": "klasse_anlegen", "ok": True, "guid": guid})
+    except CMIFehler as e:
+        # z. B. SCV102: Geschäftseigner muss eine Schuleinheit sein
+        return JSONResponse({"probelauf": False, "vollstaendig": False,
+                             "schritte": [{"schritt": "klasse_anlegen", "ok": False, "fehler": str(e)}]}, status_code=409)
+    if body.klassenlehrplan:
+        try:
+            st = c.anlegen(E.stufe_entitaet, {"schulklassendossier": ref(guid), "klassenlehrplan": ref(body.klassenlehrplan)})
+            schritte.append({"schritt": "klassenstufe_anlegen", "ok": True, "guid": st})
+        except (CMIFehler, NichtGefunden) as e:
+            schritte.append({"schritt": "klassenstufe_anlegen", "ok": False, "fehler": str(e)})
+    neu = c.lesen("Geschaeft", guid)
+    ok = (neu.get("titel") or "").lower().startswith(body.titel.lower())
+    schritte.append({"schritt": "kontrolle", "ok": ok, **({} if ok else {"titel_cmi": neu.get("titel")})})
+    ok = all(x["ok"] for x in schritte)
+    return JSONResponse({"probelauf": False, "vollstaendig": ok, "guid": guid, "titel": neu.get("titel"),
+                         "schritte": schritte}, status_code=201 if ok else 409)
+
+
 @app.get("/klassen", tags=["Klassen"], summary="Klassen (Klassendossiers)")
 def klassen(format: Format = "json"):
     return _antwort(_klassen(client()), format, "klassen")
 
 
-def _aktiv(z: dict, stichtag: date) -> bool:
-    von, bis = _norm(z.get(E.kz_von)), _norm(z.get(E.kz_bis))
-    return (not von or von <= stichtag.isoformat()) and (not bis or bis >= stichtag.isoformat())
+EINTRITTSGRUENDE = ("schuleintritt", "zuzug", "klassenwechsel", "umteilung", "kindergarteneintritt",
+                    "primareintritt", "sekundareintritt")
+Eintrittsgrund = Literal[EINTRITTSGRUENDE]  # type: ignore[valid-type]
 
 
-def _zuteilung_aus(z: dict) -> dict:
-    return {"guid": z.get("guid"), "schueler": guid_von(z.get(E.kz_schueler)), "klasse": guid_von(z.get(E.kz_klasse)),
-            "klasse_name": (z.get(E.kz_klasse) or {}).get("displayName") if isinstance(z.get(E.kz_klasse), dict) else None,
-            "von": _norm(z.get(E.kz_von)), "bis": _norm(z.get(E.kz_bis))}
+def _klassenstufen(c: CMIClient, klasse_guid: str) -> list[dict]:
+    return _suche(c, E.stufe_entitaet, **{"schulklassendossier.guid": klasse_guid})
 
 
-@app.get("/klassen/{guid}/schueler", tags=["Klassen"], dependencies=[Depends(_kz_check)],
-         summary="Zuteilungen einer Klasse (aktiv am Stichtag, Standard heute)")
-def klasse_schueler(guid: str, stichtag: date | None = None, alle: bool = False, format: Format = "json"):
-    c = client()
-    tag = stichtag or date.today()
-    zs = [z for z in _suche(c, E.kz_entitaet, **{f"{E.kz_klasse}.guid": guid}) if alle or _aktiv(z, tag)]
-    return _antwort([_zuteilung_aus(z) for z in zs], format, "klasse")
-
-
-def _schueler_ref(c: CMIClient, fremdkey: str) -> str:
-    if E.kz_schueler_ref == "dossier":
-        treffer = _dossiers_per_fremdkey(c, "schueler", fremdkey)
-    else:
-        treffer = _kontakt_per_fremdkey(c, fremdkey)
+def _lernendendossier(c: CMIClient, fremdkey: str) -> dict:
+    treffer = _dossiers_per_fremdkey(c, "schueler", fremdkey)
     if len(treffer) != 1:
-        raise LookupError("nicht gefunden" if not treffer else "mehrdeutig")
-    return treffer[0]["guid"]
+        raise LookupError("kein Lernendendossier" if not treffer else "mehrere Lernendendossiers")
+    return treffer[0]
+
+
+def _laufbahn(c: CMIClient, dossier_guid: str) -> list[dict]:
+    """Klassenzuteilungen der Schullaufbahn, je mit eigener Dauer (wie in CMI «Zuteilungen»).
+
+    CMI führt pro Schuljahr eine Schullaufbahn; ein Klassenwechsel beendet nur die Klassenzuteilung
+    (Dauer bis Vortag) und legt eine neue Zuteilung in derselben Schullaufbahn an."""
+    aus = []
+    for lb in _suche(c, E.lb_entitaet, **{"lernendedossier.guid": dossier_guid}):
+        lb_zr = _zeitraum(lb.get("vonBis"))
+        basis = {"schullaufbahn": lb["guid"], "titel": lb.get("titel"), "schuljahr": _anzeige(lb.get("schuljahr")),
+                 "schuljahr_guid": guid_von(lb.get("schuljahr")), "status": _anzeige(lb.get("status")),
+                 "eintrittsgrund": _anzeige(lb.get("eintrittsgrund")),
+                 "laufbahn_von": lb_zr["von"], "laufbahn_bis": lb_zr["bis"], "_lb": lb}
+        zuteilungen = _suche(c, E.kz_entitaet, **{"schullaufbahn.guid": lb["guid"]})
+        if not zuteilungen:
+            aus.append({**basis, "zuteilung": None, "von": lb_zr["von"], "bis": lb_zr["bis"], "klassenstufe": None,
+                        "klassenstufe_titel": None, "klasse": None, "klasse_titel": None, "_kz": None})
+        for kz in zuteilungen:
+            kz_zr = _zeitraum(kz.get("vonBis"))
+            stufe_guid = guid_von(kz.get("teilklasse"))
+            stufe = c.lesen(E.stufe_entitaet, stufe_guid) if stufe_guid else {}
+            aus.append({**basis, "zuteilung": kz["guid"], "von": kz_zr["von"] or lb_zr["von"],
+                        "bis": kz_zr["bis"] or lb_zr["bis"], "klassenstufe": stufe_guid,
+                        "klassenstufe_titel": stufe.get("titel"), "klasse": guid_von(stufe.get("schulklassendossier")),
+                        "klasse_titel": _anzeige(stufe.get("schulklassendossier")), "_kz": kz})
+    return sorted(aus, key=lambda x: (x["von"] or "", x["bis"] or ""))
+
+
+def _aktiv_am(eintraege: list[dict], tag: str) -> list[dict]:
+    return [x for x in eintraege if x["von"] and x["von"] <= tag and (not x["bis"] or x["bis"] >= tag)]
+
+
+def _ohne_intern(x: dict) -> dict:
+    return {k: v for k, v in x.items() if not k.startswith("_")}
 
 
 @app.get("/schueler/{fremdkey}/klassen", tags=["Klassen"], dependencies=[Depends(_kz_check)],
-         summary="Klassenzuteilungen einer Schülerin / eines Schülers (Schullaufbahn)")
+         summary="Schullaufbahn einer Schülerin / eines Schülers: Einträge mit Klasse und Klassenstufe")
 def schueler_klassen(fremdkey: str):
     c = client()
     try:
-        s = _schueler_ref(c, fremdkey)
+        d = _lernendendossier(c, fremdkey)
     except LookupError as e:
         raise HTTPException(404, f"Schüler:in {fremdkey}: {e}")
-    zs = _suche(c, E.kz_entitaet, **{f"{E.kz_schueler}.guid": s})
-    return sorted((_zuteilung_aus(z) for z in zs), key=lambda z: z["von"] or "")
+    return [_ohne_intern(x) for x in _laufbahn(c, d["guid"])]
+
+
+@app.get("/klassen/{guid}/stufen", tags=["Klassen"], summary="Klassenstufen einer Klasse (CMI «Teilklasse»)")
+def klasse_stufen(guid: str):
+    return [{"guid": s.get("guid"), "titel": s.get("titel"), "klassenlehrplan": _anzeige(s.get("klassenlehrplan"))}
+            for s in _klassenstufen(client(), guid)]
+
+
+@app.get("/klassen/{guid}/schueler", tags=["Klassen"], dependencies=[Depends(_kz_check)],
+         summary="Schüler:innen einer Klasse am Stichtag (Standard heute)")
+def klasse_schueler(guid: str, stichtag: date | None = None, alle: bool = False, format: Format = "json"):
+    c = client()
+    tag = stichtag or date.today()
+    aus = []
+    for st in _klassenstufen(c, guid):
+        for kz in _suche(c, E.kz_entitaet, **{"teilklasse.guid": st["guid"]}):
+            lb = c.lesen(E.lb_entitaet, guid_von(kz.get("schullaufbahn")))
+            zr = _zeitraum(kz.get("vonBis") or lb.get("vonBis"))
+            if not alle and not _aktiv_am([zr], tag.isoformat()):
+                continue
+            aus.append({"zuteilung": kz.get("guid"), "lernendendossier": guid_von(lb.get("lernendedossier")),
+                        "name": kz.get("computedPersonName"), "vorname": kz.get("computedPersonVorname"),
+                        "klassenstufe": st.get("titel"), "von": zr["von"], "bis": zr["bis"]})
+    return _antwort(aus, format, "klasse")
 
 
 class Einteilung(BaseModel):
-    fremdkey: str = Field(..., min_length=1, description="Schlüssel der Schülerin / des Schülers")
-    klasse: str = Field(..., min_length=1, description="GUID oder Titel des Klassendossiers")
+    fremdkey: str = Field(..., min_length=1, description="Schlüssel der Schülerin / des Schülers (Lernendendossier)")
+    klasse: str = Field(..., min_length=1, description="GUID oder Titel des Klassendossiers (z. B. «2a 2026/27»)")
+    klassenstufe: str | None = Field(None, description="GUID der Klassenstufe; nötig, wenn die Klasse mehrere hat")
+    eintrittsgrund: Eintrittsgrund | None = Field(None, description="Standard: schuleintritt bzw. klassenwechsel")
 
 
 class EinteilungListe(BaseModel):
-    ab: date | None = Field(None, description="gilt ab (Standard heute); bisherige Zuteilung endet am Vortag")
+    ab: date | None = Field(None, description="gilt ab (Standard heute); bisheriger Eintrag endet am Vortag")
+    bis: date | None = Field(None, description="Ende des Eintrags; Standard Ende der Klasse bzw. 31.7.")
     zuteilungen: list[Einteilung] = Field(..., min_length=1, max_length=1000)
 
 
+def _ende_standard(klasse: dict, ab: date) -> str:
+    ende = _norm(klasse.get("ende"))
+    return ende or date(ab.year + (1 if ab.month >= 8 else 0), 7, 31).isoformat()
+
+
 @app.post("/klassen/einteilen", tags=["Klassen"], dependencies=[Depends(_kz_check)],
-          summary="SuS in Klassen einteilen bzw. umteilen (ab Datum; bisherige Zuteilung wird beendet)")
+          summary="SuS in die aktuelle Klasse einteilen bzw. umteilen (Schullaufbahn wie «Klasseneinteilung» in CMI)")
 def klassen_einteilen(body: EinteilungListe, probelauf: bool = False, _=Depends(schreib_check)):
     c = client()
     ab = body.ab or date.today()
-    klassen_liste = _klassen(c)
-    nach_titel: dict[str, list[str]] = {}
-    for k in klassen_liste:
-        nach_titel.setdefault((k.get("titel") or "").strip().lower(), []).append(k["guid"])
-    guids = {k["guid"] for k in klassen_liste}
+    alle_klassen = _klassen(c) + (_suche(c, "Geschaeft", typeName=E.klasse_extern_typ) if E.klasse_extern_typ else [])
+    nach_titel: dict[str, list[dict]] = {}
+    for k in alle_klassen:
+        t = (k.get("titel") or "").strip().lower()
+        nach_titel.setdefault(t, []).append(k)
+        nach_titel.setdefault(t.split(" ")[0], []).append(k)
+    nach_guid = {k["guid"]: k for k in alle_klassen}
 
     fehler, konflikte, plaene = [], [], []
     for e in body.zuteilungen:
-        if e.klasse in guids:
-            ziel = e.klasse
-        else:
-            kandidaten = nach_titel.get(e.klasse.strip().lower(), [])
-            if len(kandidaten) != 1:
+        klasse = nach_guid.get(e.klasse)
+        if not klasse:
+            kand = {k["guid"]: k for k in nach_titel.get(e.klasse.strip().lower(), [])}
+            if len(kand) != 1:
                 fehler.append({"fremdkey": e.fremdkey, "fehler": f"Klasse {e.klasse!r} "
-                               + ("nicht gefunden" if not kandidaten else "mehrdeutig")})
+                               + ("nicht gefunden" if not kand else "mehrdeutig")})
                 continue
-            ziel = kandidaten[0]
+            klasse = next(iter(kand.values()))
+        stufen = _klassenstufen(c, klasse["guid"])
+        if e.klassenstufe:
+            stufen = [s for s in stufen if s["guid"] == e.klassenstufe]
+        if len(stufen) != 1:
+            fehler.append({"fremdkey": e.fremdkey, "fehler": "Klasse hat keine Klassenstufe" if not stufen else
+                           "Klasse hat mehrere Klassenstufen – klassenstufe angeben"})
+            continue
         try:
-            s = _schueler_ref(c, e.fremdkey)
+            dossier = _lernendendossier(c, e.fremdkey)
         except LookupError as ex:
-            fehler.append({"fremdkey": e.fremdkey, "fehler": f"Schüler:in {ex}"})
+            fehler.append({"fremdkey": e.fremdkey, "fehler": str(ex)})
             continue
-        zs = _suche(c, E.kz_entitaet, **{f"{E.kz_schueler}.guid": s})
-        aktiv = [z for z in zs if _aktiv(z, ab)]
+        laufbahn = _laufbahn(c, dossier["guid"])
+        tag = ab.isoformat()
+        aktiv = _aktiv_am([x for x in laufbahn if x["zuteilung"]], tag)
         if len(aktiv) > 1:
-            konflikte.append({"fremdkey": e.fremdkey, "zuteilungen": [_zuteilung_aus(z) for z in aktiv]})
+            konflikte.append({"fremdkey": e.fremdkey, "eintraege": [_ohne_intern(x) for x in aktiv]})
             continue
-        plan: dict[str, Any] = {"fremdkey": e.fremdkey, "schueler": s, "klasse": ziel, "ab": ab.isoformat()}
-        if not aktiv:
-            plan["aktion"] = "einteilen"
-        elif guid_von(aktiv[0].get(E.kz_klasse)) == ziel:
+        schuljahr = guid_von(klasse.get("schuljahr"))
+        plan: dict[str, Any] = {"fremdkey": e.fremdkey, "lernendendossier": dossier["guid"], "klasse": klasse["guid"],
+                                "klasse_titel": klasse.get("titel"), "klassenstufe": stufen[0]["guid"],
+                                "schuljahr": schuljahr, "ab": tag,
+                                "bis": (body.bis.isoformat() if body.bis else _ende_standard(klasse, ab))}
+        # Schullaufbahn des Schuljahrs, die am Stichtag läuft (in CMI eine pro Schuljahr)
+        lb_jahr = [x for x in _aktiv_am([{**x, "von": x["laufbahn_von"], "bis": x["laufbahn_bis"]} for x in laufbahn], tag)
+                   if x["schuljahr_guid"] == schuljahr]
+        lb_guids = {x["schullaufbahn"] for x in lb_jahr}
+        if len(lb_guids) > 1:
+            konflikte.append({"fremdkey": e.fremdkey, "fehler": "mehrere Schullaufbahnen im Schuljahr",
+                              "eintraege": [_ohne_intern(x) for x in lb_jahr]})
+            continue
+        if lb_guids:
+            plan["schullaufbahn"] = lb_jahr[0]["schullaufbahn"]
+            if not body.bis and lb_jahr[0]["laufbahn_bis"]:
+                plan["bis"] = lb_jahr[0]["laufbahn_bis"]
+        if aktiv and aktiv[0]["klassenstufe"] == stufen[0]["guid"]:
             plan["aktion"] = "unveraendert"
-        elif _norm(aktiv[0].get(E.kz_von)) == ab.isoformat():
-            plan["aktion"] = "korrigieren"  # Zuteilung beginnt am selben Tag: Klasse ersetzen statt Nulltag
-        else:
+        elif aktiv and aktiv[0]["von"] == tag:
+            plan["aktion"] = "korrigieren"  # Zuteilung beginnt am selben Tag: Klassenstufe ersetzen
+        elif aktiv:
             plan["aktion"] = "umteilen"
+            plan["eintrittsgrund"] = e.eintrittsgrund or "klassenwechsel"
             plan["bisher_bis"] = (ab - timedelta(days=1)).isoformat()
+            if aktiv[0]["schullaufbahn"] != plan.get("schullaufbahn"):
+                plan["neues_schuljahr"] = True  # Wechsel über das Schuljahr: alte Schullaufbahn endet ebenfalls
+        else:
+            plan["aktion"] = "einteilen"
+            plan["eintrittsgrund"] = e.eintrittsgrund or "schuleintritt"
         if aktiv:
-            plan["bisher"] = _zuteilung_aus(aktiv[0])
+            plan["bisher"] = _ohne_intern(aktiv[0])
             plan["_alt"] = aktiv[0]
         plaene.append(plan)
     if fehler:
         raise HTTPException(400, {"meldung": "Eingabe ungültig", "betroffene": fehler})
     if konflikte:
-        raise _konflikt("Mehrere aktive Zuteilungen am Stichtag – bitte in CMI bereinigen", konflikte)
+        raise _konflikt("Mehrere aktive Klassenzuteilungen bzw. Schullaufbahnen am Stichtag – bitte in CMI bereinigen",
+                        konflikte)
     zusammenfassung = {a: sum(p["aktion"] == a for p in plaene)
                        for a in ("einteilen", "umteilen", "korrigieren", "unveraendert")}
-    sichtbar = [_sichtbar(p) for p in plaene]
     if probelauf:
-        return {"probelauf": True, "zusammenfassung": zusammenfassung, "zuteilungen": sichtbar}
+        return {"probelauf": True, "zusammenfassung": zusammenfassung, "zuteilungen": [_sichtbar(p) for p in plaene]}
 
     def ohne_listen(d: dict) -> dict:
         return {k: v for k, v in d.items() if not isinstance(v, list)}
 
+    def dauer(von: str | None, bis: str | None) -> str:
+        return f"{_ch_datum(von)} - {_ch_datum(bis)}"
+
     ergebnisse = []
-    for p, aus in zip(plaene, sichtbar):
+    for p in plaene:
         schritte: list[dict] = []
         try:
             if p["aktion"] == "korrigieren":
-                c.aendern(E.kz_entitaet, p["_alt"]["guid"], {**ohne_listen(p["_alt"]), E.kz_klasse: ref(p["klasse"])})
+                kz = p["_alt"]["_kz"]
+                c.aendern(E.kz_entitaet, kz["guid"], {**ohne_listen(kz), "teilklasse": ref(p["klassenstufe"])})
                 schritte.append({"schritt": "zuteilung_korrigieren", "ok": True})
             if p["aktion"] == "umteilen":
-                c.aendern(E.kz_entitaet, p["_alt"]["guid"], {**ohne_listen(p["_alt"]), E.kz_bis: p["bisher_bis"]})
-                schritte.append({"schritt": "bisherige_beenden", "ok": True})
+                alt = p["_alt"]
+                kz = alt["_kz"]
+                c.aendern(E.kz_entitaet, kz["guid"], {**ohne_listen(kz), "vonBis": dauer(alt["von"], p["bisher_bis"])})
+                schritte.append({"schritt": "bisherige_zuteilung_beenden", "ok": True})
+                if p.get("neues_schuljahr"):
+                    lb = alt["_lb"]
+                    c.aendern(E.lb_entitaet, lb["guid"], {**ohne_listen(lb),
+                              "vonBis": dauer(alt["laufbahn_von"], p["bisher_bis"])})
+                    schritte.append({"schritt": "bisherige_schullaufbahn_beenden", "ok": True})
             if p["aktion"] in ("einteilen", "umteilen"):
-                g = c.anlegen(E.kz_entitaet, {E.kz_schueler: ref(p["schueler"]), E.kz_klasse: ref(p["klasse"]),
-                                              E.kz_von: p["ab"]})
-                schritte.append({"schritt": "zuteilung_anlegen", "ok": True, "guid": g})
+                lb_guid = p.get("schullaufbahn")
+                if not lb_guid:
+                    lb_guid = c.anlegen(E.lb_entitaet, {
+                        "lernendedossier": ref(p["lernendendossier"]), "schuljahr": ref(p["schuljahr"]),
+                        "vonBis": dauer(p["ab"], p["bis"]), "eintrittsgrund": p["eintrittsgrund"]})
+                    schritte.append({"schritt": "schullaufbahn_anlegen", "ok": True, "guid": lb_guid})
+                kz_guid = c.anlegen(E.kz_entitaet, {"schullaufbahn": ref(lb_guid), "teilklasse": ref(p["klassenstufe"]),
+                                                    "vonBis": dauer(p["ab"], p["bis"])})
+                schritte.append({"schritt": "zuteilung_anlegen", "ok": True, "guid": kz_guid})
         except (CMIFehler, NichtGefunden) as ex:
             schritte.append({"schritt": p["aktion"], "ok": False, "fehler": str(ex)})
         if p["aktion"] != "unveraendert" and all(s["ok"] for s in schritte):
-            zs = _suche(c, E.kz_entitaet, **{f"{E.kz_schueler}.guid": p["schueler"]})
-            aktiv = [z for z in zs if _aktiv(z, ab)]
-            ok = len(aktiv) == 1 and guid_von(aktiv[0].get(E.kz_klasse)) == p["klasse"]
+            aktiv = _aktiv_am([x for x in _laufbahn(c, p["lernendendossier"]) if x["zuteilung"]], p["ab"])
+            ok = len(aktiv) == 1 and aktiv[0]["klassenstufe"] == p["klassenstufe"]
             schritte.append({"schritt": "kontrolle", "ok": ok,
                              **({} if ok else {"fehler": "CMI zeigt am Stichtag nicht die neue Klasse",
-                                               "aktiv": [_zuteilung_aus(z) for z in aktiv]})})
-        ergebnisse.append({**aus, "schritte": schritte})
+                                               "aktiv": [_ohne_intern(x) for x in aktiv]})})
+        ergebnisse.append({**_sichtbar(p), "schritte": schritte})
     vollstaendig = all(s["ok"] for e in ergebnisse for s in e["schritte"])
     antwort = {"probelauf": False, "vollstaendig": vollstaendig, "zusammenfassung": zusammenfassung,
                "zuteilungen": ergebnisse}

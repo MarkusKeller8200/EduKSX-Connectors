@@ -21,7 +21,8 @@ from fastapi.testclient import TestClient
 from cmi_api import app as A
 from cmi_api.client import CMIClient, CMIConfig
 
-ENTITAETEN = ("Kontakt", "Adresse", "Geschaeft", "Ordner", "Dokument", "Klassenzuteilung", "Beteiligung",
+ENTITAETEN = ("Kontakt", "Adresse", "Geschaeft", "Ordner", "Dokument", "Beteiligung", "Schullaufbahn",
+              "KlassenzuteilungLernende", "Teilklasse",
               "Dossierkontakt", "Beziehung", "Zahlungsinformation", "MedizinischerInformationseintrag")
 
 
@@ -56,10 +57,10 @@ class FakeCMI:
             if r.get("file"):
                 self.dateien[g] = base64.b64decode(r["file"])
             o.pop("eDokument", None)
-        if entitaet == "Klassenzuteilung":
-            k = self.daten["Geschaeft"].get(o["klasse"]["guid"])
+        if entitaet == "Teilklasse" and o.get("schulklassendossier"):
+            k = self.daten["Geschaeft"].get(o["schulklassendossier"]["guid"])
             if k:
-                o["klasse"]["displayName"] = k["titel"]
+                o["schulklassendossier"]["displayName"] = k["titel"]
 
     # ---------------------------------------------------------- TentaQl (angenommene Syntax)
     def _treffer(self, entitaet: str, abfrage: str) -> list[dict]:
@@ -152,8 +153,7 @@ def fake(monkeypatch):
     monkeypatch.setattr(A, "SCHREIBEN", True)
     monkeypatch.setattr(A, "E", A.Einstellungen(
         schueler_vorlage="Vorlagen/Schuelerdossier", schueler_typ="Schuelerdossier",
-        personal_vorlage="Vorlagen/Personaldossier", personal_typ="Personaldossier", klasse_typ="Klassendossier",
-        kz_entitaet="Klassenzuteilung"))
+        personal_vorlage="Vorlagen/Personaldossier", personal_typ="Personaldossier", klasse_typ="Klassendossier"))
     return f
 
 
@@ -435,58 +435,144 @@ def test_schueler_ohne_einrichtung_501_ohne_schreiben(fake, api, monkeypatch):
 # ================================================================ Klassen
 
 def _klassen_setup(fake):
-    a = fake.neu("Geschaeft", titel="1a", typeName="Klassendossier")
-    b = fake.neu("Geschaeft", titel="1b", typeName="Klassendossier")
-    s = _kontakt(fake)
-    return a, b, s
+    """Wie in CMI am 25.11.2026: Klassen mit je einer Klassenstufe, Lernendendossier für E1."""
+    a = fake.neu("Geschaeft", titel="TEST_A1a 2026/27", typeName="Klassendossier", schuljahr={"guid": "sj"},
+                 ende="2027-07-31")
+    b = fake.neu("Geschaeft", titel="TEST_A1b 2026/27", typeName="Klassendossier", schuljahr={"guid": "sj"},
+                 ende="2027-07-31")
+    sa = fake.neu("Teilklasse", titel="1. SST", schulklassendossier={"guid": a}, klassenlehrplan={"guid": "lp1"})
+    sb = fake.neu("Teilklasse", titel="1. SST", schulklassendossier={"guid": b}, klassenlehrplan={"guid": "lp1"})
+    d = fake.neu("Geschaeft", titel="_TEST_Schueler", typeName="Schuelerdossier", schluesselFremdsystem="E1")
+    return a, b, sa, sb, d
 
 
 def test_einteilen_umteilen(fake, api):
-    a, b, s = _klassen_setup(fake)
-    d = api.post("/klassen/einteilen", json={"ab": "2026-08-17", "zuteilungen": [{"fremdkey": "E1", "klasse": "1A"}]}).json()
-    assert d["vollstaendig"] and d["zuteilungen"][0]["aktion"] == "einteilen"
-    assert [z["fremdkey"] if "fremdkey" in z else z["schueler"] for z in api.get(f"/klassen/{a}/schueler?stichtag=2026-09-01").json()] == [s]
-    # Umteilen ab 1.2.2027: bisherige endet am Vortag
+    a, b, sa, sb, d = _klassen_setup(fake)
     p = api.post("/klassen/einteilen?probelauf=true",
-                 json={"ab": "2027-02-01", "zuteilungen": [{"fremdkey": "E1", "klasse": b}]}).json()
-    assert p["zuteilungen"][0]["aktion"] == "umteilen" and p["zuteilungen"][0]["bisher_bis"] == "2027-01-31"
-    d = api.post("/klassen/einteilen", json={"ab": "2027-02-01", "zuteilungen": [{"fremdkey": "E1", "klasse": b}]}).json()
-    assert d["vollstaendig"], d
+                 json={"ab": "2026-08-01", "zuteilungen": [{"fremdkey": "E1", "klasse": "TEST_A1a"}]}).json()
+    assert p["zuteilungen"][0]["aktion"] == "einteilen" and p["zuteilungen"][0]["eintrittsgrund"] == "schuleintritt"
+    assert p["zuteilungen"][0]["bis"] == "2027-07-31" and fake.schreibaufrufe() == []
+    r = api.post("/klassen/einteilen", json={"ab": "2026-08-01", "zuteilungen": [{"fremdkey": "E1", "klasse": "TEST_A1a"}]})
+    assert r.status_code == 200 and r.json()["vollstaendig"], r.text
+    lb = next(iter(fake.daten["Schullaufbahn"].values()))
+    assert lb["lernendedossier"] == {"guid": d} and lb["vonBis"] == "01.08.2026 - 31.07.2027"
+    assert lb["eintrittsgrund"] == "schuleintritt" and lb["schuljahr"] == {"guid": "sj"}
+    kz = next(iter(fake.daten["KlassenzuteilungLernende"].values()))
+    assert kz["teilklasse"] == {"guid": sa}
+    assert [x["lernendendossier"] for x in api.get(f"/klassen/{a}/schueler?stichtag=2026-09-01").json()] == [d]
+    assert kz["vonBis"] == "01.08.2026 - 31.07.2027"
+    # Klassenwechsel ab 1.2.2027 wie «Klassenumteilung» in CMI (aufgezeichnet 25.11.2026):
+    # Schullaufbahn bleibt, bisherige Zuteilung endet am Vortag, neue Zuteilung in derselben Schullaufbahn
+    r = api.post("/klassen/einteilen", json={"ab": "2027-02-01", "zuteilungen": [{"fremdkey": "E1", "klasse": b}]}).json()
+    assert r["vollstaendig"] and r["zuteilungen"][0]["aktion"] == "umteilen", r
+    assert [s["schritt"] for s in r["zuteilungen"][0]["schritte"]] == [
+        "bisherige_zuteilung_beenden", "zuteilung_anlegen", "kontrolle"]
+    assert len(fake.daten["Schullaufbahn"]) == 1 and lb["vonBis"] == "01.08.2026 - 31.07.2027"
     laufbahn = api.get("/schueler/E1/klassen").json()
-    assert [(z["klasse_name"], z["von"], z["bis"]) for z in laufbahn] == [
-        ("1a", "2026-08-17", "2027-01-31"), ("1b", "2027-02-01", None)]
-    # nochmals: unverändert, kein Schreiben
+    assert [(x["klasse_titel"], x["von"], x["bis"], x["schullaufbahn"]) for x in laufbahn] == [
+        ("TEST_A1a 2026/27", "2026-08-01", "2027-01-31", lb["guid"]),
+        ("TEST_A1b 2026/27", "2027-02-01", "2027-07-31", lb["guid"])]
+    assert api.get(f"/klassen/{a}/schueler?stichtag=2027-03-01").json() == []
+    assert [x["lernendendossier"] for x in api.get(f"/klassen/{b}/schueler?stichtag=2027-03-01").json()] == [d]
     vorher = len(fake.schreibaufrufe())
-    d = api.post("/klassen/einteilen", json={"ab": "2027-03-01", "zuteilungen": [{"fremdkey": "E1", "klasse": "1b"}]}).json()
-    assert d["zuteilungen"][0]["aktion"] == "unveraendert" and len(fake.schreibaufrufe()) == vorher
+    r = api.post("/klassen/einteilen", json={"ab": "2027-03-01", "zuteilungen": [{"fremdkey": "E1", "klasse": "TEST_A1b"}]}).json()
+    assert r["zuteilungen"][0]["aktion"] == "unveraendert" and len(fake.schreibaufrufe()) == vorher
+
+
+def test_einteilen_neues_schuljahr(fake, api):
+    """Wechsel in eine Klasse eines anderen Schuljahrs: alte Schullaufbahn endet, neue wird angelegt."""
+    a, b, sa, sb, d = _klassen_setup(fake)
+    c2 = fake.neu("Geschaeft", titel="TEST_A2a 2027/28", typeName="Klassendossier", schuljahr={"guid": "sj2"},
+                  ende="2028-07-31")
+    s2 = fake.neu("Teilklasse", titel="2. SST", schulklassendossier={"guid": c2})
+    api.post("/klassen/einteilen", json={"ab": "2026-08-01", "bis": "2027-07-31",
+                                         "zuteilungen": [{"fremdkey": "E1", "klasse": "TEST_A1a"}]})
+    r = api.post("/klassen/einteilen", json={"ab": "2027-06-01", "zuteilungen": [{"fremdkey": "E1", "klasse": c2}]}).json()
+    assert r["vollstaendig"], r
+    assert [s["schritt"] for s in r["zuteilungen"][0]["schritte"]] == [
+        "bisherige_zuteilung_beenden", "bisherige_schullaufbahn_beenden", "schullaufbahn_anlegen",
+        "zuteilung_anlegen", "kontrolle"]
+    laufbahn = api.get("/schueler/E1/klassen").json()
+    assert [(x["klassenstufe"], x["von"], x["bis"]) for x in laufbahn] == [
+        (sa, "2026-08-01", "2027-05-31"), (s2, "2027-06-01", "2028-07-31")]
+    assert len({x["schullaufbahn"] for x in laufbahn}) == 2
 
 
 def test_einteilen_am_selben_tag_korrigiert(fake, api):
-    a, b, s = _klassen_setup(fake)
-    api.post("/klassen/einteilen", json={"ab": "2026-08-17", "zuteilungen": [{"fremdkey": "E1", "klasse": "1a"}]})
-    d = api.post("/klassen/einteilen", json={"ab": "2026-08-17", "zuteilungen": [{"fremdkey": "E1", "klasse": "1b"}]}).json()
-    assert d["vollstaendig"] and d["zuteilungen"][0]["aktion"] == "korrigieren"
-    assert len(fake.daten["Klassenzuteilung"]) == 1
+    a, b, sa, sb, d = _klassen_setup(fake)
+    api.post("/klassen/einteilen", json={"ab": "2026-08-01", "zuteilungen": [{"fremdkey": "E1", "klasse": "TEST_A1a"}]})
+    r = api.post("/klassen/einteilen", json={"ab": "2026-08-01", "zuteilungen": [{"fremdkey": "E1", "klasse": "TEST_A1b",
+                                                                                   "eintrittsgrund": "umteilung"}]}).json()
+    assert r["vollstaendig"] and r["zuteilungen"][0]["aktion"] == "korrigieren"
+    assert len(fake.daten["Schullaufbahn"]) == 1
+    assert next(iter(fake.daten["KlassenzuteilungLernende"].values()))["teilklasse"] == {"guid": sb}
 
 
 def test_einteilen_prueft_vorher(fake, api):
-    _klassen_setup(fake)
+    a, b, sa, sb, d = _klassen_setup(fake)
+    ohne_stufe = fake.neu("Geschaeft", titel="TEST_C1 2026/27", typeName="Klassendossier")
     r = api.post("/klassen/einteilen", json={"zuteilungen": [{"fremdkey": "E1", "klasse": "9z"},
-                                                             {"fremdkey": "E404", "klasse": "1a"}]})
-    assert r.status_code == 400 and len(r.json()["detail"]["betroffene"]) == 2
+                                                             {"fremdkey": "E404", "klasse": "TEST_A1a"},
+                                                             {"fremdkey": "E1", "klasse": ohne_stufe}]})
+    assert r.status_code == 400 and len(r.json()["detail"]["betroffene"]) == 3
+    assert "Klassenstufe" in r.json()["detail"]["betroffene"][2]["fehler"]
+    assert api.post("/klassen/einteilen", json={"zuteilungen": [{"fremdkey": "E1", "klasse": "TEST_A1a",
+                                                                  "eintrittsgrund": "ferien"}]}).status_code == 422
     assert fake.schreibaufrufe() == []
 
 
 def test_einteilen_kontrolle_409(fake, api):
-    a, b, s = _klassen_setup(fake)
-    api.post("/klassen/einteilen", json={"ab": "2026-08-17", "zuteilungen": [{"fremdkey": "E1", "klasse": "1a"}]})
+    a, b, sa, sb, d = _klassen_setup(fake)
+    api.post("/klassen/einteilen", json={"ab": "2026-08-01", "zuteilungen": [{"fremdkey": "E1", "klasse": "TEST_A1a"}]})
     fake.ignoriere_put = True
-    r = api.post("/klassen/einteilen", json={"ab": "2027-02-01", "zuteilungen": [{"fremdkey": "E1", "klasse": "1b"}]})
-    assert r.status_code == 409  # alte Zuteilung nicht beendet → zwei aktive
+    r = api.post("/klassen/einteilen", json={"ab": "2027-02-01", "zuteilungen": [{"fremdkey": "E1", "klasse": "TEST_A1b"}]})
+    assert r.status_code == 409  # alter Eintrag nicht beendet → zwei aktive
+
+
+def test_klasse_mit_klassenstufe_anlegen(fake, api, monkeypatch):
+    monkeypatch.setattr(A.E, "klasse_vorlagen", {"hinterbirch": "Vorlagen/Klasse HB"})
+    r = api.post("/klassen", json={"titel": "TEST_A2a", "schuljahr": "sj", "beginn": "2026-08-01",
+                                   "standort": "Hinterbirch", "klassenlehrplan": "lp-1-sek"})
+    assert r.status_code == 201, r.text
+    st = next(iter(fake.daten["Teilklasse"].values()))
+    assert st["schulklassendossier"]["guid"] == r.json()["guid"] and st["klassenlehrplan"] == {"guid": "lp-1-sek"}
+    assert api.get(f"/klassen/{r.json()['guid']}/stufen").json()[0]["guid"] == st["guid"]
+
+
+SJ = "schuljahr-2026-27"
+
+
+def test_klasse_anlegen_mit_standort_und_doppelt(fake, api, monkeypatch):
+    # wie TEST_A1a in der CMI-Oberfläche am 25.11.2026 (Vorlage Hinterbirch)
+    monkeypatch.setattr(A.E, "klasse_vorlagen", {"hinterbirch": "Vorlagen/Klasse HB", "mettmenriet": "Vorlagen/Klasse MR"})
+    body = {"titel": "TEST_A1a", "schuljahr": SJ, "beginn": "2026-08-01", "ende": "2027-07-31", "standort": "Hinterbirch"}
+    assert api.post("/klassen", json={**body, "standort": None}).status_code == 400
+    p = api.post("/klassen?probelauf=true", json=body).json()
+    assert p["vorlage"] == "Vorlagen/Klasse HB" and fake.schreibaufrufe() == []
+    r = api.post("/klassen", json=body)
+    assert r.status_code == 201, r.text
+    k = fake.daten["Geschaeft"][r.json()["guid"]]
+    assert k["typeName"] == "Klassendossier" and k["schuljahr"] == {"guid": SJ} and k["ende"] == "2027-07-31"
+    assert fake.schreibaufrufe()[0].url.params["Vorlage"] == "Vorlagen/Klasse HB"
+    k["titel"] = "TEST_A1a 2026/27"  # CMI hängt das Schuljahr an
+    assert api.post("/klassen", json=body).status_code == 409
+
+
+def test_externe_klasse(fake, api, monkeypatch):
+    monkeypatch.setattr(A.E, "klasse_extern_typ", "ExternesSchulklassendossier")
+    monkeypatch.setattr(A.E, "klasse_extern_vorlage", "Vorlagen/Externe Klasse")
+    body = {"titel": "TEST_Extern", "schuljahr": SJ, "beginn": "2026-08-01", "extern": True,
+            "geschaeftseigner": "klassen-weitere"}
+    assert api.post("/klassen", json=body).status_code == 400  # externe_schule fehlt
+    r = api.post("/klassen", json={**body, "externe_schule": "schule-extern"})
+    assert r.status_code == 201, r.text
+    k = fake.daten["Geschaeft"][r.json()["guid"]]
+    assert k["typeName"] == "ExternesSchulklassendossier" and k["externeSchule"] == {"guid": "schule-extern"}
+    assert k["geschaeftseigner"] == {"guid": "klassen-weitere"}
 
 
 def test_klassenzuteilung_nicht_eingerichtet_501(fake, api, monkeypatch):
-    monkeypatch.setattr(A.E, "kz_entitaet", "")
+    monkeypatch.setattr(A.E, "klasse_typ", "")
     assert api.post("/klassen/einteilen", json={"zuteilungen": [{"fremdkey": "E1", "klasse": "1a"}]}).status_code == 501
 
 
@@ -636,8 +722,7 @@ def test_kontakt_adressen_und_dossiers(fake, api):
 # ================================================================ Lesen schreibt nie
 
 def test_lesen_loest_keine_schreibaufrufe_aus(fake, api):
-    a, b, s = _klassen_setup(fake)
-    g = _dossier(fake)
+    a, b, sa, sb, g = _klassen_setup(fake)
     for pfad in ("/status", "/tenants", "/kontakte?fremdkey=E1", "/klassen", f"/klassen/{a}/schueler",
                  "/schueler/E1/klassen", "/dossiers?art=schueler&fremdkey=E1", f"/dossiers/{g}",
                  f"/dossiers/{g}/ordner", f"/dossiers/{g}/dokumente"):

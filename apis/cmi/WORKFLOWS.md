@@ -49,7 +49,10 @@ Beteiligte am Schülerdossier (Beteiligungsmodell ZU PRÜFEN).
 2. `POST /klassen/einteilen?probelauf=true` mit `ab` und den Zuteilungen; Aktionen prüfen.
 3. Ausführen; Kontrolle über `GET /schueler/{fremdkey}/klassen`.
 
-**Lücke:** Entität und Felder der Klassenzuteilung in CMI Schule (bis dahin `501`).
+Ein Klassenwechsel im Schuljahr ändert nur die Klassenzuteilungen (wie «Klassenumteilung» in CMI); offene
+Zeugnisse überträgt die API nicht.
+
+**Lücke:** Zugriff der offiziellen API auf Schullaufbahn und Klassenzuteilung (bis dahin `501`).
 
 ## WF-26 Dokumente ins Dossier ablegen
 
