@@ -729,3 +729,71 @@ def test_lesen_loest_keine_schreibaufrufe_aus(fake, api):
         assert api.get(pfad).status_code == 200, pfad
     assert fake.schreibaufrufe() == []
     assert A._client.zaehler.schreiben == 0
+
+
+# ================================================================ Zeugnisse
+
+def _zeugnis_dossiers(fake):
+    """Zwei Lernendendossiers mit Ordnern wie in der Vorlage der Sek Bülach."""
+    aus = {}
+    for key, titel in (("E1", "Muster Lea (2012)"), ("E2", "Beispiel Tim (2012)")):
+        g = fake.neu("Geschaeft", titel=titel, typeName="Schuelerdossier", schluesselFremdsystem=key)
+        b = fake.neu("Ordner", titel="b_Dossier Schule", parent=None, geschaeft={"guid": g})
+        o = fake.neu("Ordner", titel="08_Beurteilung", parent={"guid": b}, geschaeft={"guid": g})
+        aus[key] = (g, o)
+    return aus
+
+
+def _zeugnis_post(api, dateien, zuordnung, probelauf=False, **form):
+    files = [("dateien", (n, inhalt, "application/pdf")) for n, inhalt in dateien]
+    return api.post("/zeugnisse" + ("?probelauf=true" if probelauf else ""), files=files,
+                    data={"zuordnung": json.dumps(zuordnung), "schuljahr": "2026/27", "semester": "1", **form})
+
+
+def test_zeugnisse_gesammelt_ablegen(fake, api):
+    ds = _zeugnis_dossiers(fake)
+    dateien = [("lea.pdf", PDF), ("tim.pdf", PDF + b" 2")]
+    zuordnung = [{"datei": "lea.pdf", "fremdkey": "E1"}, {"datei": "tim.pdf", "fremdkey": "E2"}]
+    p = _zeugnis_post(api, dateien, zuordnung, probelauf=True).json()
+    assert p["zusammenfassung"] == {"ablegen": 2, "vorhanden": 0} and fake.schreibaufrufe() == []
+    assert p["zeugnisse"][0]["titel"] == "Zeugnis 2026/27 1. Semester"
+    assert p["zeugnisse"][0]["schluessel"] == "zeugnis-E1-2026-27-S1"
+    r = _zeugnis_post(api, dateien, zuordnung, dokumentdatum="2027-01-29")
+    assert r.status_code == 200 and r.json()["vollstaendig"], r.text
+    for z, (key, inhalt) in zip(r.json()["zeugnisse"], (("E1", PDF), ("E2", PDF + b" 2"))):
+        dok = fake.daten["Dokument"][z["guid"]]
+        assert dok["ordner"] == {"guid": ds[key][1]} and dok["geschaeft"] == {"guid": ds[key][0]}
+        assert dok["thema"] == "Zeugnis" and dok["dokumentdatum"] == "2027-01-29"
+        assert fake.dateien[z["guid"]] == inhalt
+    # zweiter Lauf: schon abgelegt → vorhanden, nichts geschrieben
+    vorher = len(fake.schreibaufrufe())
+    r = _zeugnis_post(api, dateien, zuordnung).json()
+    assert r["zusammenfassung"] == {"ablegen": 0, "vorhanden": 2} and len(fake.schreibaufrufe()) == vorher
+
+
+def test_zeugnisse_pruefen_alles_vorher(fake, api):
+    _zeugnis_dossiers(fake)
+    r = _zeugnis_post(api, [("a.pdf", PDF), ("b.txt", b"kein pdf"), ("c.pdf", PDF), ("d.pdf", PDF)],
+                      [{"datei": "a.pdf", "fremdkey": "E404"}, {"datei": "b.txt", "fremdkey": "E1"},
+                       {"datei": "c.pdf", "fremdkey": "E2"}, {"datei": "c.pdf", "fremdkey": "E2"},
+                       {"datei": "x.pdf", "fremdkey": "E1", "semester": 2}])
+    assert r.status_code == 400
+    fehler = {(f.get("datei"), f["fehler"]) for f in r.json()["detail"]["betroffene"]}
+    texte = " | ".join(t for _, t in fehler)
+    assert "kein Lernendendossier" in texte and "kein PDF" in texte and "doppelt" in texte
+    assert "Datei fehlt" in texte and ("d.pdf", "keine Zuordnung") in fehler
+    assert fake.schreibaufrufe() == []
+    # Schuljahr/Semester fehlen, Ordner fehlt
+    g = fake.neu("Geschaeft", titel="Ohne Ordner", typeName="Schuelerdossier", schluesselFremdsystem="E3")
+    r = api.post("/zeugnisse", files=[("dateien", ("e.pdf", PDF, "application/pdf"))],
+                 data={"zuordnung": json.dumps([{"datei": "e.pdf", "fremdkey": "E3"}]), "schuljahr": "26/27"})
+    texte = r.json()["detail"]["betroffene"][0]["fehler"]
+    assert r.status_code == 400 and "Schuljahr" in texte and "semester" in texte and "Ordner fehlt" in texte
+    assert api.post("/zeugnisse", files=[("dateien", ("e.pdf", PDF))], data={"zuordnung": "kein json"}).status_code == 400
+
+
+def test_zeugnisse_titel_ohne_schluessel_409(fake, api):
+    ds = _zeugnis_dossiers(fake)
+    fake.neu("Dokument", titel="Zeugnis 2026/27 2. Semester", geschaeft={"guid": ds["E1"][0]})
+    r = _zeugnis_post(api, [("lea.pdf", PDF)], [{"datei": "lea.pdf", "fremdkey": "E1", "semester": 2}])
+    assert r.status_code == 400 and "schon ein Dokument" in r.json()["detail"]["betroffene"][0]["fehler"]

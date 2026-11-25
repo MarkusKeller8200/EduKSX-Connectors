@@ -6,6 +6,9 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt
+- CMI-API 0.8.0 (#38): `POST /zeugnisse` – Zeugnis-PDFs gesammelt in die Lernendendossiers ablegen
+
 ### Geändert
 - CMI-API 0.7.1 (#36): Klassenwechsel wie «Klassenumteilung» in CMI – Schullaufbahn bleibt, bisherige
   Klassenzuteilung endet am Vortag, neue Zuteilung mit eigener Dauer
