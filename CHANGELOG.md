@@ -7,6 +7,8 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
 ## [Unveröffentlicht]
 
 ### Hinzugefügt
+- CMI-API 0.4.0 (#30): `POST /kontakte`, `PATCH /kontakte/{guid}`, `POST /schueler` (Kontakt + Lernendendossier),
+  `POST /mitarbeitende` (Kontakt + Personaldossier, Vorlage je Standort); Erstellen der Dossiers in CMI erkundet
 - CMI-API 0.3.0 (#27): Kontakt-Sync mit allen Feldern der CMI-Oberfläche, Felder leeren, mehrere Adressen nach
   Adressart mit Gültigkeit; Schreibweise der CMI-Oberfläche in `apis/cmi/ERKUNDUNG.md` (Test am Kontakt _TEST)
 - CMI-API 0.2.0 (#25): Kontakt vollständig lesen (Adressen, Dossiers, Schule, Bezugspersonen, Notfallkontakte,

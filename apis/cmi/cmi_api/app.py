@@ -54,6 +54,7 @@ class Einstellungen:
     schueler_vorlage: str = ""
     schueler_typ: str = ""
     personal_vorlage: str = ""
+    personal_vorlagen: dict | None = None   # Standort → Vorlage, z. B. Hinterbirch/Mettmenriet
     personal_typ: str = ""
     klasse_typ: str = ""
     dossier_zugriff: str = "Restriktiv"   # Offen | Restriktiv – Personendossiers standardmässig restriktiv
@@ -73,11 +74,22 @@ class Einstellungen:
     max_mb: float = 50.0
 
 
+def _vorlagen_map(text: str) -> dict:
+    """«Hinterbirch=Pfad;Mettmenriet=Pfad» → {standort: vorlage}."""
+    aus = {}
+    for teil in text.split(";"):
+        k, _, v = teil.partition("=")
+        if k.strip() and v.strip():
+            aus[k.strip().lower()] = v.strip()
+    return aus
+
+
 def einstellungen_aus_env() -> Einstellungen:
     return Einstellungen(
         kontakt_vorlage=_env("KONTAKT_VORLAGE"), kontakt_typ=_env("KONTAKT_TYP"),
         schueler_vorlage=_env("DOSSIER_SCHUELER_VORLAGE"), schueler_typ=_env("DOSSIER_SCHUELER_TYP"),
         personal_vorlage=_env("DOSSIER_PERSONAL_VORLAGE"), personal_typ=_env("DOSSIER_PERSONAL_TYP"),
+        personal_vorlagen=_vorlagen_map(_env("DOSSIER_PERSONAL_VORLAGEN")),
         klasse_typ=_env("DOSSIER_KLASSE_TYP"), dossier_zugriff=_env("DOSSIER_ZUGRIFF", "Restriktiv"),
         geschaeftseigner=_env("DOSSIER_EIGNER"),
         beteiligung_entitaet=_env("BETEILIGUNG_ENTITAET"), beteiligung_rolle=_env("BETEILIGUNG_ROLLE"),
@@ -248,10 +260,10 @@ def suche(entitaet: str, tentaql: str = Query(..., min_length=1), format: Format
 # Felder wie in der CMI-Weboberfläche (Erkundung 25.11.2026, Schreiben am Testkontakt _TEST geprüft)
 KONTAKT_TEXT = ("anrede", "briefanrede", "titel", "name", "vorname", "organisation", "funktion", "email", "email2",
                 "natel", "telefonPrivat", "telefonGeschaeft", "faxPrivat", "faxGeschaeft", "homepage",
-                "unternehmensId", "unternehmensIdKategorie", "geburtsdatum")
+                "unternehmensId", "unternehmensIdKategorie", "geburtsdatum", "rufname")
 KONTAKT_BOOL = ("mitarbeiter", "inaktiv")
-KONTAKT_FELDER = KONTAKT_TEXT + KONTAKT_BOOL + ("subjektart", "kategorie")
-KONTAKT_LEERBAR = KONTAKT_TEXT + ("subjektart", "kategorie")
+KONTAKT_FELDER = KONTAKT_TEXT + KONTAKT_BOOL + ("subjektart", "kategorie", "geschlecht")
+KONTAKT_LEERBAR = KONTAKT_TEXT + ("subjektart", "kategorie", "geschlecht")
 KONTAKT_PFLICHT_BOOL = ("inaktiv", "mitarbeiter", "istPubliziert", "googleAuthKonfiguriert", "behindert",
                         "erhoehterBetreuungsbedarf", "aufenthaltUnbekannt")
 ADRESS_TEXT = ("strasse", "plz", "ort")
@@ -292,6 +304,8 @@ class KontaktEingabe(BaseModel):
     unternehmensId: str | None = None
     unternehmensIdKategorie: str | None = None
     geburtsdatum: str | None = Field(None, description="JJJJ-MM-TT")
+    rufname: str | None = None
+    geschlecht: str | None = Field(None, description="GUID des Geschlechts (Stammdaten «Geschlecht»: männlich, weiblich)")
     mitarbeiter: bool | None = None
     inaktiv: bool | None = None
     subjektart: Literal["Natürlich", "Juristisch"] | None = None
@@ -471,7 +485,7 @@ def _adressen_eingabe(k: KontaktEingabe) -> list[AdresseEingabe]:
 
 
 def _kontakt_eingabe(k: KontaktEingabe) -> dict:
-    eingabe: dict[str, Any] = {f: getattr(k, f) for f in KONTAKT_TEXT + KONTAKT_BOOL + ("subjektart",)
+    eingabe: dict[str, Any] = {f: getattr(k, f) for f in KONTAKT_TEXT + KONTAKT_BOOL + ("subjektart", "geschlecht")
                                if getattr(k, f) is not None}
     if k.kategorien is not None:
         eingabe["kategorie"] = sorted(k.kategorien)
@@ -486,6 +500,8 @@ def _kontakt_vergleich(alt: dict, f: str) -> Any:
         return sorted(_verweise(v))
     if f == "subjektart":
         return _anzeige(v) or None
+    if f == "geschlecht":
+        return guid_von(v)
     return _norm(v)
 
 
@@ -526,10 +542,10 @@ def _ch_datum(iso: str | None) -> str:
     return f"{iso[8:10]}.{iso[5:7]}.{iso[:4]}" if iso else ""
 
 
-def _kontakt_plan(c: CMIClient, k: KontaktEingabe) -> dict:
-    """Vergleicht Eingabe und CMI – ohne zu schreiben."""
+def _kontakt_plan(c: CMIClient, k: KontaktEingabe, guid: str | None = None) -> dict:
+    """Vergleicht Eingabe und CMI – ohne zu schreiben. Mit guid: genau dieser Kontakt."""
     eingabe = _kontakt_eingabe(k)
-    treffer = _kontakt_per_fremdkey(c, k.fremdkey)
+    treffer = [{"guid": guid}] if guid else _kontakt_per_fremdkey(c, k.fremdkey)
     plan: dict[str, Any] = {"fremdkey": k.fremdkey, "guid": None, "aktion": None, "aenderungen": {},
                             "adressen": [], "_alt": None}
     if len(treffer) > 1:
@@ -560,10 +576,12 @@ def _kontakt_werte(neu_werte: dict) -> dict:
     d = dict(neu_werte)
     if "kategorie" in d:
         d["kategorie"] = [ref(g) for g in d["kategorie"] or []]
+    if "geschlecht" in d:
+        d["geschlecht"] = ref(d["geschlecht"])
     return d
 
 
-def _kontakt_schreiben(c: CMIClient, k: KontaktEingabe, plan: dict) -> list[dict]:
+def _kontakt_schreiben(c: CMIClient, k: KontaktEingabe, plan: dict, guid: str | None = None) -> list[dict]:
     schritte: list[dict] = []
 
     def schritt(name: str, fn):
@@ -599,13 +617,21 @@ def _kontakt_schreiben(c: CMIClient, k: KontaktEingabe, plan: dict) -> list[dict
     except (CMIFehler, NichtGefunden):
         return schritte
     # Kontrolle: neu lesen und vergleichen
-    kontrolle = _kontakt_plan(c, k)
+    kontrolle = _kontakt_plan(c, k, guid or plan["guid"])
     if kontrolle["aktion"] != "unveraendert":
         schritte.append({"schritt": "kontrolle", "ok": False, "fehler": "CMI hat nicht alles übernommen",
                          "abweichungen": kontrolle["aenderungen"] or [_sichtbar(a) for a in kontrolle["adressen"]]})
     else:
         schritte.append({"schritt": "kontrolle", "ok": True})
     return schritte
+
+
+def _kontakt_pruefen(k: KontaktEingabe) -> None:
+    falsch = [f for f in k.leeren if f not in KONTAKT_LEERBAR]
+    ohne_art = [a for a in _adressen_eingabe(k) if not a.adressart]
+    if falsch or len(ohne_art) > 1:
+        raise HTTPException(400, {"meldung": f"leeren: unbekannte Felder {falsch}" if falsch else
+                                  "Mehrere Adressen brauchen je eine adressart", "betroffene": [k.fremdkey]})
 
 
 def _sichtbar(plan: dict) -> dict:
@@ -623,11 +649,7 @@ def kontakte_sync(body: KontaktListe, probelauf: bool = False, _=Depends(schreib
     if doppelt:
         raise HTTPException(400, {"meldung": "fremdkey mehrfach in der Eingabe", "betroffene": doppelt})
     for k in body.kontakte:
-        falsch = [f for f in k.leeren if f not in KONTAKT_LEERBAR]
-        ohne_art = [a for a in _adressen_eingabe(k) if not a.adressart]
-        if falsch or len(ohne_art) > 1:
-            raise HTTPException(400, {"meldung": f"leeren: unbekannte Felder {falsch}" if falsch else
-                                      "Mehrere Adressen brauchen je eine adressart", "betroffene": [k.fremdkey]})
+        _kontakt_pruefen(k)
     plaene = [_kontakt_plan(c, k) for k in body.kontakte]
     for p, k in zip(plaene, body.kontakte):
         if p["aktion"] == "anlegen" and not (k.name or k.organisation):
@@ -653,6 +675,49 @@ def kontakte_sync(body: KontaktListe, probelauf: bool = False, _=Depends(schreib
     return antwort
 
 
+def _einzel_antwort(plan: dict, schritte: list[dict], status_ok: int = 200):
+    antwort = {"probelauf": False, "vollstaendig": all(s["ok"] for s in schritte), **_sichtbar(plan),
+               "schritte": schritte}
+    return JSONResponse(antwort, status_code=status_ok if antwort["vollstaendig"] else 409)
+
+
+@app.post("/kontakte", tags=["Kontakte"], status_code=201,
+          summary="Neuen Kontakt anlegen (mit Adressen); 409, wenn es den fremdkey schon gibt")
+def kontakt_anlegen(body: KontaktEingabe, probelauf: bool = False, _=Depends(schreib_check)):
+    c = client()
+    _kontakt_pruefen(body)
+    if not (body.name or body.organisation):
+        raise HTTPException(400, "Neuer Kontakt braucht name oder organisation")
+    plan = _kontakt_plan(c, body)
+    if plan["aktion"] == "konflikt":
+        raise _konflikt("Mehrere CMI-Kontakte mit diesem fremdkey", plan["guids"])
+    if plan["aktion"] != "anlegen":
+        raise _konflikt("Kontakt mit diesem fremdkey gibt es schon – ändern mit PATCH /kontakte/{guid}",
+                        [plan["guid"]])
+    if probelauf:
+        return {"probelauf": True, **_sichtbar(plan)}
+    return _einzel_antwort(plan, _kontakt_schreiben(c, body, plan), 201)
+
+
+class KontaktAenderung(KontaktEingabe):
+    fremdkey: str | None = Field(None, description="optional: fremdkey setzen bzw. ändern")
+
+
+@app.patch("/kontakte/{guid}", tags=["Kontakte"],
+           summary="Felder eines Kontakts ändern bzw. leeren, Adressen nachführen (nur Genanntes)")
+def kontakt_aendern(guid: str, body: KontaktAenderung, probelauf: bool = False, _=Depends(schreib_check)):
+    c = client()
+    _kontakt_pruefen(body)
+    k = KontaktEingabe(**{**body.model_dump(exclude={"fremdkey"}), "fremdkey": body.fremdkey or "-"})
+    plan = _kontakt_plan(c, k, guid)
+    if body.fremdkey and _norm(plan["_alt"].get("fremdkey")) != body.fremdkey:
+        plan["aenderungen"]["fremdkey"] = [plan["_alt"].get("fremdkey"), body.fremdkey]
+        plan["aktion"] = "aendern"
+    if probelauf or plan["aktion"] == "unveraendert":
+        return {"probelauf": probelauf, **_sichtbar(plan), "schritte": []}
+    return _einzel_antwort(plan, _kontakt_schreiben(c, k, plan, guid))
+
+
 # ================================================================ Dossiers
 
 class DossierEingabe(BaseModel):
@@ -661,6 +726,10 @@ class DossierEingabe(BaseModel):
     kontakt_guid: str | None = Field(None, description="sonst wird der Kontakt über fremdkey gesucht")
     titel: str | None = Field(None, description="Standard: «Name Vorname» (SuS mit Jahrgang)")
     beginn: date | None = Field(None, description="Standard: heute")
+    bemerkung: str | None = None
+    standort: str | None = Field(None, description="Personaldossier: Standort der Vorlage, z. B. Hinterbirch, "
+                                                   "Mettmenriet (CMI_DOSSIER_PERSONAL_VORLAGEN)")
+    geschaeftseigner: str | None = Field(None, description="GUID, sonst setzt ihn die Vorlage")
 
 
 @app.get("/dossiers", tags=["Dossiers"], summary="Dossiers einer Art suchen (fremdkey oder TentaQl)")
@@ -710,9 +779,18 @@ def dossier_dokumente(guid: str):
     return client().lesen("Geschaeft", guid).get("dokumente") or []
 
 
+def _dossier_vorlage(art: str, standort: str | None) -> str:
+    if art == "personal" and E.personal_vorlagen:
+        if standort and standort.lower() in E.personal_vorlagen:
+            return E.personal_vorlagen[standort.lower()]
+        if standort or not E.personal_vorlage:
+            raise HTTPException(400, f"standort muss einer sein von: {', '.join(E.personal_vorlagen)}")
+    return _vorlage(art)
+
+
 def _dossier_anlegen(art: Literal["schueler", "personal"], body: DossierEingabe, probelauf: bool):
     c = client()
-    vorlage, typ = _vorlage(art), _typ(art)
+    vorlage, typ = _dossier_vorlage(art, body.standort), _typ(art)
     if not vorlage and not typ:
         raise HTTPException(501, f"{art}-Dossier nicht eingerichtet ({PRAEFIX}DOSSIER_{art.upper()}_VORLAGE "
                                  f"bzw. _TYP setzen)")
@@ -737,10 +815,14 @@ def _dossier_anlegen(art: Literal["schueler", "personal"], body: DossierEingabe,
         "titel": titel, "beginn": (body.beginn or date.today()).isoformat(),
         "schluesselFremdsystem": body.fremdkey, "zugriffsteuerung": E.dossier_zugriff,
         "geschaeftsstatus": "InBearbeitung", "lifecycleStatus": "InBearbeitung"}
+    # Die CMI-Oberfläche verknüpft die Person direkt über das Feld «person» (Erkundung 25.11.2026)
+    daten["person"] = ref(kontakt_daten["guid"])
     if typ:
         daten["typeName"] = typ
-    if E.geschaeftseigner:
-        daten["geschaeftseigner"] = ref(E.geschaeftseigner)
+    if body.bemerkung:
+        daten["bemerkung"] = body.bemerkung
+    if body.geschaeftseigner or E.geschaeftseigner:
+        daten["geschaeftseigner"] = ref(body.geschaeftseigner or E.geschaeftseigner)
     plan = {"art": art, "kontakt_guid": kontakt_daten["guid"], "vorlage": vorlage or None, "dossier": daten,
             "beteiligung": bool(E.beteiligung_entitaet)}
     if probelauf:
@@ -764,9 +846,11 @@ def _dossier_anlegen(art: Literal["schueler", "personal"], body: DossierEingabe,
             schritte.append({"schritt": "beteiligung", "ok": False, "fehler": str(e)})
     else:
         schritte.append({"schritt": "beteiligung", "ok": True, "uebersprungen": True,
-                         "hinweis": f"Verknüpfung nur über schluesselFremdsystem ({PRAEFIX}BETEILIGUNG_ENTITAET leer)"})
+                         "hinweis": "Person über das Feld «person» verknüpft"})
     neu = c.lesen("Geschaeft", guid)
     abw = {f: [neu.get(f), daten[f]] for f in ("titel", "schluesselFremdsystem") if _norm(neu.get(f)) != _norm(daten[f])}
+    if guid_von(neu.get("person")) not in (None, kontakt_daten["guid"]):
+        abw["person"] = [guid_von(neu.get("person")), kontakt_daten["guid"]]
     schritte.append({"schritt": "kontrolle", "ok": not abw, **({"abweichungen": abw} if abw else {})})
     antwort = {"probelauf": False, "vollstaendig": all(s["ok"] for s in schritte), "guid": guid,
                "titel": neu.get("titel"), "schritte": schritte}
@@ -782,6 +866,59 @@ def schuelerdossier(body: DossierEingabe, probelauf: bool = False, _=Depends(sch
           summary="Personaldossier (Mitarbeitende/Lehrperson) für einen Kontakt erstellen")
 def personaldossier(body: DossierEingabe, probelauf: bool = False, _=Depends(schreib_check)):
     return _dossier_anlegen("personal", body, probelauf)
+
+
+class PersonMitDossier(KontaktEingabe):
+    beginn: date | None = Field(None, description="Beginn des Dossiers, Standard heute")
+    bemerkung: str | None = Field(None, description="Bemerkung im Dossier")
+    standort: str | None = Field(None, description="nur Mitarbeitende: Standort der Personaldossier-Vorlage")
+
+
+def _person_mit_dossier(art: Literal["schueler", "personal"], body: PersonMitDossier, probelauf: bool):
+    """Wie Escola POST /schueler bzw. /mitarbeitende: Kontakt anlegen (oder vorhandenen nehmen) und Dossier dazu."""
+    c = client()
+    k = KontaktEingabe(**body.model_dump(exclude={"beginn", "bemerkung", "standort"}))
+    _kontakt_pruefen(k)
+    plan = _kontakt_plan(c, k)
+    if plan["aktion"] == "konflikt":
+        raise _konflikt("Mehrere CMI-Kontakte mit diesem fremdkey", plan["guids"])
+    if plan["aktion"] == "anlegen" and not (k.name or k.organisation):
+        raise HTTPException(400, "Neuer Kontakt braucht name oder organisation")
+    if not _dossier_vorlage(art, body.standort) and not _typ(art):
+        raise HTTPException(501, f"{art}-Dossier nicht eingerichtet ({PRAEFIX}DOSSIER_{art.upper()}_VORLAGE bzw. _TYP)")
+    vorhanden = _dossiers_per_fremdkey(c, art, k.fremdkey)
+    if vorhanden:
+        raise _konflikt(f"Es gibt schon ein {art}-Dossier für diese Person",
+                        [{"guid": d.get("guid"), "titel": d.get("titel")} for d in vorhanden])
+    dossier = DossierEingabe(fremdkey=k.fremdkey, beginn=body.beginn, bemerkung=body.bemerkung,
+                             standort=body.standort, kontakt_guid=plan["guid"])
+    if probelauf:
+        vorlage = _dossier_vorlage(art, body.standort)
+        return {"probelauf": True, "kontakt": _sichtbar(plan), "dossier": {"art": art, "vorlage": vorlage or None}}
+    schritte = [] if plan["aktion"] == "unveraendert" else _kontakt_schreiben(c, k, plan)
+    if not all(s["ok"] for s in schritte):
+        return JSONResponse({"probelauf": False, "vollstaendig": False, "kontakt": _sichtbar(plan),
+                             "schritte": schritte}, status_code=409)
+    dossier.kontakt_guid = plan["guid"]
+    d = _dossier_anlegen(art, dossier, False)
+    d = json.loads(d.body) if isinstance(d, JSONResponse) else d
+    alle = [{**s, "teil": "kontakt"} for s in schritte] + [{**s, "teil": "dossier"} for s in d.get("schritte", [])]
+    antwort = {"probelauf": False, "vollstaendig": all(s["ok"] for s in alle), "kontakt_guid": plan["guid"],
+               "kontakt_aktion": plan["aktion"], "dossier_guid": d.get("guid"), "titel": d.get("titel"),
+               "schritte": alle}
+    return JSONResponse(antwort, status_code=201 if antwort["vollstaendig"] else 409)
+
+
+@app.post("/schueler", tags=["Dossiers"], status_code=201,
+          summary="Schüler:in erfassen: Kontakt anlegen bzw. nachführen und Lernendendossier erstellen")
+def schueler_anlegen(body: PersonMitDossier, probelauf: bool = False, _=Depends(schreib_check)):
+    return _person_mit_dossier("schueler", body, probelauf)
+
+
+@app.post("/mitarbeitende", tags=["Dossiers"], status_code=201,
+          summary="Mitarbeitende/Lehrperson erfassen: Kontakt anlegen bzw. nachführen und Personaldossier erstellen")
+def mitarbeitende_anlegen(body: PersonMitDossier, probelauf: bool = False, _=Depends(schreib_check)):
+    return _person_mit_dossier("personal", body, probelauf)
 
 
 # ================================================================ Klassen und Klassenzuteilung

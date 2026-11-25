@@ -16,7 +16,7 @@ CM Informatik beschreibt (`microsoft/PowerPlatformConnectors`, Ordner `certified
 
 ## Stand
 
-Version 0.3.0 – Gerüst nach der Swagger-Beschreibung, ergänzt um die Erkundung im CMI der Sek Bülach vom 25.11.2026
+Version 0.4.0 – Gerüst nach der Swagger-Beschreibung, ergänzt um die Erkundung im CMI der Sek Bülach vom 25.11.2026
 ([ERKUNDUNG.md](ERKUNDUNG.md)). **Noch nicht live geprüft** (kein Zugang zur offiziellen Schnittstelle). Tests laufen gegen
 ein nachgebautes CMI mit erfundenen Personen.
 
@@ -53,6 +53,10 @@ Listen mit `?format=csv` (Semikolon, UTF-8 mit BOM).
 | `GET /kontakte/{guid}/vollstaendig` | 🔓 🔑 | `GET /Kontakt/{guid}` + Verweise | alles zu einem Kontakt: Adressen, Dossiers (Dossierkontakte/Beteiligungen), Schule, Bezugspersonen, Notfallkontakte, Haushalt, Fremdkey-Mappings, externe Benutzer, Adressdatensperre; Zahlungs- und Gesundheitsdaten nur mit `CMI_SCHUETZENSWERT=1` und API-Key, sonst nur Anzahl |
 | `GET /kontakte/{guid}/adressen` | 🔓 | `GET /Adresse/{guid}` | Adressen mit Adressart und Gültigkeit (`?nur_aktive=true`, CSV) |
 | `GET /kontakte/{guid}/dossiers` | 🔓 | Dossierkontakt / Beteiligung | Dossiers mit Rolle, Typ, Laufnummer, Status (CSV) |
+| `POST /kontakte` | ✏️ | `POST /Kontakt`, `POST /Adresse` | neuen Kontakt anlegen (201); `409`, wenn der fremdkey schon existiert |
+| `PATCH /kontakte/{guid}` | ✏️ | `PUT /Kontakt/{guid}`, Adresse | nur genannte Felder ändern bzw. leeren, fremdkey setzen |
+| `POST /schueler` | ✏️ ⏳ | Kontakt + `POST /Geschaeft?Vorlage=` | wie Escola: Kontakt anlegen bzw. nachführen **und** Lernendendossier erstellen (201) |
+| `POST /mitarbeitende` | ✏️ ⏳ | Kontakt + `POST /Geschaeft?Vorlage=` | wie Escola: Kontakt **und** Personaldossier; `standort` wählt die Vorlage (Hinterbirch/Mettmenriet) |
 | `POST /kontakte/sync` | ✏️ | `Kontakt`, `Adresse` (Search, GET, POST, PUT) | bis 500 Kontakte abgleichen: anlegen, ändern, unverändert |
 | `GET /dossiers` | 🔓 | `POST /Geschaeft/Search` | `?art=schueler\|personal\|klasse`, `fremdkey`, `titel` oder `tentaql` |
 | `GET /dossiers/{guid}` | 🔓 | `GET /Geschaeft/{guid}` | ein Dossier |
@@ -99,6 +103,11 @@ ohne Adressart die erste aktive), `strasse`, `plz`, `ort`, `land`, `adresskatego
 ```json
 POST /dossiers/schueler   {"fremdkey": "escola-650", "beginn": "2026-08-17"}
 ```
+
+Body: `fremdkey`, optional `kontakt_guid`, `titel`, `beginn`, `bemerkung`, `standort` (Personaldossier),
+`geschaeftseigner`. Die Person wird wie in der CMI-Oberfläche über das Feld `person` verknüpft.
+In einem Schritt mit Kontakt: `POST /schueler` bzw. `POST /mitarbeitende` (Kontaktfelder + `beginn`, `bemerkung`,
+`standort`).
 
 Prüft vorher: Kontakt mit diesem fremdkey vorhanden und eindeutig (sonst `400`/`409`), noch kein Dossier derselben
 Art mit diesem Schlüssel (sonst `409`). Titel «Name Vorname» (SuS mit Jahrgang), `zugriffsteuerung` aus
@@ -164,6 +173,7 @@ Token: `POST https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token`.
 
 | Version | Datum | Änderung |
 |---|---|---|
+| 0.4.0 | 2026-11-25 | Erstellen wie bei Escola: `POST /kontakte`, `PATCH /kontakte/{guid}`, `POST /schueler`, `POST /mitarbeitende`; Dossier verknüpft die Person über `person`, Bemerkung, Personaldossier-Vorlage je Standort; Kontakt mit `geschlecht`, `rufname` (#30) |
 | 0.3.0 | 2026-11-25 | Kontakt-Sync mit allen Feldern der CMI-Oberfläche (Titel, Briefanrede, Funktion, Fax, Homepage, Unternehmens-ID, Subjektart, Kategorien), Felder leeren, mehrere Adressen nach Adressart mit Land, Kategorie und Gültigkeit; Schreibweise aus Test am Kontakt _TEST (#27) |
 | 0.2.0 | 2026-11-25 | Kontakt vollständig lesen (`/kontakte/{guid}/vollstaendig`, `/adressen`, `/dossiers`), Schalter `CMI_SCHUETZENSWERT`; Erkundung im CMI der Sek Bülach (`ERKUNDUNG.md`) (#25) |
 | 0.1.0 | 2026-11-25 | Erste Fassung nach Swagger des CMI-Connectors: Kontakte synchronisieren, Schüler-/Personaldossier, Klassen einteilen/umteilen, Dokumente hochladen; Probelauf, Kontrolle nach dem Schreiben; Tests gegen nachgebautes CMI (#23) |
