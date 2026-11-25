@@ -158,3 +158,24 @@ Die drei Testdokumente bleiben bestehen.
 **Für die CMI-API:** Upload mit Zielordner per Pfad (`b_Dossier Schule/08_Beurteilung`) oder per `ordner_guid`;
 Ordner aus der Vorlage werden nicht neu angelegt (nur mit `ordner_anlegen=true`). Offiziell entspricht das
 `POST /Dokument` mit Verweis auf Dossier und Ordner und der Datei (Format ZU PRÜFEN) bzw. Check-in.
+
+## Klasseneinteilung und Planung (Lernendendossier «_TEST_Schueler», 25.11.2026 – nicht abgeschlossen)
+
+Menü «⋮» oben rechts im Lernendendossier → **Klasseneinteilung**. Ein Assistent
+(`actionId: "workspaces.cmiaxioma.schulverwaltung.menucommands.einschulung.klasseneinteilungcommand"`,
+`actionArguments: "<Dossier-GUID>"`) mit zwei Optionen. Bis zur Klassenwahl durchgespielt, **nicht gespeichert**:
+im Mandanten gibt es keine Testklasse.
+
+| Option (`klasseneinteilungsoptionWizardOptionChoice`) | Schritt 2 | Schritt 3 |
+|---|---|---|
+| `direkteKlasseneinteilung` – aktuelle Klasse | `schuljahr` (Verweis «Schuljahr», Vorgabe 2026/27), `eintrittsgrund` (Pflicht), `vonBis` («01.08.2026 - 31.07.2027», Vorgabe = Schuljahr) | `einteilungSchulklassendossier` (Verweis «AbstraktesSchulklassendossier»: Schulklassendossier oder Externes Schulklassendossier) |
+| `planungSchuljahreswechsel` – künftige Klasse («In Planung aufnehmen») | `schuljahr`, `vonBis` (kein Eintrittsgrund) | `planungSammelklassendossier` (Verweis «Sammelklassendossier») |
+
+**Eintrittsgründe** (`key` → Anzeige): `schuleintritt` Schuleintritt · `zuzug` Zuzug · `klassenwechsel` Klassenwechsel ·
+`umteilung` Umteilung · `kindergarteneintritt` · `primareintritt` · `sekundareintritt`.
+
+- Die Planung teilt also nicht in eine Schulklasse ein, sondern in ein **Sammelklassendossier** des künftigen
+  Schuljahres (Planungsprozess Schuljahreswechsel); die definitive Klasse entsteht später.
+- Das Ergebnis erscheint im Lernendendossier unter **Schullaufbahneinträge**; Aufbau des Eintrags (Typ
+  «Klassenzuteilung Lernende» / «Schullaufbahn») noch offen.
+- Für den letzten Schritt braucht es eine **Testklasse** (Schulklassendossier) und eine **Test-Sammelklasse**.
