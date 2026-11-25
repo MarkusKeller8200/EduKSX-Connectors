@@ -7,6 +7,9 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
 ## [Unveröffentlicht]
 
 ### Hinzugefügt
+- CMI-API 0.2.0 (#25): Kontakt vollständig lesen (Adressen, Dossiers, Schule, Bezugspersonen, Notfallkontakte,
+  Haushalt, technische Details; Zahlungs- und Gesundheitsdaten nur mit `CMI_SCHUETZENSWERT=1`); Erkundung des
+  CMI-Mandanten in `apis/cmi/ERKUNDUNG.md` (nur Typen und Felder, keine Personendaten)
 - CMI-API 0.1.0 (`apis/cmi`, #23): Kontakte synchronisieren bzw. anlegen, Schüler- und Personaldossier
   erstellen, SuS in Klassen einteilen/umteilen, Dokumente ins Dossier hochladen; Probelauf, Kontrolle nach dem
   Schreiben, keine Lösch-Endpunkte; nach Swagger des CMI-Connectors, Tests gegen nachgebautes CMI; Workflows WF-23–26

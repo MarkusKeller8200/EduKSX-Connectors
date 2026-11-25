@@ -25,7 +25,8 @@ Kopien im Claude-Projekt ESCOLA: `claude/uebergabe.md` und `claude/projektstand.
 | #5 | 0.1.0 | `_1 bereit` | Mitteilungen – Versand nur mit Freigabe und genanntem Testempfänger |
 | #7, #10 | 0.1.0 | `_1 bereit` | hängen an der Antwort von Escola (Mail an Hannes/Lars) |
 | #12, #14, #15 | 0.1.0 | `_1 bereit` | Testläufe – schreiben in Escola, nur zusammen mit dem Projektverantwortlichen |
-| #23 | Funktionen | `_3 Beta-Test` | CMI-API 0.1.0: Kontakte-Sync, Schüler-/Personaldossier, Klassen ein-/umteilen, Dokument-Upload; nach Swagger des CMI-Connectors, Annahmen in README «ZU PRÜFEN»; kein Zugang, nicht live |
+| #25 | CMI-API | `_3 Beta-Test` | Kontakt vollständig lesen, Erkundung CMI (ERKUNDUNG.md) |
+| #23 | CMI-API | `_3 Beta-Test` | CMI-API 0.1.0: Kontakte-Sync, Schüler-/Personaldossier, Klassen ein-/umteilen, Dokument-Upload; nach Swagger des CMI-Connectors, Annahmen in README «ZU PRÜFEN»; kein Zugang, nicht live |
 | #20 | Funktionen | `_3 Beta-Test` | SL-Planer-API 0.1.0 eingecheckt (3f86271); Seiten 1–8 der Doku fehlen, Annahmen in README «ZU PRÜFEN»; kein Zugang, nicht live |
 | #17 | – | `_3 Beta-Test` | Testdaten, `_old/` und Kopien im Claude-Projekt pseudonymisiert; offen: Git-Verlauf (nur auf ausdrücklichen Auftrag) |
 
@@ -46,6 +47,17 @@ Schliessen erst nach «getestet ok» bzw. abgehakter Testliste.
 - Löschen nur nach Rückfrage.
 
 ## Sitzungen
+
+### Sitzung 2026-11-25 (16:00) – CMI erkundet, Kontakt lesen (#25)
+
+- Im eingebauten Browser die CMI-Weboberfläche (sekbuelach.cmicloud.ch) beim Öffnen eines Kontakts mitgelesen:
+  Mandant `sekbuelach`, Anmeldung über CMIs eigenen Anmeldedienst, interne Schnittstelle `webapiprivate` (nicht
+  verwenden), Typen Lernendendossier/Personaldossier/Schulklassendossier, Klassenzuteilung Lernende, Dossierkontakt,
+  Fremdkey Mapping → `apis/cmi/ERKUNDUNG.md` (ohne Personendaten).
+- CMI-API 0.2.0: `/kontakte/{guid}/vollstaendig`, `/adressen`, `/dossiers`; schützenswerte Daten hinter Schalter.
+- Meilensteine pro API: Escola-API (früher «0.1.0 – Escola live getestet»), SL-Planer-API, CMI-API.
+- Repo vorübergehend öffentlich (Projektverantwortlicher stellt nach dem Testen wieder auf privat); Git-Verlauf vor
+  dem 16.11.2026 enthält echte Namen (#17).
 
 ### Sitzung 2026-11-25 – CMI-API (#23)
 

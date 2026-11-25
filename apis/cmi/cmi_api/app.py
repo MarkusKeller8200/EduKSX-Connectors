@@ -222,7 +222,7 @@ def _dossiers_per_fremdkey(c: CMIClient, art: str, fremdkey: str) -> list[dict]:
 def status():
     c = _client or CMIClient(config_aus_env())
     return {"ok": True, "version": VERSION, "konfiguriert": c.konfiguriert, "mandant": c.cfg.mandant or None,
-            "schreiben": SCHREIBEN, "aufrufe_cmi": {"lesen": c.zaehler.lesen, "schreiben": c.zaehler.schreiben},
+            "schreiben": SCHREIBEN, "schuetzenswert": SCHUETZENSWERT and bool(API_KEY), "aufrufe_cmi": {"lesen": c.zaehler.lesen, "schreiben": c.zaehler.schreiben},
             "eingerichtet": {
                 "dossier_schueler": bool(E.schueler_vorlage), "dossier_personal": bool(E.personal_vorlage),
                 "klassen": bool(E.klasse_typ), "klassenzuteilung": bool(E.kz_entitaet),
@@ -291,6 +291,145 @@ def kontakte(fremdkey: str | None = None, name: str | None = None, vorname: str 
 @app.get("/kontakte/{guid}", tags=["Kontakte"])
 def kontakt(guid: str):
     return client().lesen("Kontakt", guid)
+
+
+# ---------------------------------------------------------------- Kontakt vollständig lesen
+# Beziehungen eines Kontakts, wie sie die CMI-Weboberfläche zeigt (Erkundung 25.11.2026, apis/cmi/ERKUNDUNG.md).
+# Feld im Kontakt → (Entität für GET /<Entität>/{guid}, Bereich in der Antwort, besonders schützenswert).
+# Entitätsnamen der offiziellen API ZU PRÜFEN; enthält ein Verweis eine `url` auf denselben Server, gilt diese.
+KONTAKT_BEZIEHUNGEN: dict[str, tuple[str, str, bool]] = {
+    "adressen": ("Adresse", "adressen", False),
+    "dossierkontakte": ("Dossierkontakt", "dossiers", False),
+    "beteiligungen": ("Beteiligung", "dossiers", False),
+    "gebiete": ("Gebiet", "schule", False),
+    "beziehungenA": ("Beziehung", "bezugspersonen", False),
+    "beziehungenB": ("Beziehung", "bezugspersonen", False),
+    "kommunikationsDetails": ("Kommunikationsdetail", "notfallkontakte", False),
+    "haushaltsmitgliedschaften": ("Haushaltsmitgliedschaft", "haushalt", False),
+    "fremdKeyMappings": ("FremdkeyMapping", "fremdkey_mappings", False),
+    "externeBenutzer": ("Fremdbenutzer", "externe_benutzer", False),
+    "adressdatensperre": ("Adressdatensperre", "adressdatensperre", False),
+    "zahlungsinformationen": ("Zahlungsinformation", "zahlungsinformationen", True),
+    "medizinischeInformationen": ("MedizinischerInformationseintrag", "medizinische_informationen", True),
+}
+SCHUETZENSWERT = os.environ.get(PRAEFIX + "SCHUETZENSWERT", "0") == "1"
+_INTERN = {"access", "metas", "iconId", "checkOutInfo_MF", "previewUrl", "editUrl", "downloadUrl"}
+
+
+def _verweise(wert: Any) -> list[str]:
+    """Verweisliste aus CMI: [{guid,…}], ["guid"] oder «g1;g2» (Weboberfläche)."""
+    if not wert:
+        return []
+    if isinstance(wert, str):
+        return [g for g in wert.split(";") if g.strip()]
+    if isinstance(wert, dict):
+        wert = [wert]
+    return [g for g in (guid_von(v) for v in wert) if g]
+
+
+def _anzeige(v: Any) -> Any:
+    """Verweis bzw. Auswahlwert lesbar machen: {displayName}/{text} → Text."""
+    if isinstance(v, dict):
+        if "displayName" in v or "text" in v:
+            return v.get("displayName") or v.get("text")
+        if set(v) <= {"start", "end"}:
+            return _zeitraum(v)
+    return v
+
+
+def _zeitraum(v: Any) -> dict:
+    """gueltigVonBis/dauer: {start:{value}, end:{value}} oder «von - bis» → {von, bis} (Datum)."""
+    if isinstance(v, dict):
+        def tag(x):
+            x = x.get("value") if isinstance(x, dict) else x
+            return _norm(x)
+        return {"von": tag(v.get("start")), "bis": tag(v.get("end"))}
+    if isinstance(v, str) and "-" in v and not v[:4].isdigit():
+        von, _, bis = v.partition("-")
+        return {"von": von.strip() or None, "bis": bis.strip() or None}
+    return {"von": _norm(v), "bis": None}
+
+
+def _bereinigt(o: dict) -> dict:
+    return {k: (_anzeige(v) if not isinstance(v, list) else v) for k, v in o.items() if k not in _INTERN}
+
+
+def _adresse_aus(a: dict) -> dict:
+    zr = _zeitraum(a.get("gueltigVonBis"))
+    return {"guid": a.get("guid"), "adressart": _anzeige(a.get("adressart")), "strasse": a.get("strasse"),
+            "plz": a.get("plz") or a.get("pLZ"), "ort": a.get("ort"), "land": _anzeige(a.get("land")),
+            "gueltig_von": zr["von"], "gueltig_bis": zr["bis"], "inaktiv": a.get("inaktiv")}
+
+
+def _dossier_aus(d: dict) -> dict:
+    dossier = d.get("computedDossier") or d.get("geschaeft") or d.get("dossier")
+    zr = _zeitraum(d.get("dauer"))
+    return {"guid": d.get("guid"), "rolle": _anzeige(d.get("rolle")),
+            "dossier_guid": guid_von(dossier), "dossiertitel": d.get("dossiertitel") or _anzeige(dossier),
+            "laufnummer": d.get("dossierLaufnummer"), "dossiertyp": _anzeige(d.get("dossierTyp")),
+            "status": _anzeige(d.get("dossierStatus")), "von": zr["von"], "bis": zr["bis"]}
+
+
+def _verweis_lesen(c: CMIClient, entitaet: str, verweis: Any) -> dict:
+    url = verweis.get("url") if isinstance(verweis, dict) else None
+    basis = c.cfg.base_url.rstrip("/") + "/"
+    if url and url.startswith(basis):
+        return c._senden("GET", url[len(basis):]).json()
+    return c.lesen(entitaet, guid_von(verweis) or str(verweis))
+
+
+def kontakt_vollstaendig_lesen(c: CMIClient, guid: str, schuetzenswert: bool) -> dict:
+    k = c.lesen("Kontakt", guid)
+    aus: dict[str, Any] = {
+        "kontakt": {f: _anzeige(v) for f, v in k.items()
+                    if f not in KONTAKT_BEZIEHUNGEN and f not in _INTERN and not isinstance(v, list)},
+        "adressen": [], "dossiers": [], "schule": [], "bezugspersonen": [], "notfallkontakte": [], "haushalt": [],
+        "fremdkey_mappings": [], "externe_benutzer": [], "adressdatensperre": [],
+        "geschuetzt": {}, "nicht_lesbar": [], "weitere_beziehungen": {}}
+    for feld, wert in k.items():
+        if feld in KONTAKT_BEZIEHUNGEN:
+            entitaet, bereich, heikel = KONTAKT_BEZIEHUNGEN[feld]
+            verweise = wert if isinstance(wert, list) else _verweise(wert)
+            if heikel:
+                aus["geschuetzt"][bereich] = {"anzahl": len(verweise)}
+                if not schuetzenswert:
+                    continue
+                aus["geschuetzt"][bereich]["eintraege"] = []
+            for v in verweise:
+                try:
+                    o = _verweis_lesen(c, entitaet, v)
+                except (CMIFehler, NichtGefunden) as e:
+                    aus["nicht_lesbar"].append({"beziehung": feld, "guid": guid_von(v) or v, "fehler": str(e)})
+                    continue
+                eintrag = (_adresse_aus(o) if bereich == "adressen" else
+                           _dossier_aus(o) if bereich == "dossiers" else _bereinigt(o))
+                if heikel:
+                    aus["geschuetzt"][bereich]["eintraege"].append(eintrag)
+                else:
+                    aus[bereich].append(eintrag)
+        elif isinstance(wert, list) and wert and all(isinstance(x, dict) and "guid" in x for x in wert):
+            # unbekannte Beziehung: nur Verweise zeigen, nicht nachladen
+            aus["weitere_beziehungen"][feld] = [{"guid": x.get("guid"), "name": x.get("displayName")} for x in wert]
+    aus["adressen"].sort(key=lambda a: (bool(a["inaktiv"]), a["adressart"] or ""))
+    return aus
+
+
+@app.get("/kontakte/{guid}/vollstaendig", tags=["Kontakte"],
+         summary="Kontakt mit Adressen, Dossiers, Schule, Bezugspersonen, Notfallkontakten, Haushalt, techn. Details")
+def kontakt_vollstaendig(guid: str):
+    return kontakt_vollstaendig_lesen(client(), guid, SCHUETZENSWERT and bool(API_KEY))
+
+
+@app.get("/kontakte/{guid}/adressen", tags=["Kontakte"], summary="Adressen eines Kontakts (aktive zuerst)")
+def kontakt_adressen(guid: str, nur_aktive: bool = False, format: Format = "json"):
+    adr = kontakt_vollstaendig_lesen(client(), guid, False)["adressen"]
+    return _antwort([a for a in adr if not (nur_aktive and a["inaktiv"])], format, "adressen")
+
+
+@app.get("/kontakte/{guid}/dossiers", tags=["Kontakte"],
+         summary="Dossiers, an denen der Kontakt beteiligt ist (Rolle, Dossiertyp, Status)")
+def kontakt_dossiers(guid: str, format: Format = "json"):
+    return _antwort(kontakt_vollstaendig_lesen(client(), guid, False)["dossiers"], format, "dossiers")
 
 
 def _kontakt_plan(c: CMIClient, k: KontaktEingabe) -> dict:
