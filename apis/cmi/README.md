@@ -166,7 +166,7 @@ curl -H "X-API-Key: $KEY" -F dateien=@lea.pdf -F dateien=@tim.pdf \
 
 Je Datei: `datei` (Dateiname), `fremdkey` (Lernendendossier), optional `schuljahr`, `semester`, `titel`
 (sonst die gemeinsamen Werte). Abgelegt in `CMI_ZEUGNIS_ORDNER` (Standard `b_Dossier Schule/08_Beurteilung`,
-Annahme – mit `ordner` übersteuerbar; der Ordner wird nicht angelegt). Titel «Zeugnis 2026/27 1. Semester», Thema
+bestätigt 26.11.2026 – mit `ordner` übersteuerbar; der Ordner wird nicht angelegt). Titel «Zeugnis 2026/27 1. Semester», Thema
 «Zeugnis», Schlüssel `zeugnis-<fremdkey>-2026-27-S1`. Schon abgelegte Zeugnisse (gleicher Schlüssel) meldet die
 API als `vorhanden`, ein erneuter Lauf schreibt also nichts doppelt. Vor dem Schreiben wird alles geprüft (kein
 PDF, Datei ohne Zuordnung, unbekannter fremdkey, Ordner fehlt, doppelt in der Eingabe, gleicher Titel ohne
