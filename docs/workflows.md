@@ -35,7 +35,7 @@ neue Fälle unten anfügen, Nummer fortlaufend (`WF-xx`), auch wenn sie mehrere 
 | WF-24 | Schüler- bzw. Personaldossier in CMI eröffnen | CMI | ✅ | 🧪 | [CMI](../apis/cmi/WORKFLOWS.md#wf-24-schüler--bzw-personaldossier-eröffnen) |
 | WF-25 | Klasseneinteilung und Klassenwechsel in CMI nachführen | Escola, CMI | ⚠️ | 🧪 | [CMI](../apis/cmi/WORKFLOWS.md#wf-25-klasseneinteilung-und-klassenwechsel-in-cmi-nachführen) |
 | WF-26 | Dokumente (z. B. Zeugnisse) ins CMI-Dossier ablegen | Escola/IDA, CMI | ✅ | 🧪 | [CMI](../apis/cmi/WORKFLOWS.md#wf-26-dokumente-ins-dossier-ablegen) |
-| WF-27 | Zeugnisse aus Escola in die CMI-Lernendendossiers ablegen | Escola, CMI | ⚠️ | 🧪 | [CMI](../apis/cmi/WORKFLOWS.md#wf-27-zeugnisse-aus-escola-in-die-lernendendossiers-ablegen) |
+| WF-27 | Zeugnisse aus Escola in die CMI-Lernendendossiers ablegen | Escola, CMI | ✅ | 🧪 | [CMI](../apis/cmi/WORKFLOWS.md#wf-27-zeugnisse-aus-escola-in-die-lernendendossiers-ablegen) |
 | WF-28 | *(nächster Fall)* | | 💡 | | |
 
 ## Neuen Workflow aufnehmen

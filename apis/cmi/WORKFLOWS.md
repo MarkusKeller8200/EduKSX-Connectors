@@ -12,7 +12,7 @@ Stand API: 0.1.0 · erste Fassung 25.11.2026. Übersicht aller Systeme: [docs/wo
 | WF-24 | Schüler- bzw. Personaldossier eröffnen | ✅ | 🧪 | Dossiervorlagen, Typnamen |
 | WF-25 | Klasseneinteilung und Klassenwechsel in CMI nachführen | ⚠️ | 🧪 | Modell der Klassenzuteilung in CMI Schule |
 | WF-26 | Dokumente (z. B. Zeugnisse) ins Dossier ablegen | ✅ | 🧪 | Dateiformat beim Anlegen, Ordnerstruktur |
-| WF-27 | Zeugnisse aus Escola in die Lernendendossiers ablegen | ⚠️ | 🧪 | Zeugnis-PDFs aus Escola (#39) |
+| WF-27 | Zeugnisse aus Escola in die Lernendendossiers ablegen | ✅ | 🧪 | Live-Test CMI; Automatik (Zeitplan) |
 
 Testdaten: nur erfundene Personen (z. B. «Muster Lea», fremdkey `test-…`) und eine Testklasse; Schlüssel und
 Titel mit «TEST» beginnen lassen. Die API löscht nicht – Testobjekte in CMI von Hand inaktiv setzen bzw. entfernen.
@@ -63,6 +63,13 @@ Zeugnisse überträgt die API nicht.
 
 ## WF-27 Zeugnisse aus Escola in die Lernendendossiers ablegen
 
-1. Zeugnis-PDFs je Schüler:in aus Escola holen (Escola-API, #39 – in Arbeit) oder als Stapel bereitstellen.
-2. `POST /zeugnisse?probelauf=true` mit allen PDFs, `zuordnung` (Datei → fremdkey), `schuljahr`, `semester`.
-3. Ausführen; bereits abgelegte Zeugnisse erscheinen als `vorhanden`. Zeitpunkt: Semesterende.
+Zeitpunkt: Semesterende, nachdem die Lehrpersonen die Zeugnisse in Escola definitiv ausgedruckt haben.
+
+1. Escola-API: `GET /klassen/{id}/zeugnisse?schuljahr=2026/27&titel=Zeugnis 1. Semester&nur_definitiv=true`
+   (je SuS das neueste definitive Zeugnis; Schalter `ESCOLA_ZEUGNISSE=1`).
+2. Je Zeile das PDF holen: `GET /schueler/{schueler_id}/zeugnisse/{id}/pdf`.
+3. CMI-API: `POST /zeugnisse?probelauf=true` mit allen PDFs und `zuordnung` (Datei → fremdkey = Escola-ID wie in
+   WF-23), `schuljahr`, `semester` (aus dem Titel «… 1. Semester»). Plan prüfen.
+4. Ausführen; bereits abgelegte Zeugnisse erscheinen als `vorhanden`, ein erneuter Lauf ist gefahrlos.
+
+Fehlt einer Schülerin noch das definitive Zeugnis, fehlt sie in Schritt 1 – Liste mit der Klassenliste vergleichen.
