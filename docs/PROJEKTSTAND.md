@@ -1,5 +1,9 @@
 # EduKSX-Connectors – Projektstand
 
+> Stand 2026-11-28 (01:00): Escola-API 1.19.0 (Branch `funktion/escola-erkundung-28-11`, PR): Erkundung der offenen
+> Issues im Browser, nur lesend – Dokumente (#3), App-Status (#4), Absenzen (#9), Stundenplan Arbeitsgruppen (#13)
+> eingebaut; #11 braucht eine Test-Zuordnung, #5/#7 Rundgang bzw. Antwort Escola. Escola hat ausser H_A1a noch keine SuS.
+>
 > Stand 2026-11-27 (23:45): Escolas Korrekturen am Personenimport live nachgeprüft (TEST_A1a, ERGÄNZEN und
 > ÜBERSCHREIBEN) – alle gemeldeten Fehler behoben; README › Personenimport und WORKFLOWS WF-11/L10 nachgeführt (#2).
 > Testpersonen ID 723–734 (TEST/TESTV) danach gelöscht. Weiterhin offen: Branch übernehmen, Upload über die API.

@@ -1,6 +1,6 @@
 # Escola-API – Workflows (Prüfliste und spätere Testläufe)
 
-Stand API: 1.16.0 · Liste wird laufend ergänzt (zuletzt 27.11.2026, WF-01 bis WF-20; WF-11 nach der Nachprüfung des Escola-Imports).
+Stand API: 1.19.0 · Liste wird laufend ergänzt (zuletzt 28.11.2026: Erkundung L8, L11, L12, L17).
 
 Jeder Workflow wird zuerst **theoretisch** gegen die vorhandene API geprüft (reichen die Endpunkte?).
 Später dient er als **Testlauf** auf dem Testsystem (Testpersonen TEST TEST 649, SuS SuS 650, Testklasse TEST_A1a 120,
@@ -43,18 +43,18 @@ Test-Arbeitsgruppe TEST 3).
 | L3 | Fächer-Zuteilung für Arbeitsgruppen (Fachklassen) | ✅ seit 1.12 |
 | L4 | Bezugspersonen | ✅ seit 1.12 (lesen, verknüpfen, anlegen, Sorgerecht, entfernen, Eltern deaktivieren) |
 | L5 | Stichtag – Escola-Änderungen gelten sofort | offen, ausserhalb der API: IDA/CONNECT plant und löst am Datum aus |
-| L6 | Rechte (KLR/FP/SpM/Abs) fürs kommende Schuljahr | offen – Escola-Verhalten nicht live geprüft; Rechte nach dem SJ-Wechsel setzen ([#11](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/11)) |
+| L6 | Rechte (KLR/FP/SpM/Abs) fürs kommende Schuljahr | offen – lesend nicht klärbar (28.11.2026: im kommenden SJ hat keine Klasse Zuordnungen); braucht Test-Zuordnung in TEST_A1a ([#11](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/11)) |
 | L7 | Neue Bezugsperson anlegen (`createNewPersonAndRelationshipRpc`) | eingebaut, nicht live getestet (legt eine nicht löschbare Person an) – im ersten Testlauf prüfen ([#12](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/12)) |
-| L8 | Stundenplan von Arbeitsgruppen | offen – Escola-Aufruf unbekannt (Anzeige liefert keine Zellen) ([#13](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/13)) |
+| L8 | Stundenplan von Arbeitsgruppen | ✅ Lesen seit 1.19 `GET /arbeitsgruppen/{id}/stundenplan` (`application_workgroup.php`, live 28.11.2026; alle AG noch leer); Schreiben offen ([#13](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/13)) |
 | L9 | Lehrpersonen-Schalter im Stundenplan bei mehreren Lehrpersonen pro Fach | eingebaut, live nur gelesen (H_A1a), nicht geschaltet ([#14](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/14)) |
 | L10 | Escola-Importformat und Upload | ⚠️ Format geklärt und nach Escolas Korrekturen live nachgeprüft 27.11.2026 (Excel-Zeilen per Zwischenablage, Feldliste, Werte für Berechtigung und Ja/Nein – README › Personenimport); Upload über die API offen, bei Escola ohne Termin geplant ([#2](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/2)) |
-| L11 | Dokumente im Schülerdossier lesen und ablegen | offen ([#3](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/3)) |
-| L12 | Eltern-App: Aktivierungsstatus, Zugänge | offen ([#4](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/4)) |
+| L11 | Dokumente im Schülerdossier lesen und ablegen | ⚠️ seit 1.19: Lesen live geprüft (650), Hochladen/Löschen eingebaut, nicht live ([#3](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/3)) |
+| L12 | Eltern-App: Aktivierungsstatus, Zugänge | ✅ seit 1.19 `GET /personen/{id}/app`, `/klassen/{id}/eltern?app=true` bzw. `?nur_ohne_app=true`; Zugänge versendet Escola selbst (Aktion «Willkommensnachricht … für Eltern dieser SuS»); Zustand «aktiviert» nicht live gesehen ([#4](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/4)) |
 | L13 | Mitteilungen über Escola senden, Rücklauf lesen | offen ([#5](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/5)) |
 | L14 | Stundenplan-Abgleich mit dem Stundenplaner | ✅ eingebaut `POST /klassen/{id}/stundenplan/abgleich` (neutrales Format; Umwandlung des Stundenplaner-Exports in IDA/CONNECT), nicht live ([#6](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/6)) |
 | L15 | Sichtbarkeit in der Eltern-App pro Phase | offen, mit Escola klären ([#7](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/7)) |
 | L16 | Arzt-/Zahnarztkontrollen: Status, Liste der offenen | Lesen ✅ `GET /klassen/{id}/felder?nur_leer=true` (falls Escola-Feld); Entscheid Escola/CMI/eigene Anwendung offen ([#8](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/8)) |
-| L17 | Absenzen, Verhalten, Prüfungsresultate lesen | offen ([#9](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/9)) |
+| L17 | Absenzen, Verhalten, Prüfungsresultate lesen | ⚠️ seit 1.19 Absenzen über Escolas REST (`/klassen/{id}/absenzen…`); Verhalten/Noten: Aufrufe bekannt, aber noch keine Daten in Escola (28.11.2026) → Format offen ([#9](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/9)) |
 | L18 | Prüfungen mit Note an Eltern | offen ([#10](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/10)) |
 | L19 | Klassenbeginn in der Vergangenheit (Import/Transfer teilen ab heute ein) | ✅ seit 1.16 über die Schullaufbahn (`PUT /schueler/{id}/klasse/beginn`, `POST /klassen/{id}/klassenbeginn`); Escola-Aufrufe live geprüft 24.11.2026 (SuS 650, 6 Durchläufe ok, Ø 0,76 s pro SuS), API-Ablauf noch nicht |
 

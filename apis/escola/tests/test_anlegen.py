@@ -148,14 +148,15 @@ def test_person_anlegen_und_pruefungen(monkeypatch):
     assert api.post("/schueler/652/klasse", json={"klasse_id": 92, "stichtag": "14.11.2026"}).status_code == 400
 
 
-def test_schreiben_aus_und_dokumente_platzhalter(monkeypatch):
+def test_schreiben_aus_und_dokumente_ausgeschaltet(monkeypatch):
+    monkeypatch.delenv("ESCOLA_DOKUMENTE", raising=False)
     fake, api = make(monkeypatch, schreiben=False)
     assert api.post("/schueler", json={"nachname": "A", "vorname": "B", "geschlecht": "w", "schulhaus": "Hinterbirch"}).status_code == 403
     assert api.post("/schueler/652/klasse", json={"klasse_id": 92}).status_code == 403
     assert fake.rpc == [] and fake.transfers == []
-    for url in ("/schueler/650/dokumente", "/schueler/650/dokumente/1", "/dokumente/struktur"):
+    for url in ("/schueler/650/dokumente", "/schueler/650/dokumente/1"):
         r = api.get(url)
-        assert r.status_code == 501 and "noch nicht aktiviert" in r.json()["detail"]
+        assert r.status_code == 403 and "ESCOLA_DOKUMENTE" in r.json()["detail"]
 
 
 def test_eigene_gruppe_neu(monkeypatch):

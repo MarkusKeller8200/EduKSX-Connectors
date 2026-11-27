@@ -316,3 +316,34 @@ def parse_zeugnis_archiv(html: str) -> list[dict]:
             })
             stern = None
     return out
+
+
+# ---------------------------------------------------------------- Escola-App und Logins (L12, #4)
+def parse_app_status(html: str) -> dict:
+    """Reiter „Escola App“ (Abschnitt `mobile`). Escola zeigt ein Symbol: `text-danger` + „App nicht aktiviert.“
+    bzw. `text-success` (aus dem Escola-Skript `enableDisableMobile`). Aktiviert heisst: die Person darf die App
+    nutzen – nicht, dass sie sie schon installiert hat (dafür Logins/Geräte). Live geprüft 28.11.2026 nur der
+    Zustand „nicht aktiviert“ (niemand hatte die App aktiviert)."""
+    box = _soup(html).select_one("#mobile")
+    if box is None:
+        return {"app_aktiviert": None, "app_schaltbar": False}
+    icon = box.select_one("i.text-success, i.text-danger")
+    txt = _clean(box.get_text(" "))
+    if icon is not None:
+        aktiv = "text-success" in (icon.get("class") or [])
+    else:
+        aktiv = None if not txt else "nicht aktiviert" not in txt
+    return {"app_aktiviert": aktiv, "app_schaltbar": box.select_one("button") is not None}
+
+
+def parse_aktivitaet(html: str) -> dict:
+    """Reiter „Aktivität“: Anzahl Logins und letzter Login (Web und App)."""
+    werte = {}
+    for tr in _soup(html).select("table.niceTableNarrow tr"):
+        tds = tr.find_all("td", recursive=False)
+        if len(tds) >= 2:
+            werte[_clean(tds[0].get_text())] = _clean(tds[1].get_text(" "))
+    n = werte.get("Anzahl Logins", "")
+    letzt = werte.get("letzter Login", "")
+    return {"anzahl_logins": int(n) if n.isdigit() else None,
+            "letzter_login": None if (not letzt or "noch nie" in letzt) else letzt}

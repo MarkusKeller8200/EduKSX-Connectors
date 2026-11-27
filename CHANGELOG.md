@@ -7,6 +7,12 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
 ## [Unveröffentlicht]
 
 ### Geändert
+- Escola-API 1.19.0 (#3, #4, #9, #13): Erkundung 28.11.2026 (nur lesen, Testobjekte) – Dokumente im
+  Schülerdossier über Escolas REST lesen, hochladen und löschen (Schalter `ESCOLA_DOKUMENTE`, ersetzt die
+  501-Platzhalter; `/dokumente/struktur` entfällt), Absenzen über `/escola/api/absences` (`/klassen/{id}/absenzen…`,
+  `/schueler/{id}/absenzen`), App-Status `/personen/{id}/app` und `/klassen/{id}/eltern?app=true|nur_ohne_app=true`,
+  Stundenplan von Arbeitsgruppen `/arbeitsgruppen/{id}/stundenplan`; Befund: in Escola sind ausser H_A1a noch
+  keine Schüler:innen erfasst, Absenzen/Dossier/Noten ohne Daten
 - Escola-Doku (README › Personenimport, WORKFLOWS WF-11/L10, #2): Escolas Import-Korrekturen am 27.11.2026 live
   nachgeprüft – Abteilung (Firma), PLZ Geschäft, Berechtigung (EB/IB/Keine, mit ÜBERSCHREIBEN auch bei verknüpften
   Vertreter:innen), Vertreter-Geburtstag, Ja/Nein-Felder inkl. Jod, Auto-Matching, eigene Adresse neuer SuS;
