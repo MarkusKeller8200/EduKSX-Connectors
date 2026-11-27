@@ -12,7 +12,10 @@ Kopien im Claude-Projekt ESCOLA: `claude/uebergabe.md` und `claude/projektstand.
 - **Testplattform** `testplattform/` (Port 8090, `start-testplattform.command`/`.bat`): Plugins aus `apis/*/api.json`,
   Tester mit Probelauf, Bestätigung (auch serverseitig, `428`), Datei-Upload, Escola-Anmeldung mit 2FA, Protokoll.
   Alte Escola-`/testseite` bleibt und ist verlinkt (Workflows).
-- **Versionen:** Escola 1.17.0, CMI 0.9.0, SL-Planer 0.2.0, Vorlage 0.2.0, Testplattform 0.1.0.
+- **Versionen:** Escola 1.17.0, CMI 0.9.0, SL-Planer 0.2.0, Vorlage 0.2.0, Testplattform 0.2.0.
+- **#50/#51:** Doppelklick startet alle APIs + Plattform; Oberfläche auf GitHub Pages (APIs lokal, CORS
+  `EDUKSX_CORS_ORIGINS`). Nach dem Merge: Settings → Pages → Source «GitHub Actions» (von hier nicht setzbar).
+- **#52 (später):** Betrieb auf einem Server (Schweiz, HTTPS, Anmeldung) – nur Issue, `triage`.
 - **Intranet (#48 ↔ sek-intranet#229, PR #230):** `intranet:plugin-from-openapi <name>-plugin.json --neu=…`;
   lokal nicht gegen PHP 8.5 getestet → CI des Intranets abwarten.
 - **Offen:** Live-Test der Testplattform mit laufenden APIs auf dem eigenen Rechner (Testlisten in #41–#48);
