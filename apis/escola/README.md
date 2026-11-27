@@ -228,7 +228,7 @@ docker run -p 8080:8080 --env-file apis/escola/.env escola-api
 | Methode | Endpunkt | Zugriff | Zweck |
 |---|---|---|---|
 | GET | `/klassen/{id}/absenzen/auswahl` | 🔑 | Absenzen-Semester (IDs), Schüler:innen und Absenzarten einer Klasse |
-| GET | `/klassen/{id}/absenzen?semester=…` | 🔑 | Absenz-Einträge einer Klasse (Felder unverändert von Escola), CSV |
+| GET | `/klassen/{id}/absenzen?semester=…` | 🔑 | Absenz-Einträge einer Klasse (Datum, Schüler:in, Art, Dauer; `?roh=true` Escola-Felder), CSV |
 | GET | `/schueler/{id}/absenzen?semester=…` | 🔑 | Absenz-Einträge einer Schülerin / eines Schülers |
 
 ### Escola-App (L12, #4)
@@ -713,7 +713,11 @@ H_A1a 92, Arbeitsgruppe TEST 3). Ins Repo kamen nur Aufrufe, Feldnamen und erfun
 - **Absenzen** (Modul «A», Vue-Komponente `escola-absences-schoolclass`): REST unter `/escola/api/absences/`:
   `selects/schoolclasses/{id}/absence-semesters|students|types`, Einträge `schoolclasses/{id}/absences` bzw.
   `students/{id}/absences` mit `semester` (Ganzzahl) und `sorting` (`date-asc|date-desc|created-at-asc|created-at-desc`).
-  Keine Klasse hat ein Absenzen-Semester → Einträge noch nie gesehen, Format offen.
+  Ein Semester (z. B. `20261` = 2026/27, 1. Semester) erscheint erst, wenn es darin einen Eintrag gibt.
+  **Live geprüft 28.11.2026** mit einer Testperson in TEST_A1a (Klasse ohne Klassenlehrperson – in H_A1a hätte
+  Escola zwingend die Klassenlehrerin per Mail benachrichtigt): Absenz in Escola erfasst, über beide Aufrufe gelesen,
+  gelöscht (`DELETE /escola/api/absences/absences/{id}`), Testperson gelöscht. Die API gibt die Einträge flach aus
+  (`datum` in Schweizer Zeit, `schueler`, `art`, `kategorie`, `dauer`, …), `?roh=true` liefert die Escola-Felder.
 - **Schülerdossier/Verhalten** (Modul «S»): `inc/ajax/journal/show.php` (unsetSemester=1), dann
   `inc/ajax/journal/show_entries.php` (classId, workgroupId=0); ohne SuS in der Klasse lehnt Escola ab.
   **Noten/LZK** (Modul «N»): `inc/ajax/noten_show.php`. Beide noch ohne Daten → noch keine Endpunkte.
@@ -884,6 +888,7 @@ Felder abgewiesen werden und dass das Passwort nirgends gespeichert wird.
 
 | Version | Datum | Änderungen |
 |---|---|---|
+| 1.19.2 | 28.11.2026 | Absenzen live mit Test-Absenz geprüft (#9): flache Ausgabe mit Datum in Schweizer Zeit, `?roh=true` für die Escola-Felder |
 | 1.19.1 | 28.11.2026 | Live geprüft mit Testdaten: App-Status liest den echten Zustand «App (manuell) aktiviert» und neu `app_manuell`, `app_eingeloggt` (#4); Zellen im Stundenplan von Arbeitsgruppen mit `arbeitsgruppe` und LP-Kürzel richtig getrennt (#13) |
 | 1.19.0 | 28.11.2026 | Erkundung (nur lesen): Dokumente lesen/hochladen/löschen `/schueler/{id}/dokumente` (#3, Schalter `ESCOLA_DOKUMENTE`), Absenzen `/klassen/{id}/absenzen…` (#9), App-Status `/personen/{id}/app` und `/klassen/{id}/eltern?app=true` (#4), Stundenplan von Arbeitsgruppen (#13); Platzhalter `/dokumente/struktur` entfernt; Rechte auch fürs kommende Schuljahr (#11); Dokumente und Rechte kommendes SJ live in Escola geprüft |
 | 1.18.0 | 27.11.2026 | Plugin-Beschreibung für Testplattform und Intranet: `GET /plugin.json`, Beschriftungen für alle Endpunkte, Anmeldung und Import-Vorprüfung als lesend gekennzeichnet (`x-eduksx`), Sitzung in `api.json` → `plugin` (#42, #44) |

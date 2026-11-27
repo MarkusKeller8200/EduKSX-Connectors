@@ -2037,8 +2037,9 @@ class EscolaClient:
     # ------------------------------------------------------------------ Absenzen (L17, #9)
     # Das Absenzen-Modul („A“ in Klassen/Gruppen) ist eine Vue-Komponente auf Escolas REST-Schnittstelle
     # /escola/api/absences/… (Sitzungs-Cookie, JSON; live mitgeschnitten 28.11.2026). Einträge brauchen
-    # `semester` (Ganzzahl aus absence-semesters) und `sorting`. Am 28.11.2026 hatte keine Klasse ein
-    # Absenzen-Semester (Modul noch ungenutzt) – das Format der Einträge ist deshalb noch nicht geprüft.
+    # `semester` (Ganzzahl aus absence-semesters, z. B. 20261 = 2026/27, 1. Semester; ein Semester erscheint erst,
+    # wenn es darin einen Eintrag gibt) und `sorting`. Live geprüft 28.11.2026 mit einer Test-Absenz (Testperson in
+    # TEST_A1a): anlegen in Escola, lesen pro Klasse und SuS, löschen = DELETE /escola/api/absences/absences/{id}.
     ABS = "escola/api/absences/"
     ABS_SORTIERUNG = ("date-asc", "date-desc", "created-at-asc", "created-at-desc")
 
@@ -2066,6 +2067,25 @@ class EscolaClient:
                          if not o.get("isGroup") and o.get("value") is not None]
         return {"klasse_id": k, "semester": opt(sem), "schueler": opt(sus),
                 "arten": [{"code": a["id"], "text": a["text"]} for a in opt(arten)]}
+
+    @staticmethod
+    def absenz_kurz(a: dict) -> dict:
+        """Escola-Eintrag (Format live 28.11.2026) -> flache Zeile. `date` ist UTC-Mitternacht des Schweizer Tags."""
+        import datetime as _dt
+        from zoneinfo import ZoneInfo
+        datum = None
+        if a.get("date"):
+            try:
+                datum = _dt.datetime.fromisoformat(a["date"].replace("Z", "+00:00")).astimezone(
+                    ZoneInfo("Europe/Zurich")).date().isoformat()
+            except ValueError:
+                datum = a["date"]
+        sus = a.get("student") or {}
+        return {"id": a.get("id"), "datum": datum, "schueler_id": sus.get("id"), "schueler": sus.get("displayName"),
+                "klasse_id": sus.get("schoolclassId"), "art": a.get("typeString"), "kategorie": a.get("typeCategory"),
+                "dauer": a.get("duration"), "dauer_text": a.get("durationString"), "bemerkung": a.get("description") or "",
+                "von_eltern": a.get("isLegalGuardianEntry"), "erstellt": a.get("createdAt"), "erstellt_von": a.get("createdBy"),
+                "bestaetigt_am": a.get("approvedAt"), "bestaetigt_von": a.get("approvedBy")}
 
     def absenzen(self, semester: int, klasse_id: int | None = None, schueler_id: int | None = None,
                  sortierung: str = "date-asc") -> list:

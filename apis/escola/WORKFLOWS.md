@@ -1,6 +1,6 @@
 # Escola-API – Workflows (Prüfliste und spätere Testläufe)
 
-Stand API: 1.19.1 · Liste wird laufend ergänzt (zuletzt 28.11.2026: Erkundung L8, L11, L12, L17).
+Stand API: 1.19.2 · Liste wird laufend ergänzt (zuletzt 28.11.2026: Erkundung L8, L11, L12, L17).
 
 Jeder Workflow wird zuerst **theoretisch** gegen die vorhandene API geprüft (reichen die Endpunkte?).
 Später dient er als **Testlauf** auf dem Testsystem (Testpersonen TEST TEST 649, SuS SuS 650, Testklasse TEST_A1a 120,
@@ -54,7 +54,7 @@ Test-Arbeitsgruppe TEST 3).
 | L14 | Stundenplan-Abgleich mit dem Stundenplaner | ✅ eingebaut `POST /klassen/{id}/stundenplan/abgleich` (neutrales Format; Umwandlung des Stundenplaner-Exports in IDA/CONNECT), nicht live ([#6](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/6)) |
 | L15 | Sichtbarkeit in der Eltern-App pro Phase | offen, mit Escola klären ([#7](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/7)) |
 | L16 | Arzt-/Zahnarztkontrollen: Status, Liste der offenen | Lesen ✅ `GET /klassen/{id}/felder?nur_leer=true` (falls Escola-Feld); Entscheid Escola/CMI/eigene Anwendung offen ([#8](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/8)) |
-| L17 | Absenzen, Verhalten, Prüfungsresultate lesen | ⚠️ seit 1.19 Absenzen über Escolas REST (`/klassen/{id}/absenzen…`); Verhalten/Noten: Aufrufe bekannt, aber noch keine Daten in Escola (28.11.2026) → Format offen ([#9](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/9)) |
+| L17 | Absenzen, Verhalten, Prüfungsresultate lesen | ⚠️ Absenzen ✅ seit 1.19.2 (live mit Test-Absenz 28.11.2026); Verhalten/Noten: Aufrufe bekannt, noch keine Daten in Escola → Format offen ([#9](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/9)) |
 | L18 | Prüfungen mit Note an Eltern | offen ([#10](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/10)) |
 | L19 | Klassenbeginn in der Vergangenheit (Import/Transfer teilen ab heute ein) | ✅ seit 1.16 über die Schullaufbahn (`PUT /schueler/{id}/klasse/beginn`, `POST /klassen/{id}/klassenbeginn`); Escola-Aufrufe live geprüft 24.11.2026 (SuS 650, 6 Durchläufe ok, Ø 0,76 s pro SuS), API-Ablauf noch nicht |
 
