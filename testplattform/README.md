@@ -9,14 +9,38 @@ Browser ──► Testplattform (127.0.0.1:8090) ──X-API-Key──► Escola
             Beschreibung: GET <api>/plugin.json (sonst aus /openapi.json erzeugt)
 ```
 
-## Starten
+## Starten (lokal, alles mit einem Doppelklick – #50)
 
-1. Die APIs starten, die getestet werden sollen – z. B. `start-escola.command` / `.bat`, oder
-   `cd apis/cmi && uvicorn cmi_api.app:app --port 8082`.
-2. `start-testplattform.command` (macOS/Linux) bzw. `start-testplattform.bat` (Windows) – richtet beim ersten Start
-   die Python-Umgebung ein und öffnet `http://127.0.0.1:8090`.
+`start-testplattform.command` (macOS/Linux) bzw. `start-testplattform.bat` (Windows) doppelklicken. Das Skript
+- richtet beim ersten Start `testplattform/.venv` ein und installiert die Pakete **aller** APIs (erneut, sobald sich
+  eine `requirements.txt` ändert),
+- legt fehlende `apis/<name>/.env` aus `.env.example` an – mit neuem API-Key und **Schreiben aus**
+  (`<NAME>_SCHREIBEN=0`; zum Schreiben in der `.env` auf `1` setzen und neu starten),
+- startet alle APIs (Escola 8080, SL-Planer 8081, CMI 8082) und die Plattform (8090), alles nur auf 127.0.0.1;
+  läuft eine API schon, wird sie nicht doppelt gestartet,
+- öffnet `http://127.0.0.1:8090`. **Ctrl+C** (bzw. Fenster schliessen) beendet alles.
 
+Optionen: `--nur-plattform` (APIs selbst starten), `--ohne-browser`.
 Von Hand: `cd testplattform && pip install -r requirements.txt && python3 start_lokal.py`.
+
+## GitHub Pages (nur Oberfläche – #51)
+
+Die Oberfläche gibt es auch auf GitHub Pages: **https://markuskeller8200.github.io/EduKSX-Connectors/**.
+**Die APIs müssen trotzdem lokal laufen** (Doppelklick wie oben); die Seite ruft sie direkt aus dem Browser auf.
+
+- Auf der Startseite je API Adresse prüfen und API-Key eintragen (`<NAME>_API_KEY` aus `apis/<name>/.env`). Der Key
+  bleibt nur im Browser-Tab (sessionStorage), die Adresse im Browser (localStorage).
+- Die Daten gehen direkt vom Browser an die API auf dem eigenen Rechner – nicht über GitHub. GitHub liefert nur
+  HTML, JavaScript und `plugins.json` (Namen, Versionen, Ports aus `apis/*/api.json`).
+- Die APIs erlauben Aufrufe von der Pages-Adresse (CORS inkl. Freigabe fürs lokale Netz, `shared/plugin_export.py`):
+  `EDUKSX_CORS_ORIGINS` (Komma-Liste), Vorgabe `https://markuskeller8200.github.io`; leer = keine.
+- Unterschiede zur lokalen Plattform: Bestätigung vor dem Schreiben nur im Browser; Protokoll nur im Tab; die API
+  muss `/plugin.json` anbieten (aus dem Repo gestartet: ja).
+- Browser: Chrome, Edge, Firefox (evtl. Rückfrage «Zugriff auf lokales Netzwerk» – erlauben). Safari blockiert
+  Aufrufe von https-Seiten an `http://127.0.0.1`.
+- Veröffentlicht vom Workflow `.github/workflows/pages.yml` bei Änderungen auf `main`; einmalig in den
+  Repo-Einstellungen Pages → Source «GitHub Actions» wählen. **Privates Repo: Pages nur mit bezahltem GitHub-Plan.**
+- Lokal ansehen: `python3 testplattform/pages_bauen.py _site` erzeugt die Seite in `_site/`.
 
 ## Einstellungen
 
@@ -31,6 +55,7 @@ Ohne Einstellungen findet die Plattform alle `apis/*/api.json` und ruft sie unte
 | `TESTPLATTFORM_PORT` | Port der Plattform (Standard 8090); sie lauscht nur auf 127.0.0.1 |
 | `TESTPLATTFORM_TOKEN` | optional: Zugangsschlüssel (Kopfzeile `X-Testplattform-Token`), falls die Plattform nicht nur lokal läuft |
 | `TESTPLATTFORM_VORLAGE` | `1` = auch `apis/_vorlage` anzeigen |
+| `EDUKSX_CORS_ORIGINS` | für die APIs: erlaubte Herkunft für Aufrufe aus dem Browser (Vorgabe GitHub Pages, siehe unten) |
 
 Vorlage: `.env.example` (als `.env` kopieren, nie einchecken).
 
@@ -69,9 +94,12 @@ API-weite Angaben in `api.json` → `plugin`. `python3 pruefen.py` prüft jede A
 | `testplattform/static/` | `index.html`, `plattform.js`, `plattform.css` (ohne Fremdbibliotheken, WCAG 2.1 AA) |
 | `tests/` | Tests gegen nachgebaute APIs (ohne Netzwerk) |
 | `testplattform.json` | Version der Testplattform |
+| `start_lokal.py` | Start aller APIs und der Plattform (#50) |
+| `pages_bauen.py` | statische Seite für GitHub Pages (#51) |
 
 ## Versionen
 
 | Version | Datum | Änderung |
 |---|---|---|
+| 0.2.0 | 2026-11-27 | Ein Doppelklick startet alle APIs und die Plattform (#50); Oberfläche auch auf GitHub Pages mit direktem Aufruf der lokal laufenden APIs (#51) |
 | 0.1.0 | 2026-11-27 | Erste Fassung: Plugins aus `apis/*/api.json`, Beschreibung aus `/plugin.json` bzw. `/openapi.json`, Tester mit Probelauf, Bestätigung, Datei-Upload, Escola-Anmeldung mit 2FA, Protokoll (#41, #43, #44–#46) |

@@ -1,6 +1,6 @@
 @echo off
 rem Testplattform lokal starten (Windows). Doppelklick genuegt.
-rem Beim ersten Start: Python-Umgebung + Pakete einrichten. Die APIs selbst separat starten.
+rem Startet alle APIs aus apis\ und die Testplattform (Browser oeffnet sich). Beim ersten Start: Python-Umgebung + Pakete.
 setlocal
 cd /d "%~dp0testplattform"
 

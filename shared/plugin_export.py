@@ -388,16 +388,62 @@ def pruefen(m: dict, info: dict | None = None, streng: bool = True) -> list[str]
 
 
 # ----------------------------------------------------------------------------------------------- Einbinden
-def einbinden(app, api_ordner: str | Path) -> None:
-    """``GET /plugin.json`` an einer FastAPI-App anbieten (ohne API-Key: enthält keine Daten, nur die Beschreibung).
+CORS_VORGABE = "https://markuskeller8200.github.io"  # Testplattform auf GitHub Pages (#51)
 
-    Hinweis: die App prüft den API-Key global (``dependencies=[...]``); dann gilt er auch hier.
+
+def cors_origins(umgebung: dict | None = None) -> list[str]:
+    """Erlaubte Herkunft für Aufrufe aus dem Browser: ``EDUKSX_CORS_ORIGINS`` (Komma-Liste, leer = keine),
+    Vorgabe die Testplattform auf GitHub Pages."""
+    import os
+
+    wert = (os.environ if umgebung is None else umgebung).get("EDUKSX_CORS_ORIGINS", CORS_VORGABE)
+    return [o.strip().rstrip("/") for o in wert.split(",") if o.strip()]
+
+
+class _LokalesNetz:
+    """Private Network Access (Chrome): Vorabanfrage einer öffentlichen Seite an 127.0.0.1 erlauben, wenn die
+    Herkunft freigegeben ist (Antwort-Kopfzeile Access-Control-Allow-Private-Network)."""
+
+    def __init__(self, app, origins: list[str]):
+        self.app, self.origins = app, set(origins)
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or scope.get("method") != "OPTIONS":
+            return await self.app(scope, receive, send)
+        kopf = {k.decode().lower(): v.decode() for k, v in scope.get("headers", [])}
+        erlauben = kopf.get("access-control-request-private-network") == "true" and kopf.get("origin") in self.origins
+
+        async def senden(nachricht):
+            if erlauben and nachricht["type"] == "http.response.start":
+                nachricht.setdefault("headers", []).append((b"access-control-allow-private-network", b"true"))
+            await send(nachricht)
+
+        return await self.app(scope, receive, senden)
+
+
+def einbinden(app, api_ordner: str | Path, origins: list[str] | None = None) -> None:
+    """``GET /plugin.json`` an einer FastAPI-App anbieten und Aufrufe aus der Testplattform im Browser erlauben (CORS
+    für die freigegebenen Herkünfte, #51). Der API-Key bleibt nötig, wo die App ihn verlangt.
     """
     ordner = Path(api_ordner)
 
     @app.get("/plugin.json", include_in_schema=False)
     def plugin_json():
         return manifest(app.openapi(), api_info(ordner))
+
+    erlaubt = cors_origins() if origins is None else origins
+    if erlaubt:
+        import inspect
+
+        from fastapi.middleware.cors import CORSMiddleware
+
+        optionen = dict(allow_origins=erlaubt, allow_methods=["*"], allow_headers=["*"],
+                        expose_headers=["Content-Disposition"], max_age=600)
+        if "allow_private_network" in inspect.signature(CORSMiddleware.__init__).parameters:
+            app.add_middleware(CORSMiddleware, allow_private_network=True, **optionen)  # Starlette ≥ 0.47
+        else:
+            app.add_middleware(CORSMiddleware, **optionen)
+            app.add_middleware(_LokalesNetz, origins=erlaubt)
 
 
 if __name__ == "__main__":  # python3 shared/plugin_export.py apis/cmi > cmi-plugin.json

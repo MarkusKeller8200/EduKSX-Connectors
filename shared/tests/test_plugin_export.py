@@ -151,3 +151,30 @@ def test_einbinden_liefert_plugin_json(tmp_path):
     r = TestClient(app).get("/plugin.json")
     assert r.status_code == 200 and r.json()["id"] == "eduksx-demo"
     assert "/plugin.json" not in app.openapi()["paths"]
+
+
+def test_cors_fuer_testplattform_auf_github_pages(tmp_path):
+    """#51: die Pages-Seite darf die lokal laufende API direkt aufrufen, fremde Seiten nicht."""
+    import json
+    (tmp_path / "api.json").write_text(json.dumps(INFO), encoding="utf-8")
+    app = demo_app()
+    einbinden(app, tmp_path, origins=["https://markuskeller8200.github.io"])
+    tc = TestClient(app)
+    pages = {"Origin": "https://markuskeller8200.github.io", "Access-Control-Request-Method": "POST",
+             "Access-Control-Request-Headers": "x-api-key,content-type", "Access-Control-Request-Private-Network": "true"}
+    r = tc.options("/kontakte", headers=pages)
+    assert r.status_code == 200
+    assert r.headers["access-control-allow-origin"] == "https://markuskeller8200.github.io"
+    assert r.headers["access-control-allow-private-network"] == "true"
+    fremd = {**pages, "Origin": "https://boese.example"}
+    r = tc.options("/kontakte", headers=fremd)
+    assert r.status_code == 400 and "access-control-allow-origin" not in r.headers  # Browser blockiert
+    assert tc.get("/status", headers={"Origin": "https://markuskeller8200.github.io"}).headers[
+        "access-control-allow-origin"] == "https://markuskeller8200.github.io"
+
+
+def test_cors_aus_umgebung():
+    from shared.plugin_export import cors_origins
+    assert cors_origins({}) == ["https://markuskeller8200.github.io"]
+    assert cors_origins({"EDUKSX_CORS_ORIGINS": ""}) == []
+    assert cors_origins({"EDUKSX_CORS_ORIGINS": "https://a.example/, http://127.0.0.1:8090"}) == ["https://a.example", "http://127.0.0.1:8090"]

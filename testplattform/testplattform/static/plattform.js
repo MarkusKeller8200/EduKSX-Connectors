@@ -1,4 +1,7 @@
-/* Testplattform EduKSX-Connectors (#41, #43). Alles über die Plattform (/api/…): API-Keys bleiben auf dem Server.
+/* Testplattform EduKSX-Connectors (#41, #43, #51). Zwei Betriebsarten:
+   - Plattform (lokal, testplattform/app.py): Aufrufe über /api/…, API-Keys bleiben auf dem Server.
+   - Direkt (GitHub Pages, plugins.json vorhanden): der Browser ruft die lokal laufenden APIs selbst auf; Adresse und
+     API-Key je API gibt man auf der Startseite ein (Key nur im Browser-Tab).
    Texte aus Beschreibungen und Antworten nur über textContent (kein innerHTML mit Daten). */
 "use strict";
 
@@ -24,6 +27,76 @@ function el(tag, attrs = {}, ...kinder) {
 
 function fuelle(ziel, ...kinder) {
   ziel.replaceChildren(...kinder.flat(3).filter((k) => k != null && k !== false));
+}
+
+// ----------------------------------------------------------------------------------------- Betriebsarten
+const lokal = {  // Adresse dauerhaft (localStorage), API-Key nur im Tab (sessionStorage)
+  adresse: (p) => { try { return localStorage.getItem(`adresse:${p.name}`) || `http://127.0.0.1:${p.port}`; } catch { return `http://127.0.0.1:${p.port}`; } },
+  setzeAdresse: (name, v) => { try { v ? localStorage.setItem(`adresse:${name}`, v.replace(/\/+$/, "")) : localStorage.removeItem(`adresse:${name}`); } catch { /* egal */ } },
+  key: (name) => store.get(`key:${name}`) || "",
+};
+const direktProtokoll = [];
+let backend = null;
+
+const plattformBackend = {
+  direkt: false,
+  info: () => json("api/info"),
+  plugins: () => json("api/plugins"),
+  manifest: (name, neu) => json(`api/plugins/${encodeURIComponent(name)}/manifest${neu ? "?neu=true" : ""}`),
+  aufruf: (name, pfad, opt) => plattform(`api/plugins/${encodeURIComponent(name)}/aufruf${pfad}`, opt),
+  protokoll: () => json("api/protokoll"),
+};
+
+function direktBackend(liste) {
+  const nachName = Object.fromEntries(liste.map((p) => [p.name, p]));
+  const kopf = (name, extra = {}) => { const h = new Headers(extra); const k = lokal.key(name); if (k) h.set("X-API-Key", k); return h; };
+  const oeffentlich = (p) => ({ ...p, base_url: lokal.adresse(p), api_key_gesetzt: !!lokal.key(p.name) });
+  return {
+    direkt: true,
+    info: async () => ({ version: liste.version || "", token_noetig: false }),
+    plugins: async () => Promise.all(liste.map(async (p) => {
+      const e = oeffentlich(p);
+      try {
+        const r = await fetch(e.base_url + "/status", { headers: kopf(p.name) });
+        e.erreichbar = true; e.status_code = r.status; e.status = await r.json().catch(() => null);
+      } catch { e.erreichbar = false; e.status_code = null; e.status = null; }
+      return e;
+    })),
+    manifest: async (name) => {
+      const p = nachName[name]; if (!p) throw new Error(`Plugin «${name}» unbekannt`);
+      const e = oeffentlich(p);
+      let r;
+      try { r = await fetch(e.base_url + "/plugin.json", { headers: kopf(name) }); }
+      catch { throw new Error(`${p.titel} nicht erreichbar unter ${e.base_url} – API lokal starten (start-testplattform) und Adresse prüfen.`); }
+      if (r.status === 401) throw new Error(`${p.titel}: API-Key fehlt oder ist falsch – auf der Startseite eintragen.`);
+      if (!r.ok) throw new Error(`${p.titel}: /plugin.json antwortet mit ${r.status} (API ohne shared/? Lokal aus dem Repo starten).`);
+      const m = await r.json(); (m["x-eduksx"] ||= {}).quelle_beschreibung = "plugin.json";
+      return { plugin: e, manifest: m };
+    },
+    aufruf: async (name, pfad, opt) => {
+      const p = nachName[name]; const t0 = performance.now();
+      const h = kopf(name, opt.headers || {}); h.delete("X-Testplattform-Bestaetigt");
+      const eintrag = { zeit: new Date().toISOString().slice(0, 19), plugin: name, methode: opt.method, pfad: pfad.split("?")[0],
+        probelauf: /[?&]probelauf=true/.test(pfad), schreibend: !!opt.schreibend };
+      try {
+        const r = await fetch(lokal.adresse(p) + pfad, { ...opt, headers: h });
+        direktProtokoll.push({ ...eintrag, status: r.status, dauer_ms: Math.round(performance.now() - t0) });
+        return r;
+      } catch (ex) {
+        direktProtokoll.push({ ...eintrag, status: null, dauer_ms: Math.round(performance.now() - t0) });
+        throw new Error(`${p.titel} nicht erreichbar (${lokal.adresse(p)}) – läuft die API lokal? Browser-Freigabe für das lokale Netzwerk erteilt?`);
+      }
+    },
+    protokoll: async () => [...direktProtokoll].reverse(),
+  };
+}
+
+async function waehleBackend() {
+  try {
+    const r = await fetch("plugins.json", { cache: "no-store" });
+    if (r.ok) { const d = await r.json(); const b = direktBackend(d.plugins || []); b.version = d.version; b.info = async () => ({ version: d.version }); return b; }
+  } catch { /* Plattform */ }
+  return plattformBackend;
 }
 
 async function plattform(pfad, opt = {}) {
@@ -58,12 +131,35 @@ function bestaetigen(text) {
 async function start() {
   const main = $("inhalt");
   fuelle(main, el("p", { "aria-live": "polite", text: "Lade Plugins …" }));
-  try { zustand.plugins = await json("/api/plugins"); } catch (e) { fuelle(main, el("p", { class: "fehler", text: e.message })); return; }
+  try { zustand.plugins = await backend.plugins(); } catch (e) { fuelle(main, el("p", { class: "fehler", text: e.message })); return; }
   navigation();
-  fuelle(main, 
+  fuelle(main,
+    backend.direkt ? direktHinweis() : null,
     el("h2", { text: "Eingebundene APIs" }),
     el("p", { class: "leise", text: "Jede API unter apis/ ist ein Plugin. Die Testseite entsteht aus ihrer Beschreibung (GET /plugin.json bzw. /openapi.json)." }),
     el("div", { class: "karten" }, zustand.plugins.map(karte)));
+}
+function direktHinweis() {
+  return el("section", { class: "warn", "aria-label": "Hinweis" },
+    el("strong", { text: "Diese Seite läuft auf GitHub Pages – die APIs müssen lokal laufen." }),
+    el("ul", {},
+      el("li", { text: "Repository EduKSX-Connectors auschecken und start-testplattform.command (macOS/Linux) bzw. start-testplattform.bat (Windows) doppelklicken – startet alle APIs. Oder eine API einzeln starten." }),
+      el("li", { text: "Je API die Adresse prüfen und den API-Key eintragen (steht in apis/<name>/.env als <NAME>_API_KEY). Der Key bleibt nur in diesem Browser-Tab." }),
+      el("li", { text: "Die Daten gehen direkt vom Browser an die API auf diesem Rechner, nicht über GitHub. Beim ersten Aufruf fragt der Browser evtl. nach dem Zugriff aufs lokale Netzwerk – erlauben." }),
+      el("li", { text: "Chrome, Edge oder Firefox verwenden; Safari blockiert Aufrufe an http://127.0.0.1 von https-Seiten." })));
+}
+function direktEinstellungen(p) {
+  const idA = `adr-${p.name}`, idK = `key-${p.name}`;
+  const adresse = el("input", { type: "text", id: idA, value: p.base_url, spellcheck: "false" });
+  const key = el("input", { type: "password", id: idK, autocomplete: "off", placeholder: p.api_key_gesetzt ? "hinterlegt (leer lassen = behalten)" : "" });
+  return el("form", { onsubmit: (ev) => {
+    ev.preventDefault();
+    lokal.setzeAdresse(p.name, adresse.value.trim() === `http://127.0.0.1:${p.port}` ? "" : adresse.value.trim());
+    if (key.value) store.set(`key:${p.name}`, key.value);
+    zustand.manifeste = {}; start();
+  } }, el("label", { for: idA, text: "Adresse" }), adresse, el("label", { for: idK, text: "API-Key" }), key,
+    el("div", { class: "knoepfe" }, el("button", { text: "Übernehmen" }),
+      p.api_key_gesetzt ? el("button", { type: "button", class: "sekundaer", onclick: () => { store.set(`key:${p.name}`, null); zustand.manifeste = {}; start(); }, text: "Key entfernen" }) : null));
 }
 function statusPill(p) {
   if (!p.erreichbar) return el("span", { class: "pill err", text: "nicht erreichbar" });
@@ -84,8 +180,9 @@ function karte(p) {
     p.beschreibung ? el("p", { text: p.beschreibung }) : null,
     el("dl", { class: "kurz" },
       el("dt", { text: "Adresse" }), el("dd", { class: "pfad", text: p.base_url }),
-      el("dt", { text: "API-Key" }), el("dd", { text: p.api_key_gesetzt ? "hinterlegt (auf dem Server)" : "keiner hinterlegt" }),
+      el("dt", { text: "API-Key" }), el("dd", { text: p.api_key_gesetzt ? (backend.direkt ? "eingetragen (nur in diesem Tab)" : "hinterlegt (auf dem Server)") : "keiner hinterlegt" }),
       p.status?.version ? [el("dt", { text: "Version laut API" }), el("dd", { text: p.status.version })] : null),
+    backend.direkt ? el("details", { open: !p.api_key_gesetzt || !p.erreichbar }, el("summary", { text: "Adresse und API-Key" }), direktEinstellungen(p)) : null,
     el("a", { href: `#/plugin/${p.name}`, text: `Testseite ${p.titel} öffnen` }));
 }
 function navigation() {
@@ -94,11 +191,11 @@ function navigation() {
 
 async function pluginSeite(name, endpunktId) {
   const main = $("inhalt");
-  if (!zustand.plugins.length) { try { zustand.plugins = await json("/api/plugins"); navigation(); } catch { /* weiter */ } }
+  if (!zustand.plugins.length) { try { zustand.plugins = await backend.plugins(); navigation(); } catch { /* weiter */ } }
   let daten = zustand.manifeste[name];
   if (!daten) {
     fuelle(main, el("p", { "aria-live": "polite", text: "Lade Beschreibung …" }));
-    try { daten = zustand.manifeste[name] = await json(`/api/plugins/${encodeURIComponent(name)}/manifest`); }
+    try { daten = zustand.manifeste[name] = await backend.manifest(name); }
     catch (e) { fuelle(main, el("h2", { text: name }), el("p", { class: "fehler", text: e.message }), el("a", { href: "#/", text: "Zur Übersicht" })); return; }
   }
   const { plugin: p, manifest: m } = daten;
@@ -118,8 +215,10 @@ async function pluginSeite(name, endpunktId) {
       el("a", { href: p.base_url + "/docs", target: "_blank", rel: "noopener", text: "Swagger der API" }),
       name === "escola" ? [" · ", el("a", { href: p.base_url + "/testseite", target: "_blank", rel: "noopener", text: "Escola-Testseite (Workflows)" })] : null,
       " · ", el("a", { href: "#", onclick: (ev) => { ev.preventDefault(); herunterladen(new Blob([JSON.stringify(m, null, 2)], { type: "application/json" }), `${m.id}-plugin.json`); }, text: "plugin.json herunterladen" }),
-      " · ", el("a", { href: "#", onclick: async (ev) => { ev.preventDefault(); delete zustand.manifeste[name]; await json(`/api/plugins/${name}/manifest?neu=true`).then((d) => { zustand.manifeste[name] = d; route(); }).catch((e) => alarm(e.message)); }, text: "neu laden" })),
-    info && !info.api_key_gesetzt ? el("p", { class: "warn", text: `Kein API-Key hinterlegt (${name.toUpperCase()}_API_KEY in der Umgebung oder apis/${name}/.env). Hat die API einen Key gesetzt, antwortet sie mit 401.` }) : null,
+      " · ", el("a", { href: "#", onclick: async (ev) => { ev.preventDefault(); delete zustand.manifeste[name]; await backend.manifest(name, true).then((d) => { zustand.manifeste[name] = d; route(); }).catch((e) => alarm(e.message)); }, text: "neu laden" })),
+    info && !info.api_key_gesetzt ? el("p", { class: "warn", text: backend.direkt
+      ? `Kein API-Key eingetragen – auf der Startseite unter «Adresse und API-Key» eintragen (${name.toUpperCase()}_API_KEY aus apis/${name}/.env).`
+      : `Kein API-Key hinterlegt (${name.toUpperCase()}_API_KEY in der Umgebung oder apis/${name}/.env). Hat die API einen Key gesetzt, antwortet sie mit 401.` }) : null,
     p.sitzung ? sitzungsBox(name, p.sitzung) : null,
     el("div", { class: "zwei" },
       el("nav", { class: "karte liste", "aria-label": `Endpunkte ${p.titel}` },
@@ -153,7 +252,7 @@ function sitzungsBox(name, s) {
   const zeigen = (text, cls = "") => { meldung.className = cls; meldung.textContent = text; };
   const rufe = async (m, pfad, body) => {
     const h = { "Content-Type": "application/json" }; const tok = store.get(sitzungsKey(name)); if (tok) h[s.header] = tok;
-    const r = await plattform(`/api/plugins/${name}/aufruf${pfad}`, { method: m, headers: h, body: body ? JSON.stringify(body) : undefined });
+    const r = await backend.aufruf(name, pfad, { method: m, headers: h, body: body ? JSON.stringify(body) : undefined });
     const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.meldung || j.detail || `HTTP ${r.status}`); return j;
   };
   if (aktiv) {
@@ -270,9 +369,9 @@ function tester(name, p, e) {
     } else if (body && body.value.trim()) { inhalt = body.value; h["Content-Type"] = "application/json"; }
     senden.disabled = true; fuelle(ergebnis, el("p", { text: "Aufruf läuft …" }));
     try {
-      const url = `/api/plugins/${encodeURIComponent(name)}/aufruf${pfad}${q.toString() ? "?" + q : ""}`;
-      const r = await plattform(url, { method: e.method, headers: h, body: inhalt });
-      await antwortZeigen(name, r, ergebnis, istProbe);
+      const t0 = performance.now();
+      const r = await backend.aufruf(name, `${pfad}${q.toString() ? "?" + q : ""}`, { method: e.method, headers: h, body: inhalt, schreibend: !!e.danger });
+      await antwortZeigen(name, r, ergebnis, istProbe, r.headers.get("x-dauer-ms") || String(Math.round(performance.now() - t0)));
     } catch (ex) { fuelle(ergebnis, el("p", { class: "fehler", text: ex.message })); }
     finally { senden.disabled = false; }
   } },
@@ -313,9 +412,8 @@ function idsMerken(name, daten) {
   if (obj.id != null) { ziel.id = String(obj.id); ziel.pid ??= String(obj.id); }
 }
 
-async function antwortZeigen(name, r, box, probe) {
+async function antwortZeigen(name, r, box, probe, dauer) {
   const typ = r.headers.get("content-type") || "";
-  const dauer = r.headers.get("x-dauer-ms");
   const kopf = el("p", {}, el("span", { class: `pill ${r.ok ? "ok" : r.status === 428 ? "gelb" : "err"}`, text: `HTTP ${r.status}` }),
     dauer ? ` · ${dauer} ms` : "", probe ? " · Probelauf" : "", typ ? [" · ", el("span", { class: "pfad", text: typ.split(";")[0] })] : null);
   if (typ.includes("json")) {
@@ -336,9 +434,9 @@ async function antwortZeigen(name, r, box, probe) {
 async function protokollSeite() {
   const main = $("inhalt");
   let liste = [];
-  try { liste = await json("/api/protokoll"); } catch (e) { fuelle(main, el("p", { class: "fehler", text: e.message })); return; }
+  try { liste = await backend.protokoll(); } catch (e) { fuelle(main, el("p", { class: "fehler", text: e.message })); return; }
   fuelle(main, el("h2", { text: "Protokoll" }),
-    el("p", { class: "leise", text: "Letzte 300 Aufrufe seit dem Start der Testplattform, nur im Arbeitsspeicher. Ohne Parameterwerte, Bodys und Zugangsdaten." }),
+    el("p", { class: "leise", text: backend.direkt ? "Aufrufe aus diesem Browser-Tab seit dem Öffnen der Seite (nur im Arbeitsspeicher). Ohne Parameterwerte, Bodys und Zugangsdaten." : "Letzte 300 Aufrufe seit dem Start der Testplattform, nur im Arbeitsspeicher. Ohne Parameterwerte, Bodys und Zugangsdaten." }),
     liste.length ? el("table", {}, el("thead", {}, el("tr", {}, ["Zeit", "Plugin", "Methode", "Endpunkt", "Status", "Probelauf", "Dauer"].map((t) => el("th", { scope: "col", text: t })))),
       el("tbody", {}, liste.map((x) => el("tr", {}, el("td", { text: x.zeit.replace("T", " ") }), el("td", { text: x.plugin }), el("td", {}, el("span", { class: `m ${x.methode}`, text: x.methode })),
         el("td", { class: "pfad", text: x.pfad }), el("td", { text: x.status ?? "nicht erreichbar" }), el("td", { text: x.probelauf ? "ja" : x.schreibend ? "nein – geschrieben" : "" }), el("td", { text: `${x.dauer_ms} ms` })))))
@@ -353,4 +451,8 @@ function route() {
   else start();
 }
 window.addEventListener("hashchange", route);
-json("/api/info").then((i) => { $("version").textContent = "Version " + i.version; }).catch(() => {}).finally(route);
+waehleBackend().then((b) => {
+  backend = b;
+  document.body.classList.toggle("direkt", b.direkt);
+  return b.info().then((i) => { $("version").textContent = "Version " + i.version; });
+}).catch(() => {}).finally(route);

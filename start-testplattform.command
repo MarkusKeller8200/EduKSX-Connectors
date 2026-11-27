@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Testplattform lokal starten (macOS: Doppelklick im Finder; Linux: ./start-testplattform.command)
-# Beim ersten Start: Python-Umgebung + Pakete einrichten. Die APIs selbst separat starten (z. B. start-escola).
+# Startet alle APIs aus apis/ und die Testplattform (Browser öffnet sich). Beim ersten Start: Python-Umgebung + Pakete.
 set -e
 cd "$(dirname "$0")/testplattform"
 

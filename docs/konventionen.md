@@ -61,6 +61,9 @@ Entscheid #42 (27.11.2026): Jede API beschreibt sich **im Code**; daraus entsteh
 - **Prüfung:** `python3 pruefen.py` erzeugt die Beschreibung jeder API und meldet fehlende Beschriftungen,
   schreibende Endpunkte ohne `danger`, doppelte IDs und eine Version ≠ `api.json`.
 - **Export:** `python3 shared/plugin_export.py apis/<name> [https://adresse] > <name>-plugin.json` (ohne laufende API).
+- **Aufrufe aus dem Browser (CORS, #51):** `einbinden` erlaubt Aufrufe von `EDUKSX_CORS_ORIGINS` (Vorgabe
+  `https://markuskeller8200.github.io`, die Testplattform auf GitHub Pages), inkl. Freigabe fürs lokale Netz. Auf einem
+  Server die Liste bewusst setzen (leer = keine).
 
 ## Tests
 - Ohne Netzwerk: echte, gekürzte Antworten in `tests/fixtures/` und nachgebaute Fremdsysteme (httpx MockTransport).

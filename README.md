@@ -21,7 +21,8 @@ Neue APIs entstehen aus [`apis/_vorlage`](apis/_vorlage).
 - **Workflows aus Sicht Escola:** [docs/workflows-escola.md](docs/workflows-escola.md) – Aufwand heute, Automatisierung, Wünsche an Escola (zum Teilen mit dem Anbieter)
 - **Testplattform:** [`testplattform/`](testplattform) – eine Webseite für alle APIs, je API eine Testseite aus
   ihrer Plugin-Beschreibung (`GET /plugin.json`); Start mit `start-testplattform.command` / `.bat`. Dieselbe
-  Beschreibung übernimmt das Intranet als Plugin. Escola behält zusätzlich `/testseite` (Workflows)
+  Beschreibung übernimmt das Intranet als Plugin. Der Doppelklick startet alle APIs mit; die Oberfläche gibt es auch
+  auf [GitHub Pages](https://markuskeller8200.github.io/EduKSX-Connectors/) (APIs laufen trotzdem lokal). Escola behält zusätzlich `/testseite` (Workflows)
 - **Einsatz in Webanwendungen:** [docs/betrieb-webanwendung.md](docs/betrieb-webanwendung.md) – die APIs laufen als
   Server-Dienst (z. B. Docker), Webanwendungen rufen sie per HTTP auf
 - **Archiv:** [`_old/`](_old) – Stände vor dem Umzug ins Repo (nur zum Nachschlagen)

@@ -211,3 +211,35 @@ def test_plugins_aus_repo_liest_api_json_und_env(tmp_path):
 def test_alle_apis_im_repo_sind_plugins():
     namen = [p.name for p in plugins_aus_repo(umgebung={})]
     assert {"escola", "cmi", "slplaner"} <= set(namen)
+
+
+def test_pages_bauen_ohne_geheimnisse(tmp_path):
+    """#51: statische Seite mit plugins.json, relative Pfade, keine Keys."""
+    import pages_bauen
+    ziel = pages_bauen.bauen(tmp_path / "_site")
+    daten = json.loads((ziel / "plugins.json").read_text(encoding="utf-8"))
+    namen = {p["name"]: p for p in daten["plugins"]}
+    assert {"escola", "cmi", "slplaner"} <= set(namen) and "_vorlage" not in namen
+    assert namen["cmi"]["port"] == 8082 and namen["escola"]["sitzung"]["header"] == "X-Escola-Session"
+    assert (ziel / "static" / "plattform.js").exists() and (ziel / ".nojekyll").exists()
+    html = (ziel / "index.html").read_text(encoding="utf-8")
+    assert 'src="static/plattform.js"' in html and 'href="/static' not in html
+    assert "API_KEY" not in (ziel / "plugins.json").read_text(encoding="utf-8")
+
+
+def test_start_lokal_legt_env_mit_schreiben_aus_an(tmp_path):
+    """#50: fehlende .env aus .env.example, neuer API-Key, Schreiben aus; vorhandene bleibt unverändert."""
+    import start_lokal
+    (tmp_path / ".env.example").write_text("# Kommentar\nCMI_API_KEY=\nCMI_SCHREIBEN=1\nCMI_MANDANT=demo\n", encoding="utf-8")
+    assert start_lokal.env_anlegen(tmp_path, "CMI_") is True
+    werte = start_lokal.env_lesen(tmp_path / ".env")
+    assert len(werte["CMI_API_KEY"]) > 20 and werte["CMI_SCHREIBEN"] == "0" and werte["CMI_MANDANT"] == "demo"
+    vorher = (tmp_path / ".env").read_text(encoding="utf-8")
+    assert start_lokal.env_anlegen(tmp_path, "CMI_") is False
+    assert (tmp_path / ".env").read_text(encoding="utf-8") == vorher
+
+
+def test_startseite_mit_relativen_pfaden_und_plugins_json_fehlt(tc):
+    """Lokale Plattform: kein plugins.json → Oberfläche nutzt die Plattform (/api/…)."""
+    assert tc.get("/plugins.json").status_code == 404
+    assert 'src="static/plattform.js"' in tc.get("/").text
