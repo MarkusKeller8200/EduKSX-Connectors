@@ -1,6 +1,6 @@
 # Übergabe an einen neuen Chat – EduKSX-Connectors
 
-Stand: **2026-11-25 (12:00)** – CMI-API 0.1.0 (#23) gebaut, nicht live; davor 2026-11-24 (13:00): Escola-API 1.16.0 auf Branch `escola-klassenbeginn-import` (Klassenbeginn L19, Importerkenntnisse WF-11); davor 2026-11-16 (14:00): #17 umgesetzt (Repo und Claude-Projekt pseudonymisiert), doppelter CI-Workflow `tests` entfernt; GitHub-Blueprint angewendet; Escola-API 1.15.0 auf `main`, Login live bestätigt,
+Stand: **2026-11-27 (23:45)** – Escolas Import-Korrekturen live nachgeprüft, alle Fehler behoben (Doku WF-11/L10, #2); Testpersonen ID 723–734 von Hand löschen. Davor **2026-11-25 (12:00)** – CMI-API 0.1.0 (#23) gebaut, nicht live; davor 2026-11-24 (13:00): Escola-API 1.16.0 auf Branch `escola-klassenbeginn-import` (Klassenbeginn L19, Importerkenntnisse WF-11); davor 2026-11-16 (14:00): #17 umgesetzt (Repo und Claude-Projekt pseudonymisiert), doppelter CI-Workflow `tests` entfernt; GitHub-Blueprint angewendet; Escola-API 1.15.0 auf `main`, Login live bestätigt,
 Lesen live geprüft; Meilenstein «0.1.0 – Escola live getestet» mit #2–#15 freigegeben, noch kein Release.
 [PROJEKTSTAND.md](PROJEKTSTAND.md) (aktuell), Konzepte in `docs/KONZEPT-*.md` (noch keine).
 Kopien im Claude-Projekt ESCOLA: `claude/uebergabe.md` und `claude/projektstand.md` – bei jeder Übergabe beide Orte nachführen.

@@ -1,6 +1,6 @@
 # Escola-API – Workflows (Prüfliste und spätere Testläufe)
 
-Stand API: 1.16.0 · Liste wird laufend ergänzt (zuletzt 24.11.2026, WF-01 bis WF-20; WF-11 nach den Importtests).
+Stand API: 1.16.0 · Liste wird laufend ergänzt (zuletzt 27.11.2026, WF-01 bis WF-20; WF-11 nach der Nachprüfung des Escola-Imports).
 
 Jeder Workflow wird zuerst **theoretisch** gegen die vorhandene API geprüft (reichen die Endpunkte?).
 Später dient er als **Testlauf** auf dem Testsystem (Testpersonen TEST TEST 649, SuS SuS 650, Testklasse TEST_A1a 120,
@@ -23,7 +23,7 @@ Test-Arbeitsgruppe TEST 3).
 | WF-08 | Schüler:in wechselt die Klasse ab Datum | ✅ | 🧪 | – |
 | WF-09 | Schüler:in verlässt die Schule zum Zeitpunkt X | ✅ | ◐ | – |
 | WF-10 | Schüler:in zieht um | ✅ | ◐ | Ausführung ab Datum: IDA/CONNECT (L5) |
-| WF-11 | Massenimport Schüler:innen und Eltern (Einschulung) | ⚠️ | ◐ | Import in Escola per Zwischenablage, live getestet 24.11.2026; Klassenbeginn ✅ `POST /klassen/{id}/klassenbeginn` (L19); Escola-Fehler „Abteilung (Firma)“ gemeldet ([#2](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/2)) |
+| WF-11 | Massenimport Schüler:innen und Eltern (Einschulung) | ⚠️ | ◐ | Import in Escola per Zwischenablage, live getestet 24.11.2026, Escola-Korrekturen nachgeprüft 27.11.2026 ✔️; Klassenbeginn ✅ `POST /klassen/{id}/klassenbeginn` (L19); Upload über die API offen ([#2](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/2)) |
 | WF-12 | Übertrittsformular ins Schülerdossier | ❌ | – | Dokumente ablegen ([#3](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/3)) |
 | WF-13 | Klasseneinteilung durch die Schulleitung, Kontrolle | ✅ | 🧪 | Einteilung im Escola-Tool; Kontrolle `GET /klassenlisten` |
 | WF-14 | App-Zugang für Eltern, Nachfassen | ⚠️ | 🧪 | Eltern je Klasse ✅ `GET /klassen/{id}/eltern`; App-Status ([#4](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/4)) |
@@ -47,7 +47,7 @@ Test-Arbeitsgruppe TEST 3).
 | L7 | Neue Bezugsperson anlegen (`createNewPersonAndRelationshipRpc`) | eingebaut, nicht live getestet (legt eine nicht löschbare Person an) – im ersten Testlauf prüfen ([#12](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/12)) |
 | L8 | Stundenplan von Arbeitsgruppen | offen – Escola-Aufruf unbekannt (Anzeige liefert keine Zellen) ([#13](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/13)) |
 | L9 | Lehrpersonen-Schalter im Stundenplan bei mehreren Lehrpersonen pro Fach | eingebaut, live nur gelesen (H_A1a), nicht geschaltet ([#14](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/14)) |
-| L10 | Escola-Importformat und Upload | ⚠️ Format geklärt (Excel-Zeilen per Zwischenablage, Feldliste, Eigenheiten – README › Personenimport); Upload über die API offen ([#2](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/2)) |
+| L10 | Escola-Importformat und Upload | ⚠️ Format geklärt und nach Escolas Korrekturen live nachgeprüft 27.11.2026 (Excel-Zeilen per Zwischenablage, Feldliste, Werte für Berechtigung und Ja/Nein – README › Personenimport); Upload über die API offen, bei Escola ohne Termin geplant ([#2](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/2)) |
 | L11 | Dokumente im Schülerdossier lesen und ablegen | offen ([#3](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/3)) |
 | L12 | Eltern-App: Aktivierungsstatus, Zugänge | offen ([#4](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/4)) |
 | L13 | Mitteilungen über Escola senden, Rücklauf lesen | offen ([#5](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/5)) |
@@ -267,16 +267,19 @@ Erhoben am 15.11.2026 aus dem Gesamtablauf (siehe `docs/workflows-escola.md`). T
 |---|---|---|
 | 1 | IDA/CONNECT | Datenlieferung einlesen, aufbereiten (Migration aus CMI: `cmi2escola.py`, ein Blatt pro Klasse) |
 | 2 | Wrapper | `POST /import/pruefen` `{"personen": [{nachname, vorname, geschlecht, art, schulhaus}]}` → `neu` / `moegliche_duplikate` / `fehler`, legt nichts an |
-| 3 | IDA/CONNECT | Importdatei erzeugen (Excel, Kopfzeile = Escola-Feldnamen; nie „Vertreter … Abteilung (Firma)“) |
-| 4 | Escola-Import | pro Klasse: „Schüler:innen (Klassen)“ → Klasse → Import → einfügen → Zuordnung prüfen („Eintrittsdatum Oberstufe“ von Hand) → importieren; SuS ohne Klasse über „Zukünftige Schüler:innen“ |
+| 3 | IDA/CONNECT | Importdatei erzeugen (Excel, Kopfzeile = Escola-Feldnamen; Berechtigung als „EB“/„IB“/„Keine“, Ja/Nein als „ja“/„nein“; Werte wie im Escola-Export) |
+| 4 | Escola-Import | pro Klasse: „Schüler:innen (Klassen)“ → Klasse → Import → einfügen → Zuordnung prüfen → importieren; SuS ohne Klasse über „Zukünftige Schüler:innen“; Personal in Batches bis 200 |
 | 5 | Wrapper | `POST /klassen/{id}/klassenbeginn?probelauf=true`, dann ohne Probelauf – Klassenbeginn 1.8. bzw. Eintritt (L19) |
-| 6 | Wrapper | informationsberechtigte Eltern setzen: `PATCH /schueler/{id}/bezugspersonen/{beziehung_id}` (Import ignoriert den Wert) |
+| 6 | Wrapper | nur noch für Korrekturen: Berechtigung mit `PATCH /schueler/{id}/bezugspersonen/{beziehung_id}` (der Import übernimmt sie seit 27.11.2026) |
 | 7 | Wrapper | Kontrolle `GET /klassenlisten`, `GET /klassen/{id}/eltern`, `GET /schueler?ohne_klasse=true` |
 
 - **Live geprüft 24.11.2026** (Testklasse TEST_A1a, erfundene Testpersonen, danach gelöscht): Klassenimport mit
-  SuS und 2 Vertretern ✔️ ohne „Vertreter 1 Abteilung (Firma)“, ❌ mit ihr (Escola-Fehler, gemeldet); Klassenbeginn
+  SuS und 2 Vertretern ✔️ ohne „Vertreter 1 Abteilung (Firma)“, ❌ mit ihr (Escola-Fehler, gemeldet, behoben 27.11.2026); Klassenbeginn
   über die Schullaufbahn ✔️ (Escola-Dialog und dieselben RPC-Aufrufe wie die API: 0,65–0,92 s pro SuS, mit Eintrittsdatum
   geschätzt 1–1,5 s → Klasse à 22 SuS ca. 20–30 s, alle ca. 1050 SuS ca. 15–25 min). Details: README › Personenimport.
+- **Nachprüfung 27.11.2026** (TEST_A1a, 4 erfundene SuS + 8 Vertreter:innen, ERGÄNZEN und ÜBERSCHREIBEN): Abteilung
+  (Firma) und PLZ Geschäft, Berechtigung, Vertreter-Geburtstag, Ja/Nein-Felder inkl. Jod, Auto-Matching und eigene
+  Adresse neuer SuS ✔️; 12 Personen in unter 8 s. Testpersonen danach von Hand zu löschen (ID 723–734).
 
 ### WF-12: Übertrittsformular ins Schülerdossier
 

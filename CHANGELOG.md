@@ -7,6 +7,10 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
 ## [Unveröffentlicht]
 
 ### Geändert
+- Escola-Doku (README › Personenimport, WORKFLOWS WF-11/L10, #2): Escolas Import-Korrekturen am 27.11.2026 live
+  nachgeprüft – Abteilung (Firma), PLZ Geschäft, Berechtigung (EB/IB/Keine, mit ÜBERSCHREIBEN auch bei verknüpften
+  Vertreter:innen), Vertreter-Geburtstag, Ja/Nein-Felder inkl. Jod, Auto-Matching, eigene Adresse neuer SuS;
+  Umgehungen (Spalte weglassen, Berechtigung nachträglich per API) entfallen
 - CMI-API 0.7.1 (#36): Klassenwechsel wie «Klassenumteilung» in CMI – Schullaufbahn bleibt, bisherige
   Klassenzuteilung endet am Vortag, neue Zuteilung mit eigener Dauer
 

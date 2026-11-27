@@ -374,7 +374,7 @@ curl -X POST 'localhost:8080/klassen/120/klassenbeginn?probelauf=true' … -d '{
   Mit `ab: "eintritt"` kommt das Lesen des Eintrittsdatums dazu (geschätzt 1–1,5 s pro SuS): eine Klasse à 22 SuS
   ca. 20–30 s, alle ca. 1050 SuS ca. 15–25 min. Die API selbst ist noch nicht live gelaufen (Anmeldung mit 2FA nötig).
 
-### Personenimport von Escola (WF-11, Tests 24.11.2026)
+### Personenimport von Escola (WF-11, Tests 24.11.2026, Nachprüfung 27.11.2026)
 
 Der Massenimport läuft in Escola selbst (nicht über die API): Personen → Gruppe wählen → „Import“ → ERGÄNZEN/ÜBERSCHREIBEN →
 Excel-Zeilen **inkl. Kopfzeile in ein Textfeld einfügen** (kein Datei-Upload) → Spaltenzuordnung → „Daten importieren“.
@@ -386,19 +386,35 @@ Die Datei dafür erzeugt der CMI-Converter (`cmi2escola.py`, Claude-Projekt ESCO
 | „Zukünftige Schüler:innen (ohne Klasse)“ | SuS ohne Klasse, Eltern angelegt | 141 |
 | „Schüler:innen (ohne Klasse)“ | allgemeiner Personenimport **ohne Vertreter-Felder** – nicht verwenden | 71 |
 
-- **Escola-Fehler:** Ist „Vertreter 1 Abteilung (Firma)“ zugeordnet, bricht der Klassenimport beim ersten Vertreter 2 ab
-  („Es ist ein Fehler aufgetreten.“): alle SuS angelegt, nur Vertreter 1 der ersten Zeile, alle übrigen Eltern fehlen.
-  Eingegrenzt Spalte für Spalte; alle anderen Vertreter-Felder sind unproblematisch. → Spalte nie importieren (an Escola gemeldet).
-- **Klassenbeginn = Importtag** → danach `POST /klassen/{id}/klassenbeginn`.
-- **Berechtigung der Vertreter wird ignoriert:** „ja“, „Erziehung“, „Information“ ergeben alle „erziehungsberechtigt“ →
-  informationsberechtigte Eltern danach mit `PATCH /schueler/{id}/bezugspersonen/{beziehung_id}` setzen.
-- **Vertreter-Geburtstag** wird verstümmelt (01.04.1981 → „19.4..01.0“) → nicht importieren.
-- **Auto-Matching** erkennt „Eintrittsdatum Oberstufe“, „Jahrgangsstufe (SJ …)“ und „nimmt folgende Medikamente ein“
-  nicht, obwohl die Felder existieren → in der Zuordnung von Hand wählen. Escola erwartet „Vertreter n Erstsprache“
-  (nicht Muttersprache) und „Vertreter n Abteilung (Firma)“. „Schweinefleisch-Verzicht“ landet auf „Ernährungsform“.
-- Nicht übernommen trotz Zuordnung: „Zustimmung Abgabe Jod-Tabletten“, „Jahrgangsstufe (SJ kommendes)“. Der c/o der
-  SuS wird durch den c/o von Vertreter 1 ersetzt (Adresse hängt an Vertreter 1). Mit alternativem Namen zeigt Escola
-  die SuS unter diesem Namen an.
+- **Nachprüfung 27.11.2026 nach Escolas Korrekturen** (TEST_A1a, 4 erfundene SuS + 8 Vertreter:innen, 1× neu, 2× erneut
+  mit ERGÄNZEN bzw. ÜBERSCHREIBEN): alle unten gemeldeten Fehler behoben, ✔️ live. 12 Personen in unter 8 s;
+  ein zweiter Import erkennt die vorhandenen Personen (keine Duplikate).
+- **Vertreter n Abteilung (Firma)** und **Vertreter n PLZ Geschäft** werden gespeichert; der Import bricht nicht mehr ab
+  (bis 26.11.2026: Abbruch beim ersten Vertreter 2, PLZ Geschäft nie gespeichert).
+- **Berechtigung der Vertreter** („Vertreter n ist erziehungsberechtigt/informationsberechtigt“), Gross-/Kleinschreibung egal:
+  „erziehungsberechtigt“, „EB“, „Erziehung“ → erziehungsberechtigt · „informationsberechtigt“, „IB“, „Information“ →
+  informationsberechtigt · „keine Berechtigung“, „Keine“ → keine Berechtigung. Andere Werte („ja“) und leer: neue
+  Vertreter:innen werden erziehungsberechtigt, bestehende bleiben unverändert. Bei schon verknüpften Vertreter:innen
+  ändert sich der Wert nur mit **ÜBERSCHREIBEN** (ERGÄNZEN lässt ihn stehen). Das sind die Werte aus dem Export.
+  Der `PATCH /schueler/{id}/bezugspersonen/{beziehung_id}` nach dem Import ist damit nicht mehr nötig.
+- **Vertreter-Geburtstag** wird umgewandelt wie bei den SuS: 01.04.1981, 1.4.1981, 01.04.81 → 1. April 1981.
+- **Ja/Nein-Felder** (Fluor, Jod-Tabletten, Lebensmittel-Allergien/-Intoleranzen …): „ja“/„nein“/„1“/„0“ in beliebiger
+  Schreibweise; leer bleibt „nicht erfasst“. „Zustimmung Abgabe Jod-Tabletten“ wird jetzt gespeichert.
+  Anzeige-Eigenheit: „Jod-Tabletten: Nein“ erscheint erst mit „Leere Felder anzeigen“ (Fluor „Nein“ immer) – an Escola gemeldet.
+- **Auto-Matching** erkennt jetzt auch „Eintrittsdatum Oberstufe“, „Jahrgangsstufe (SJ …)“, „nimmt folgende Medikamente
+  ein“ sowie die Namen aus dem Support-Artikel („Muttersprache“ → Erstsprache, „Vertreter n Abteilung“ → „… (Firma)“).
+  Eine Spalte „Schweinefleisch-Verzicht“ wird nicht mehr zugeordnet; als Wert in „Ernährungsform“ wird er erkannt.
+- **Adresse neuer SuS:** andere Strasse als Vertreter 1 → „Eigene Adresse“; gleiche Strasse → mit Vertreter 1 verknüpft
+  (zieht beim Umzug mit). Bis 26.11.2026 bekamen neue SuS immer die Adresse von Vertreter 1.
+- **ÜBERSCHREIBEN** ändert nur die Spalten der Datei; nicht enthaltene Felder (Gesundheit, Adresse, Geschäft) bleiben.
+- **Klassenbeginn = Importtag** (von Escola so gewollt) → danach `POST /klassen/{id}/klassenbeginn`.
+- **So gewollt** (Antwort Escola 27.11.2026): Wohnt die SuS bei Vertreter 1, zeigt Escola dessen ganzen Adressblock inkl.
+  c/o → c/o in „Vertreter 1 c/o Adresszusatz“; der eigene c/o bleibt gespeichert und erscheint mit „Eigene Adresse“.
+  Der alternative Name ist der Rufname in Escola, Zeugnisse nutzen den amtlichen Namen. „Jahrgangsstufe/Abteilung
+  (SJ kommendes)“ wird nur gesetzt, wenn die SuS im kommenden SJ schon in einer Klasse ist.
+- **Mengen** (Escola): keine feste Grenze; empfohlen SuS klassenweise, Personal in Batches bis 200. Datei-Upload gibt
+  es nicht (nur Zwischenablage), ein neuer Import ist ohne Termin geplant. Sammeltransfer mit Datum: Klasse unter
+  „Schüler:innen (Klassen)“ → SuS anhaken → „SuS in eine Klasse transferieren (aktuelles SJ)“ → „Klassenwechsel ab“.
 - Escola prüft die **AHV-Prüfziffer**: ungültige Nummern werden nicht übernommen (Meldung mit Namen), die Person wird angelegt.
 - Alle importierbaren Felder (151) und exportierbaren Felder (227, Vorlage „ALLES“ der Konfigurierbaren Liste):
   Claude-Projekt ESCOLA `escola-import-feldtest.md` und `escola-export-alle-felder.md`.
