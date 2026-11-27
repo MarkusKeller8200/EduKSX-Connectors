@@ -41,6 +41,27 @@ CONNECT und weitere Module alle Schnittstellen gleich ansprechen können.
   Tabelle „Verwendete Aufrufe des Fremdsystems“.
 - `WORKFLOWS.md`: Geschäftsfälle mit Status (✅/⚠️/❌), Aufrufen, Testdaten, Aufräumen.
 
+## Plugin-Beschreibung (Testplattform, Intranet)
+
+Entscheid #42 (27.11.2026): Jede API beschreibt sich **im Code**; daraus entsteht `GET /plugin.json` im Format von
+`plugin.json` des Intranets (sek-intranet, `PLUGINS.md`). Die Testplattform (`testplattform/`) und das Intranet
+(`php artisan intranet:plugin-from-openapi`, sek-intranet#229) lesen dieselbe Beschreibung. Umwandlung:
+`shared/plugin_export.py`.
+
+- **Standard-OpenAPI:** jeder Endpunkt mit `summary="…"` oder Docstring (erste Zeile = Beschriftung), `tags=[…]`
+  (Gruppe), Beispiele mit `Field(examples=[…])`, `Query(examples=[…])`, `Form(examples=[…])`. Nur erfundene Werte.
+- **Eigenes nur in `x-eduksx`:** `openapi_extra={"x-eduksx": {...}}` mit `danger`, `status` (`full`/`partial`/
+  `planned`), `effect` (`read`/`write`), `permission`, `use`, `note`, `label`, `body`. Vorgaben: alles ausser GET
+  ist schreibend (`danger`); POST, die nur prüfen oder anmelden, mit `{"effect": "read", "danger": false}`.
+- **API-weit in `api.json` → `plugin`:** `port`, `status` (Vorgabe je Endpunkt; `partial`, solange nicht live
+  geprüft), `kategorie`, `beschreibung`, `data_notice`, optional `sitzung` (`header`, `feld`, `anmeldung`, `status`,
+  `hinweis`) und `auth_note`.
+- **Automatisch:** `?probelauf=` → `probelauf: true`; `X-API-Key` und die Sitzungs-Kopfzeile erscheinen nicht als
+  Parameter; Multipart-Formulare → `form` (+ `file` fürs Intranet).
+- **Prüfung:** `python3 pruefen.py` erzeugt die Beschreibung jeder API und meldet fehlende Beschriftungen,
+  schreibende Endpunkte ohne `danger`, doppelte IDs und eine Version ≠ `api.json`.
+- **Export:** `python3 shared/plugin_export.py apis/<name> [https://adresse] > <name>-plugin.json` (ohne laufende API).
+
 ## Tests
 - Ohne Netzwerk: echte, gekürzte Antworten in `tests/fixtures/` und nachgebaute Fremdsysteme (httpx MockTransport).
 - Beobachtetes Verhalten des Fremdsystems wird im Fake nachgebildet und im Test-Docstring mit Datum festgehalten.

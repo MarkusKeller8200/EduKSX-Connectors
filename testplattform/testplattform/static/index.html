@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Testplattform – EduKSX-Connectors</title>
+<link rel="stylesheet" href="/static/plattform.css">
+<link rel="icon" href="data:,">
+</head>
+<body>
+<a class="skip" href="#inhalt">Zum Inhalt springen</a>
+<header>
+  <h1><a href="#/">Testplattform <span class="leise">EduKSX-Connectors</span></a></h1>
+  <nav aria-label="Hauptnavigation" id="hauptnav"></nav>
+  <span class="raum"></span>
+  <a href="#/protokoll">Protokoll</a>
+  <span id="version" class="pill" aria-label="Version der Testplattform"></span>
+</header>
+
+<main id="inhalt" tabindex="-1"></main>
+
+<dialog id="d-bestaetigen" aria-labelledby="d-titel">
+  <form method="dialog">
+    <h2 id="d-titel">Wirklich schreiben?</h2>
+    <p id="d-text"></p>
+    <p class="warn">Ohne Probelauf ändert dieser Aufruf Daten im Fremdsystem. Nur mit Testobjekten arbeiten.</p>
+    <div class="knoepfe">
+      <button value="nein" class="sekundaer" autofocus>Abbrechen</button>
+      <button value="ja" class="gefahr">Ja, schreiben</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="d-token" aria-labelledby="t-titel">
+  <form method="dialog" id="f-token">
+    <h2 id="t-titel">Zugang zur Testplattform</h2>
+    <label for="token">Zugangsschlüssel (TESTPLATTFORM_TOKEN)</label>
+    <input id="token" type="password" autocomplete="off" required>
+    <div class="knoepfe"><button value="ok">Weiter</button></div>
+  </form>
+</dialog>
+
+<script src="/static/plattform.js"></script>
+</body>
+</html>

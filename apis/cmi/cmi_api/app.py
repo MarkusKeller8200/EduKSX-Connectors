@@ -237,7 +237,7 @@ def _dossiers_per_fremdkey(c: CMIClient, art: str, fremdkey: str) -> list[dict]:
 
 # ================================================================ Status, Mandanten, freie Suche
 
-@app.get("/status", tags=["Status"])
+@app.get("/status", tags=["Status"], summary="Version, eingerichtet ja/nein, Schalter, Anzahl Aufrufe")
 def status():
     c = _client or CMIClient(config_aus_env())
     return {"ok": True, "version": VERSION, "konfiguriert": c.konfiguriert, "mandant": c.cfg.mandant or None,
@@ -327,14 +327,15 @@ class KontaktListe(BaseModel):
 
 @app.get("/kontakte", tags=["Kontakte"], summary="Kontakte suchen (fremdkey, name, email oder TentaQl)")
 def kontakte(fremdkey: str | None = None, name: str | None = None, vorname: str | None = None,
-             email: str | None = None, tentaql: str | None = None, format: Format = "json"):
+             email: str | None = None, tentaql: str | None = Query(None, examples=['name = "Muster"']),
+             format: Format = "json"):
     c = client()
     daten = c.suchen("Kontakt", tentaql) if tentaql else _suche(c, "Kontakt", fremdkey=fremdkey, name=name,
                                                                  vorname=vorname, email=email)
     return _antwort(daten, format, "kontakte")
 
 
-@app.get("/kontakte/{guid}", tags=["Kontakte"])
+@app.get("/kontakte/{guid}", tags=["Kontakte"], summary="Ein Kontakt")
 def kontakt(guid: str):
     return client().lesen("Kontakt", guid)
 
@@ -753,7 +754,7 @@ def dossiers(art: DossierArt | None = None, fremdkey: str | None = None, titel: 
     return _antwort(daten, format, "dossiers")
 
 
-@app.get("/dossiers/{guid}", tags=["Dossiers"])
+@app.get("/dossiers/{guid}", tags=["Dossiers"], summary="Ein Dossier")
 def dossier(guid: str):
     return client().lesen("Geschaeft", guid)
 
@@ -780,7 +781,7 @@ def dossier_ordner(guid: str):
     return [{"guid": o["guid"], "titel": o.get("titel"), "pfad": pfad(o)} for o in ordner]
 
 
-@app.get("/dossiers/{guid}/dokumente", tags=["Dossiers"])
+@app.get("/dossiers/{guid}/dokumente", tags=["Dossiers"], summary="Dokumente eines Dossiers")
 def dossier_dokumente(guid: str):
     return client().lesen("Geschaeft", guid).get("dokumente") or []
 
@@ -1108,7 +1109,8 @@ def klasse_schueler(guid: str, stichtag: date | None = None, alle: bool = False,
 
 class Einteilung(BaseModel):
     fremdkey: str = Field(..., min_length=1, description="Schlüssel der Schülerin / des Schülers (Lernendendossier)")
-    klasse: str = Field(..., min_length=1, description="GUID oder Titel des Klassendossiers (z. B. «2a 2026/27»)")
+    klasse: str = Field(..., min_length=1, description="GUID oder Titel des Klassendossiers (z. B. «2a 2026/27»)",
+                        examples=["TEST_A1a"])
     klassenstufe: str | None = Field(None, description="GUID der Klassenstufe; nötig, wenn die Klasse mehrere hat")
     eintrittsgrund: Eintrittsgrund | None = Field(None, description="Standard: schuleintritt bzw. klassenwechsel")
 
@@ -1260,7 +1262,7 @@ def klassen_einteilen(body: EinteilungListe, probelauf: bool = False, _=Depends(
 
 # ================================================================ Dokumente
 
-@app.get("/dokumente/{guid}", tags=["Dokumente"])
+@app.get("/dokumente/{guid}", tags=["Dokumente"], summary="Metadaten eines Dokuments")
 def dokument(guid: str):
     return client().lesen("Dokument", guid)
 
@@ -1340,7 +1342,8 @@ def _dokument_ablegen(c: CMIClient, dossier: str, ordner_guid: str | None, fehle
 @app.post("/dossiers/{guid}/dokumente", tags=["Dokumente"],
           summary="Datei als Dokument ins Dossier hochladen (Ordnerpfad wird bei Bedarf angelegt)")
 def dokument_hochladen(guid: str, datei: UploadFile = File(...), titel: str | None = Form(None),
-                       ordner: str | None = Form(None, description="Pfad, z. B. «b_Dossier Schule/08_Beurteilung»"),
+                       ordner: str | None = Form(None, description="Pfad, z. B. «b_Dossier Schule/08_Beurteilung»",
+                                                  examples=["b_Dossier Schule/08_Beurteilung"]),
                        ordner_guid: str | None = Form(None, description="Zielordner direkt (statt Pfad)"),
                        ordner_anlegen: bool = Form(False, description="fehlende Ordner anlegen (sonst 400)"),
                        dokumentdatum: date | None = Form(None), eingangsdatum: date | None = Form(None),
@@ -1411,8 +1414,9 @@ def _schuljahr_norm(sj: str) -> str:
 @app.post("/zeugnisse", tags=["Dokumente"],
           summary="Zeugnis-PDFs gesammelt in die Lernendendossiers ablegen (Ordner Beurteilung)")
 async def zeugnisse_ablegen(dateien: list[UploadFile] = File(..., description="PDF-Dateien"),
-                            zuordnung: str = Form(..., description="JSON-Liste [{datei, fremdkey, schuljahr?, semester?, titel?}]"),
-                            schuljahr: str | None = Form(None, description="gemeinsam, z. B. «2026/27»"),
+                            zuordnung: str = Form(..., description="JSON-Liste [{datei, fremdkey, schuljahr?, semester?, titel?}]",
+                                                 examples=['[{"datei": "lea.pdf", "fremdkey": "escola-650"}]']),
+                            schuljahr: str | None = Form(None, description="gemeinsam, z. B. «2026/27»", examples=["2026/27"]),
                             semester: int | None = Form(None, description="gemeinsam: 1 oder 2"),
                             dokumentdatum: date | None = Form(None, description="Datum des Zeugnisses"),
                             ordner: str | None = Form(None, description="Standard CMI_ZEUGNIS_ORDNER"),
@@ -1506,3 +1510,20 @@ async def zeugnisse_ablegen(dateien: list[UploadFile] = File(..., description="P
     antwort = {"probelauf": False, "vollstaendig": vollstaendig, "zusammenfassung": zusammenfassung,
                "zeugnisse": ergebnisse}
     return antwort if vollstaendig else JSONResponse(antwort, status_code=409)
+
+
+# Plugin-Beschreibung für Testplattform und Intranet (GET /plugin.json, #42). Fehlt shared/ (z. B. im Docker-Image),
+# entfällt /plugin.json; die Testplattform erzeugt die Beschreibung dann selbst aus /openapi.json.
+def _plugin_json_einbinden(app) -> None:
+    import sys
+    wurzel = str(Path(__file__).resolve().parents[3])
+    if wurzel not in sys.path:
+        sys.path.append(wurzel)
+    try:
+        from shared.plugin_export import einbinden
+    except ImportError:
+        return
+    einbinden(app, Path(__file__).resolve().parents[1])
+
+
+_plugin_json_einbinden(app)

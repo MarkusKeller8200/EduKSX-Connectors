@@ -165,7 +165,7 @@ timeout_minuten = 60
 # release_nach den Namen «pruefungen» verwenden.
 aktiv = true
 befehl = ""                       # leer = projekt.pruefbefehl
-vorbereiten = "pip install -r apis/escola/requirements.txt -r apis/_vorlage/requirements.txt -r apis/slplaner/requirements.txt -r apis/cmi/requirements.txt"
+vorbereiten = "pip install -r apis/escola/requirements.txt -r apis/_vorlage/requirements.txt -r apis/slplaner/requirements.txt -r apis/cmi/requirements.txt -r testplattform/requirements.txt"
 betriebssysteme = "auto"          # auto: web → ubuntu; desktop → windows + macos; beides → alle drei
 betriebssysteme_beta = []         # bei Vorabversionen nur diese, z. B. ["windows-latest"]; leer = wie oben
 # Sprachversionen (leer = nicht einrichten; Listen ergeben eine Matrix, z. B. python = ["3.12", "3.13"]).

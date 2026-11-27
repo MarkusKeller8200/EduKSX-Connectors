@@ -1,5 +1,12 @@
 {
   "name": "cmi",
   "titel": "CMI-API",
-  "version": "0.8.0"
+  "version": "0.9.0",
+  "plugin": {
+    "port": 8082,
+    "status": "partial",
+    "kategorie": "school",
+    "beschreibung": "CMI Schule / CMI Cloud (CM Informatik AG): Kontakte synchronisieren, Schüler-, Personal- und Klassendossiers, Klassen ein- und umteilen, Dokumente und Zeugnisse ablegen. Nicht live geprüft.",
+    "data_notice": "Liefert und schreibt Personendaten (Kontakte, Dossiers) im CMI der Schule; schützenswerte Daten nur mit CMI_SCHUETZENSWERT=1."
+  }
 }

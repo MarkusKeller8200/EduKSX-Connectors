@@ -6,6 +6,15 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt
+- Testplattform 0.1.0 (#41, #43): Webseite zum Testen aller APIs (`testplattform/`, Port 8090,
+  `start-testplattform.command`/`.bat`); jede API ist ein Plugin mit eigener Testseite, Tester mit Beispielwerten,
+  Probelauf, Bestätigung für schreibende Aufrufe, Datei-Upload, Escola-Anmeldung mit 2FA und Protokoll
+- Plugin-Beschreibung je API (#42): `GET /plugin.json` aus OpenAPI + `api.json` im Format des Intranets
+  (`shared/plugin_export.py`), Prüfung in `pruefen.py`, Export für das Intranet (#48)
+- Escola-API 1.18.0 (#44), CMI-API 0.9.0 (#45), SL-Planer-API 0.2.0 (#46), Vorlage 0.2.0 (#47): Beschreibungen
+  für alle Endpunkte, `api.json` → `plugin`
+
 ### Geändert
 - Escola-Doku (README › Personenimport, WORKFLOWS WF-11/L10, #2): Escolas Import-Korrekturen am 27.11.2026 live
   nachgeprüft – Abteilung (Firma), PLZ Geschäft, Berechtigung (EB/IB/Keine, mit ÜBERSCHREIBEN auch bei verknüpften
