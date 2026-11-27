@@ -117,8 +117,15 @@ def test_stundenplan_arbeitsgruppe(monkeypatch):
 
 # ------------------------------------------------------------------ Absenzen (REST)
 class FakeAbsenzen:
-    """Antworten wie live am 28.11.2026 für H_A1a (92): keine Semester; Einträge erfunden."""
-    EINTRAG = {"id": 501, "studentId": 650, "type": "E", "dateFrom": "2026-11-23", "dateTo": "2026-11-23", "lessons": 2}
+    """Format wie live am 28.11.2026 (Test-Absenz einer Testperson in TEST_A1a, danach gelöscht); hier Klasse 92/650."""
+    EINTRAG = {"CSEducatorAccess": False, "absenceSuggestionId": None, "approvedAt": None, "approvedBy": None,
+               "createdAt": "2026-11-27T23:52:34.000000Z", "createdBy": "Keller Markus", "date": "2026-11-26T23:00:00.000000Z",
+               "description": "", "duration": 2, "durationString": "2 Lektionen", "educatorComments": [], "hasChat": True,
+               "hasMessages": False, "id": 1, "isLegalGuardianEntry": False, "kind": "Absence", "lessons": [],
+               "mailLogUrl": None, "options": {"delete": True, "edit": True, "excuse": False, "extend": True, "teacherComment": False},
+               "readAt": None, "readBy": None, "set": None, "student": {"displayName": "Testname Testvorname", "id": 650, "schoolclassId": 92},
+               "teacherComment": None, "typeCategory": "excused", "typeString": "Entschuldigt", "unseenMessagesBadgeCount": 0,
+               "updatedAt": None, "updatedBy": None}
 
     def __init__(self):
         self.gets = []
@@ -128,7 +135,7 @@ class FakeAbsenzen:
         self.gets.append((p, dict(req.url.params)))
         assert req.headers.get("accept") == "application/json"
         if p == "/escola/api/absences/selects/schoolclasses/92/absence-semesters":
-            return httpx.Response(200, json={"value": None, "options": [{"text": "1. Semester 2026/27", "value": 7, "isGroup": False}]})
+            return httpx.Response(200, json={"value": 20261, "options": [{"text": "2026/27 – 1. Semester", "value": 20261, "isGroup": False}]})
         if p == "/escola/api/absences/selects/schoolclasses/92/students":
             return httpx.Response(200, json={"value": 650, "options": [
                 {"text": "Alle Schüler:innen einer Klasse", "value": None, "isGroup": False},
@@ -140,7 +147,7 @@ class FakeAbsenzen:
             q = req.url.params
             if "semester" not in q or "sorting" not in q:
                 return httpx.Response(422, json={"message": "The semester field is required. (and 1 more error)"})
-            return httpx.Response(200, json=[self.EINTRAG] if q["semester"] == "7" else [])
+            return httpx.Response(200, json=[self.EINTRAG] if q["semester"] == "20261" else [])
         return httpx.Response(404, text="<html>Seite nicht gefunden</html>")
 
 
@@ -148,17 +155,22 @@ def test_absenzen_auswahl_und_eintraege(monkeypatch):
     fake = FakeAbsenzen()
     api = make(monkeypatch, fake, schreiben=False)
     a = api.get("/klassen/92/absenzen/auswahl").json()
-    assert a["semester"] == [{"id": 7, "text": "1. Semester 2026/27"}]
+    assert a["semester"] == [{"id": 20261, "text": "2026/27 – 1. Semester"}]
     assert [s["id"] for s in a["schueler"]] == [651, 650]  # „Alle“ (ohne ID) fällt weg
     assert a["arten"] == [{"code": "E", "text": "Entschuldigt"}, {"code": "O", "text": "Unentschuldigt"}]
-    assert api.get("/klassen/92/absenzen", params={"semester": 7}).json() == [FakeAbsenzen.EINTRAG]
-    assert ("/escola/api/absences/schoolclasses/92/absences", {"semester": "7", "sorting": "date-asc"}) in fake.gets
+    assert api.get("/klassen/92/absenzen", params={"semester": 20261}).json() == [{
+        "id": 1, "datum": "2026-11-27", "schueler_id": 650, "schueler": "Testname Testvorname", "klasse_id": 92,
+        "art": "Entschuldigt", "kategorie": "excused", "dauer": 2, "dauer_text": "2 Lektionen", "bemerkung": "",
+        "von_eltern": False, "erstellt": "2026-11-27T23:52:34.000000Z", "erstellt_von": "Keller Markus",
+        "bestaetigt_am": None, "bestaetigt_von": None}]
+    assert api.get("/klassen/92/absenzen", params={"semester": 20261, "roh": True}).json() == [FakeAbsenzen.EINTRAG]
+    assert ("/escola/api/absences/schoolclasses/92/absences", {"semester": "20261", "sorting": "date-asc"}) in fake.gets
     assert api.get("/schueler/650/absenzen", params={"semester": 1}).json() == []
-    assert api.get("/schueler/650/absenzen", params={"semester": 7, "sortierung": "falsch"}).status_code == 400
+    assert api.get("/schueler/650/absenzen", params={"semester": 20261, "sortierung": "falsch"}).status_code == 400
     assert api.get("/klassen/92/absenzen").status_code == 422  # semester fehlt (FastAPI)
     assert api.get("/klassen/5/absenzen/auswahl").status_code == 404
-    csv = api.get("/klassen/92/absenzen", params={"semester": 7, "format": "csv"}).text.lstrip("﻿").splitlines()
-    assert csv[0] == "id;studentId;type;dateFrom;dateTo;lessons" and csv[1].startswith("501;650;E")
+    csv = api.get("/klassen/92/absenzen", params={"semester": 20261, "format": "csv"}).text.lstrip("﻿").splitlines()
+    assert csv[0].startswith("id;datum;schueler_id;schueler;klasse_id;art") and csv[1].startswith("1;2026-11-27;650;")
 
 
 # ------------------------------------------------------------------ Dokumente im Schülerdossier (L11, #3)

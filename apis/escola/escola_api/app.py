@@ -1012,18 +1012,19 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
         return _abs(lambda: c.absenzen_auswahl(klasse_id))
 
     @app.get("/klassen/{klasse_id}/absenzen", dependencies=deps, tags=["Absenzen"], summary="Absenzen einer Klasse")
-    def klasse_absenzen(klasse_id: int, semester: int = Query(..., description="ID aus /absenzen/auswahl"),
-                        sortierung: str = Query("date-asc"), format: Format = F, c: EscolaClient = Depends(get_client)):
-        """Absenz-Einträge einer Klasse in einem Absenzen-Semester, Felder unverändert von Escola
-        (Format noch nicht live geprüft, weil Escola noch keine Absenzen enthält)."""
-        return out(_abs(lambda: c.absenzen(semester, klasse_id=klasse_id, sortierung=sortierung)), format,
-                   f"absenzen_klasse_{klasse_id}")
+    def klasse_absenzen(klasse_id: int, semester: int = Query(..., description="ID aus /absenzen/auswahl, z. B. 20261"),
+                        sortierung: str = Query("date-asc"), roh: bool = Query(False, description="Escola-Felder unverändert"),
+                        format: Format = F, c: EscolaClient = Depends(get_client)):
+        """Absenz-Einträge einer Klasse in einem Absenzen-Semester (Datum, Schüler:in, Art, Dauer …)."""
+        rows = _abs(lambda: c.absenzen(semester, klasse_id=klasse_id, sortierung=sortierung))
+        return out(rows if roh else [c.absenz_kurz(x) for x in rows], format, f"absenzen_klasse_{klasse_id}")
 
     @app.get("/schueler/{pid}/absenzen", dependencies=deps, tags=["Absenzen"], summary="Absenzen einer Schülerin")
     def schueler_absenzen(pid: int, semester: int = Query(...), sortierung: str = Query("date-asc"),
-                          format: Format = F, c: EscolaClient = Depends(get_client)):
+                          roh: bool = Query(False), format: Format = F, c: EscolaClient = Depends(get_client)):
         """Absenz-Einträge einer Schülerin / eines Schülers in einem Absenzen-Semester."""
-        return out(_abs(lambda: c.absenzen(semester, schueler_id=pid, sortierung=sortierung)), format, f"absenzen_{pid}")
+        rows = _abs(lambda: c.absenzen(semester, schueler_id=pid, sortierung=sortierung))
+        return out(rows if roh else [c.absenz_kurz(x) for x in rows], format, f"absenzen_{pid}")
 
     @app.get("/personen/{pid}/app", dependencies=deps, tags=["Schuljahr vorbereiten"],
              summary="Escola-App: freigeschaltet, Anzahl Logins, letzter Login")

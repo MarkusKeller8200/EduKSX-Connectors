@@ -7,6 +7,8 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
 ## [Unveröffentlicht]
 
 ### Geändert
+- Escola-API 1.19.2 (#9): Absenzen live mit einer Test-Absenz geprüft (Testperson in TEST_A1a, danach gelöscht);
+  Ausgabe flach mit Datum in Schweizer Zeit, `?roh=true` für die Escola-Felder
 - Escola-API 1.19.1 (#4, #13): mit Testdaten live geprüft – App-Status erkennt «App (manuell) aktiviert» (das
   Symbol der Gerätezeile ist auch dann rot), neu `app_manuell` und `app_eingeloggt`; Zellen im Stundenplan von
   Arbeitsgruppen trennen `arbeitsgruppe`, LP-Kürzel und Zusatz richtig
