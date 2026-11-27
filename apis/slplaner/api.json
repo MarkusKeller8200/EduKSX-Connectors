@@ -1,5 +1,12 @@
 {
   "name": "slplaner",
   "titel": "SL-Planer-API",
-  "version": "0.1.0"
+  "version": "0.2.0",
+  "plugin": {
+    "port": 8081,
+    "status": "partial",
+    "kategorie": "school",
+    "beschreibung": "SL-Planer (Seabird AG), nur lesend: Ressourcen, Einheiten, Pensenplanung, Pensen und – geschützt – Personaldossier/MAB. Nicht live geprüft.",
+    "data_notice": "Liefert Personen- und Anstellungsdaten (Pensen, Personaldossier) aus dem SL-Planer."
+  }
 }

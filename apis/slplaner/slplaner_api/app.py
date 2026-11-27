@@ -114,7 +114,7 @@ F = Query("json", description="json oder csv")
 
 # ---------------------------------------------------------------- Status
 
-@app.get("/status", tags=["Status"])
+@app.get("/status", tags=["Status"], summary="Version, eingerichtet ja/nein, Schalter, Anzahl Aufrufe")
 def status():
     c = _client or SLPlanerClient(config_aus_env())
     return {"ok": True, "version": VERSION, "konfiguriert": c.konfiguriert, "schreiben": False,
@@ -137,29 +137,29 @@ def ressourcentypen(sj: str | None = SJ, format: Format = F):
     return _antwort(daten, format, "ressourcentypen")
 
 
-@app.get("/ressourcentypen/{id}", tags=["Ressourcen"])
+@app.get("/ressourcentypen/{id}", tags=["Ressourcen"], summary="Ein Ressourcentyp")
 def ressourcentyp(id: str, sj: str | None = SJ):
     return _ressource_mit_rest(client().einzeln(f"/ressourcentypen/{id}", {"sj": sj}))
 
 
-@app.get("/einheiten", tags=["Ressourcen"])
+@app.get("/einheiten", tags=["Ressourcen"], summary="Einheiten (VZE, WL, Stunden …)")
 def einheiten(format: Format = F):
     return _antwort(client().liste("/einheiten"), format, "einheiten")
 
 
-@app.get("/einheiten/{id}", tags=["Ressourcen"])
+@app.get("/einheiten/{id}", tags=["Ressourcen"], summary="Eine Einheit")
 def einheit(id: str):
     return client().einzeln(f"/einheiten/{id}")
 
 
 # ---------------------------------------------------------------- Personen (5.1.1 – Felder ZU PRÜFEN)
 
-@app.get("/personen", tags=["Personen"])
+@app.get("/personen", tags=["Personen"], summary="Alle Personen (Liste)")
 def personen(sj: str | None = SJ, format: Format = F):
     return _antwort(client().liste("/personen", {"sj": sj}), format, "personen")
 
 
-@app.get("/personen/{id}", tags=["Personen"])
+@app.get("/personen/{id}", tags=["Personen"], summary="Eine Person")
 def person(id: str, sj: str | None = SJ):
     return client().einzeln(f"/personen/{id}", {"sj": sj})
 
@@ -184,7 +184,7 @@ def planung(bereich: Bereich, sj: str | None = SJ, format: Format = F):
     return _antwort(daten, format, bereich, _zuweisungs_zeilen)
 
 
-@app.get("/planung/{bereich}/{id}", tags=["Pensenplanung"])
+@app.get("/planung/{bereich}/{id}", tags=["Pensenplanung"], summary="Eine Aufgabe eines Bereichs mit Zuweisungen")
 def planung_einzeln(bereich: Bereich, id: str, sj: str | None = SJ):
     return client().einzeln(f"/{BEREICHE[bereich]}/{id}", {"sj": sj})
 
@@ -217,7 +217,7 @@ def pensen(sj: str | None = SJ, format: Format = F):
     return _antwort(client().liste("/pensen", {"sj": sj}), format, "pensen", _pensum_zeilen)
 
 
-@app.get("/pensen/{id}", tags=["Pensen"])
+@app.get("/pensen/{id}", tags=["Pensen"], summary="Pensum einer Person")
 def pensum(id: str, sj: str | None = SJ):
     return client().einzeln(f"/pensen/{id}", {"sj": sj})
 
@@ -242,12 +242,12 @@ def mab_liste(sj: str | None = SJ):
     return client().liste("/pfiles/mab", {"sj": sj})
 
 
-@app.get("/mab/{mab_id}", tags=["Personaldossier"], dependencies=[Depends(dossier_check)])
+@app.get("/mab/{mab_id}", tags=["Personaldossier"], dependencies=[Depends(dossier_check)], summary="Eine Mitarbeiterbeurteilung")
 def mab(mab_id: str):
     return _ohne_pdf(client().einzeln(f"/pfiles/mab/{mab_id}"))
 
 
-@app.get("/mab/{mab_id}/pdf", tags=["Personaldossier"], dependencies=[Depends(dossier_check)])
+@app.get("/mab/{mab_id}/pdf", tags=["Personaldossier"], dependencies=[Depends(dossier_check)], summary="Mitarbeiterbeurteilung als PDF")
 def mab_pdf(mab_id: str):
     return _pdf(client().einzeln(f"/pfiles/mab/{mab_id}"), f"mab_{mab_id}")
 
@@ -260,16 +260,33 @@ def person_mab(person_id: str, sj: str | None = SJ, alle_schuljahre: bool = Fals
     return client().liste(f"/pfiles_by_person/mab/{person_id}", {"sj": sj})
 
 
-@app.get("/personen/{person_id}/dokumente", tags=["Personaldossier"], dependencies=[Depends(dossier_check)])
+@app.get("/personen/{person_id}/dokumente", tags=["Personaldossier"], dependencies=[Depends(dossier_check)], summary="Dokumente im Personaldossier einer Person")
 def person_dokumente(person_id: str, sj: str | None = SJ):
     return client().liste(f"/pfiles_by_person/{person_id}", {"sj": sj})
 
 
-@app.get("/dokumente/{dokument_id}", tags=["Personaldossier"], dependencies=[Depends(dossier_check)])
+@app.get("/dokumente/{dokument_id}", tags=["Personaldossier"], dependencies=[Depends(dossier_check)], summary="Metadaten eines Dokuments im Personaldossier")
 def dokument(dokument_id: str):
     return _ohne_pdf(client().einzeln(f"/pfiles/{dokument_id}"))
 
 
-@app.get("/dokumente/{dokument_id}/pdf", tags=["Personaldossier"], dependencies=[Depends(dossier_check)])
+@app.get("/dokumente/{dokument_id}/pdf", tags=["Personaldossier"], dependencies=[Depends(dossier_check)], summary="Dokument im Personaldossier als PDF")
 def dokument_pdf(dokument_id: str):
     return _pdf(client().einzeln(f"/pfiles/{dokument_id}"), f"dokument_{dokument_id}")
+
+
+# Plugin-Beschreibung für Testplattform und Intranet (GET /plugin.json, #42). Fehlt shared/ (z. B. im Docker-Image),
+# entfällt /plugin.json; die Testplattform erzeugt die Beschreibung dann selbst aus /openapi.json.
+def _plugin_json_einbinden(app) -> None:
+    import sys
+    wurzel = str(Path(__file__).resolve().parents[3])
+    if wurzel not in sys.path:
+        sys.path.append(wurzel)
+    try:
+        from shared.plugin_export import einbinden
+    except ImportError:
+        return
+    einbinden(app, Path(__file__).resolve().parents[1])
+
+
+_plugin_json_einbinden(app)

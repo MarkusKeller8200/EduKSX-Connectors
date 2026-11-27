@@ -8,6 +8,9 @@ CONNECT. Steckbrief: `docs/PROJEKTSTART.md`. Antworten und Doku auf Deutsch (de-
 - **Aufbau:** jede API in `apis/<name>/` mit eigenem Paket, `requirements.txt`, Tests, README, `api.json` (Version des
   Moduls). Neue APIs aus `apis/_vorlage`. Gemeinsame Regeln: `docs/konventionen.md`, Workflows: `docs/workflows.md`.
 - **Prüfen:** `python3 pruefen.py` (alle APIs) bzw. `python3 pruefen.py escola`. Tests laufen ohne Netzwerk.
+- **Plugin-Beschreibung (#42):** jeder Endpunkt mit `summary` bzw. Docstring, `tags` und Beispielen; Besonderes in
+  `openapi_extra={"x-eduksx": {...}}`, API-weit in `api.json` → `plugin`. Daraus entstehen `GET /plugin.json`, die
+  Testseite in `testplattform/` und das Intranet-Plugin. `pruefen.py` prüft das (Regeln: `docs/konventionen.md`).
 - **Version:** wer eine API ändert, erhöht `version` in ihrer `api.json` und trägt die Änderung in ihrer README unter
   «Versionen» ein. Die Repo-Version in `VERSION` nur nach Release-Freigabe.
 - **Escola ist ein Testsystem**, schreibende Tests aber nur mit den Testobjekten: TEST TEST (649), SuS SuS (650),

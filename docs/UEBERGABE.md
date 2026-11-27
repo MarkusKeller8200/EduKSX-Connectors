@@ -1,9 +1,26 @@
 # Übergabe an einen neuen Chat – EduKSX-Connectors
 
-Stand: **2026-11-27 (23:45)** – Escolas Import-Korrekturen live nachgeprüft, alle Fehler behoben (Doku WF-11/L10, #2); Testpersonen ID 723–734 danach gelöscht. Davor **2026-11-25 (12:00)** – CMI-API 0.1.0 (#23) gebaut, nicht live; davor 2026-11-24 (13:00): Escola-API 1.16.0 auf Branch `escola-klassenbeginn-import` (Klassenbeginn L19, Importerkenntnisse WF-11); davor 2026-11-16 (14:00): #17 umgesetzt (Repo und Claude-Projekt pseudonymisiert), doppelter CI-Workflow `tests` entfernt; GitHub-Blueprint angewendet; Escola-API 1.15.0 auf `main`, Login live bestätigt,
+Stand: **2026-11-27 (23:45)** – Escolas Import-Korrekturen live nachgeprüft, alle Fehler behoben (Doku WF-11/L10, #2); Testpersonen ID 723–734 danach gelöscht. Davor **2026-11-27 (16:00)** – Testplattform 0.1.0 und Plugin-Beschreibung je API (#41–#48, Meilenstein 0.1.0) auf Branch `funktion/41-testplattform` (PR #49, baut auf PR #40 auf), Intranet-Gegenstück sek-intranet#229 (PR #230); davor **2026-11-25 (12:00)** – CMI-API 0.1.0 (#23) gebaut, nicht live; davor 2026-11-24 (13:00): Escola-API 1.16.0 auf Branch `escola-klassenbeginn-import` (Klassenbeginn L19, Importerkenntnisse WF-11); davor 2026-11-16 (14:00): #17 umgesetzt (Repo und Claude-Projekt pseudonymisiert), doppelter CI-Workflow `tests` entfernt; GitHub-Blueprint angewendet; Escola-API 1.15.0 auf `main`, Login live bestätigt,
 Lesen live geprüft; Meilenstein «0.1.0 – Escola live getestet» mit #2–#15 freigegeben, noch kein Release.
 [PROJEKTSTAND.md](PROJEKTSTAND.md) (aktuell), Konzepte in `docs/KONZEPT-*.md` (noch keine).
 Kopien im Claude-Projekt ESCOLA: `claude/uebergabe.md` und `claude/projektstand.md` – bei jeder Übergabe beide Orte nachführen.
+
+## Übergabe 2026-11-27 – Testplattform (Meilenstein 0.1.0)
+
+- **Entscheid #42:** Beschreibung jeder API im Code (`summary`/Docstring, `tags`, Beispiele, `x-eduksx`), API-weit in
+  `api.json` → `plugin`; `GET /plugin.json` im Format des Intranets (`shared/plugin_export.py`). `pruefen.py` prüft.
+- **Testplattform** `testplattform/` (Port 8090, `start-testplattform.command`/`.bat`): Plugins aus `apis/*/api.json`,
+  Tester mit Probelauf, Bestätigung (auch serverseitig, `428`), Datei-Upload, Escola-Anmeldung mit 2FA, Protokoll.
+  Alte Escola-`/testseite` bleibt und ist verlinkt (Workflows).
+- **Versionen:** Escola 1.18.0, CMI 0.9.0, SL-Planer 0.2.0, Vorlage 0.2.0, Testplattform 0.2.0.
+- **#50/#51:** Doppelklick startet alle APIs + Plattform; Oberfläche auf GitHub Pages (APIs lokal, CORS
+  `EDUKSX_CORS_ORIGINS`). Nach dem Merge: Settings → Pages → Source «GitHub Actions» (von hier nicht setzbar).
+- **#52 (später):** Betrieb auf einem Server (Schweiz, HTTPS, Anmeldung) – nur Issue, `triage`.
+- **Intranet (#48 ↔ sek-intranet#229, PR #230):** `intranet:plugin-from-openapi <name>-plugin.json --neu=…`;
+  lokal nicht gegen PHP 8.5 getestet → CI des Intranets abwarten.
+- **Offen:** Live-Test der Testplattform mit laufenden APIs auf dem eigenen Rechner (Testlisten in #41–#48);
+  Escola-Sitzung im Intranet (nicht unterstützt); `composer ci:check` im Intranet.
+- **Branch-Abhängigkeit:** `funktion/41-testplattform` enthält die Commits von PR #40 (Zeugnisse) – zuerst #40 mergen.
 
 ## Start nächster Chat (Übergabe 2026-11-15, 23:55)
 

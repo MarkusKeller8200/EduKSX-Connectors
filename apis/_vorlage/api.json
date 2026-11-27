@@ -1,5 +1,11 @@
 {
   "name": "_vorlage",
   "titel": "Vorlage-API",
-  "version": "0.1.0"
+  "version": "0.2.0",
+  "plugin": {
+    "port": 8099,
+    "status": "planned",
+    "kategorie": "other",
+    "beschreibung": "Vorlage für neue APIs in EduKSX-Connectors."
+  }
 }

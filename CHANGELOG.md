@@ -15,6 +15,16 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
   Klassenzuteilung endet am Vortag, neue Zuteilung mit eigener Dauer
 
 ### Hinzugefügt
+- Testplattform 0.1.0 (#41, #43): Webseite zum Testen aller APIs (`testplattform/`, Port 8090,
+  `start-testplattform.command`/`.bat`); jede API ist ein Plugin mit eigener Testseite, Tester mit Beispielwerten,
+  Probelauf, Bestätigung für schreibende Aufrufe, Datei-Upload, Escola-Anmeldung mit 2FA und Protokoll
+- Testplattform 0.2.0: ein Doppelklick startet alle APIs und die Plattform, fehlende `.env` mit Schreiben aus (#50);
+  Oberfläche auch auf GitHub Pages (`pages.yml`), ruft die lokal laufenden APIs direkt auf; APIs erlauben dafür
+  Aufrufe von der Pages-Adresse (CORS, `EDUKSX_CORS_ORIGINS`) (#51)
+- Plugin-Beschreibung je API (#42): `GET /plugin.json` aus OpenAPI + `api.json` im Format des Intranets
+  (`shared/plugin_export.py`), Prüfung in `pruefen.py`, Export für das Intranet (#48)
+- Escola-API 1.18.0 (#44), CMI-API 0.9.0 (#45), SL-Planer-API 0.2.0 (#46), Vorlage 0.2.0 (#47): Beschreibungen
+  für alle Endpunkte, `api.json` → `plugin`
 - CMI-API 0.8.0 (#38): `POST /zeugnisse` – Zeugnis-PDFs gesammelt in die Lernendendossiers ablegen
 - Escola-API 1.17.0 (#39): Zeugnisse aus dem Zeugnis-/Formular-Archiv lesen und als PDF herunterladen
   (`/schueler/{id}/zeugnisse`, `/klassen/{id}/zeugnisse`), Schalter `ESCOLA_ZEUGNISSE`

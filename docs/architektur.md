@@ -15,6 +15,18 @@
           └─────────────┘                       └───────┘
 ```
 
+## Testplattform und Plugin-Beschreibung
+
+Jede API beschreibt sich selbst (`GET /plugin.json`, aus OpenAPI + `api.json`, Entscheid #42). Die
+**Testplattform** (`testplattform/`, Port 8090, nur lokal) liest diese Beschreibungen und baut je API eine
+Testseite; Aufrufe gehen über die Plattform, die den API-Key setzt. Das **Intranet** übernimmt dieselbe Beschreibung
+als Plugin (`intranet:plugin-from-openapi`, sek-intranet#229).
+
+```
+Browser ─► Testplattform :8090 ─► apis/escola :8080 · apis/slplaner :8081 · apis/cmi :8082
+Intranet (Laravel) ◄── plugin.json ──┘
+```
+
 ## Aufgabenteilung
 - **APIs (dieses Repo):** einzelne, geprüfte Schritte im Fremdsystem – lesen, anlegen, ändern, mit Probelauf
   und Kontrolle. Keine Planung, keine Daten anderer Systeme.

@@ -17,7 +17,7 @@ CM Informatik beschreibt (`microsoft/PowerPlatformConnectors`, Ordner `certified
 
 ## Stand
 
-Version 0.8.0 – Gerüst nach der Swagger-Beschreibung, ergänzt um die Erkundung im CMI der Sek Bülach vom 25.11.2026
+Version 0.9.0 – Gerüst nach der Swagger-Beschreibung, ergänzt um die Erkundung im CMI der Sek Bülach vom 25.11.2026
 ([ERKUNDUNG.md](ERKUNDUNG.md)). **Noch nicht live geprüft** (kein Zugang zur offiziellen Schnittstelle). Tests laufen gegen
 ein nachgebautes CMI mit erfundenen Personen.
 
@@ -210,6 +210,7 @@ Token: `POST https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token`.
 
 | Version | Datum | Änderung |
 |---|---|---|
+| 0.9.0 | 2026-11-27 | Plugin-Beschreibung für Testplattform und Intranet: `GET /plugin.json`, Beschriftungen und Beispiele für alle Endpunkte, `api.json` → `plugin` (#42, #45) |
 | 0.8.0 | 2026-11-25 | `POST /zeugnisse`: Zeugnis-PDFs gesammelt ins Lernendendossier (Ordner Beurteilung), Duplikate über Schlüssel, alles vor dem Schreiben geprüft (#38) |
 | 0.7.1 | 2026-11-25 | Klassenwechsel wie «Klassenumteilung» in CMI: Schullaufbahn bleibt, bisherige Klassenzuteilung endet am Vortag, neue Zuteilung mit eigener Dauer; Wechsel _TEST_Schueler TEST_A1a → TEST_A1b aufgezeichnet (#36) |
 | 0.7.0 | 2026-11-25 | Klasseneinteilung nach dem Modell von CMI Schule (Schullaufbahn → Klassenzuteilung → Klassenstufe), Eintrittsgrund, `GET /klassen/{guid}/stufen`, Klassenstufe beim Anlegen einer Klasse (`klassenlehrplan`); Einteilung von _TEST_Schueler in TEST_A1a aufgezeichnet (#36) |

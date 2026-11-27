@@ -296,7 +296,7 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
         """Testseite: Endpunkte lesen, schreiben und rückgängig machen (lesen → schreiben → lesen → zurück → lesen)."""
         return HTMLResponse((Path(__file__).parent / "testseite.html").read_text(encoding="utf-8"))
 
-    @app.post("/auth/login", dependencies=deps, tags=["Anmeldung"])
+    @app.post("/auth/login", dependencies=deps, tags=["Anmeldung"], openapi_extra={"x-eduksx": {"effect": "read", "danger": False}})
     def auth_login(body: LoginDaten):
         """Schritt 1: Benutzername + Passwort an Escola weiterreichen (nichts wird gespeichert).
         Antwort `status`: `angemeldet` oder `2fa_erforderlich` (dann POST /auth/2fa)."""
@@ -312,12 +312,13 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
         s.status = res["status"]
         return {**res, "session": token}
 
-    @app.get("/auth/2fa/methoden", dependencies=deps, tags=["Anmeldung"])
+    @app.get("/auth/2fa/methoden", dependencies=deps, tags=["Anmeldung"], summary="Verfügbare 2FA-Methoden der Sitzung")
     def auth_methoden(x_escola_session: str = Header(...)):
         s = _sitzung(x_escola_session)
         return {"methoden": A._methoden(A._zwei_faktor_infos(s.client))}
 
-    @app.post("/auth/2fa/methode", dependencies=deps, tags=["Anmeldung"])
+    @app.post("/auth/2fa/methode", dependencies=deps, tags=["Anmeldung"], summary="2FA-Methode wählen (App, SMS, Escola-App)",
+               openapi_extra={"x-eduksx": {"effect": "read", "danger": False}})
     def auth_methode(body: Methode, x_escola_session: str = Header(...)):
         s = _sitzung(x_escola_session)
         try:
@@ -326,7 +327,8 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
             return _fehler(e, x_escola_session, behalten=True)
         return {"status": "2fa_erforderlich", "methode": body.methode}
 
-    @app.post("/auth/2fa/erneut", dependencies=deps, tags=["Anmeldung"])
+    @app.post("/auth/2fa/erneut", dependencies=deps, tags=["Anmeldung"], summary="2FA-Code erneut senden",
+               openapi_extra={"x-eduksx": {"effect": "read", "danger": False}})
     def auth_erneut(x_escola_session: str = Header(...)):
         s = _sitzung(x_escola_session)
         try:
@@ -334,7 +336,7 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
         except A.LoginFehler as e:
             return _fehler(e, x_escola_session, behalten=True)
 
-    @app.post("/auth/2fa", dependencies=deps, tags=["Anmeldung"])
+    @app.post("/auth/2fa", dependencies=deps, tags=["Anmeldung"], openapi_extra={"x-eduksx": {"effect": "read", "danger": False}})
     def auth_2fa(body: Code, x_escola_session: str = Header(...)):
         """Schritt 2: 2FA-Code (Authentifizierungs-App / SMS) bestätigen."""
         s = _sitzung(x_escola_session)
@@ -345,7 +347,7 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
         s.status = res["status"]
         return {**res, "session": x_escola_session}
 
-    @app.post("/auth/2fa/app", dependencies=deps, tags=["Anmeldung"])
+    @app.post("/auth/2fa/app", dependencies=deps, tags=["Anmeldung"], openapi_extra={"x-eduksx": {"effect": "read", "danger": False}})
     def auth_app(x_escola_session: str = Header(...)):
         """Alternative: Bestätigung in der Escola-App anfordern, danach GET /auth/2fa/app/{token} abfragen."""
         s = _sitzung(x_escola_session)
@@ -354,7 +356,7 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
         except A.LoginFehler as e:
             return _fehler(e, x_escola_session, behalten=True)
 
-    @app.get("/auth/2fa/app/{app_token}", dependencies=deps, tags=["Anmeldung"])
+    @app.get("/auth/2fa/app/{app_token}", dependencies=deps, tags=["Anmeldung"], summary="Status der Bestätigung in der Escola-App")
     def auth_app_status(app_token: str, x_escola_session: str = Header(...)):
         s = _sitzung(x_escola_session)
         try:
@@ -371,14 +373,14 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
         während langer Listen (Seite fragt alle ~0.5 s ab und zeigt die Differenz)."""
         return {"aufrufe": c.zaehler, "zuletzt": c.zuletzt}
 
-    @app.get("/auth/status", dependencies=deps, tags=["Anmeldung"])
+    @app.get("/auth/status", dependencies=deps, tags=["Anmeldung"], summary="Status der Anmeldesitzung")
     def auth_status(x_escola_session: str = Header(...)):
         s = _sitzung(x_escola_session)
         if s.status == "angemeldet" and not A._ist_angemeldet(s.client):
             s.status = "abgelaufen"
         return {"status": s.status, "seit": int(s.erstellt)}
 
-    @app.post("/auth/logout", dependencies=deps, tags=["Anmeldung"])
+    @app.post("/auth/logout", dependencies=deps, tags=["Anmeldung"], openapi_extra={"x-eduksx": {"effect": "read", "danger": False}})
     def auth_logout(x_escola_session: str = Header(...)):
         """Bei Escola abmelden und Session löschen."""
         s = sessions.get(x_escola_session)
@@ -395,22 +397,22 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
         """Prüft, ob die Escola-Session gültig ist."""
         return c.status()
 
-    @app.get("/klassen", dependencies=deps, tags=["Stammdaten"])
+    @app.get("/klassen", dependencies=deps, tags=["Stammdaten"], summary="Klassen und Arbeitsgruppen (nach Schulhaus, Typ)")
     def klassen(schulhaus: str | None = None, typ: Literal["Klasse", "Arbeitsgruppe"] | None = None,
                 format: Format = F, refresh: bool = R, c: EscolaClient = Depends(get_client)):
         rows = [k for k in c.klassen(refresh) if (not schulhaus or k["schulhaus"] == schulhaus) and (not typ or k["typ"] == typ)]
         return out(rows, format, "klassen")
 
-    @app.get("/faecher", dependencies=deps, tags=["Stammdaten"])
+    @app.get("/faecher", dependencies=deps, tags=["Stammdaten"], summary="Fächer")
     def faecher(format: Format = F, refresh: bool = R, c: EscolaClient = Depends(get_client)):
         return out(c.faecher(refresh), format, "faecher")
 
-    @app.get("/lehrpersonen", dependencies=deps, tags=["Stammdaten"])
+    @app.get("/lehrpersonen", dependencies=deps, tags=["Stammdaten"], summary="Lehrpersonen (nach Schulhaus)")
     def lehrpersonen(schulhaus: str | None = None, format: Format = F, refresh: bool = R, c: EscolaClient = Depends(get_client)):
         rows = [p for p in c.lehrpersonen(refresh) if not schulhaus or schulhaus in p["schulhaeuser"]]
         return out(rows, format, "lehrpersonen")
 
-    @app.get("/raeume", dependencies=deps, tags=["Stammdaten"])
+    @app.get("/raeume", dependencies=deps, tags=["Stammdaten"], summary="Räume (nach Schulhaus)")
     def raeume(schulhaus: str | None = None, format: Format = F, refresh: bool = R, c: EscolaClient = Depends(get_client)):
         data = c.raeume(refresh)
         rows = [r for sh, rs in data.items() if not schulhaus or sh == schulhaus for r in rs]
@@ -444,7 +446,7 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
                         for p in data for z in p["zeiten"]], "csv", "zeiteinteilung")
         return data
 
-    @app.get("/tage", dependencies=deps, tags=["Raster"])
+    @app.get("/tage", dependencies=deps, tags=["Raster"], summary="Schultage des Stundenplanrasters")
     def tage(format: Format = F, refresh: bool = R, c: EscolaClient = Depends(get_client)):
         seen, rows = set(), []
         for r in c.raster(refresh).values():
@@ -942,7 +944,7 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
         Ob die Eltern die Escola-App aktiviert haben, kann die API noch nicht lesen (Issue L12)."""
         return out(c.eltern_der_klasse(klasse_id, schuljahr), format, f"eltern_klasse_{klasse_id}")
 
-    @app.post("/import/pruefen", dependencies=deps, tags=["Schuljahr vorbereiten"])
+    @app.post("/import/pruefen", dependencies=deps, tags=["Schuljahr vorbereiten"], openapi_extra={"x-eduksx": {"effect": "read", "danger": False}})
     def import_pruefen(body: ImportListe, format: Format = F, c: EscolaClient = Depends(get_client)):
         """Vorprüfung einer Importliste (Schüler:innen und Eltern) mit der Escola-Duplikatprüfung.
         Legt nichts an. `status`: `neu`, `moegliche_duplikate` (mit Liste) oder `fehler`.
@@ -1141,7 +1143,7 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
         """Alle Felder einer beliebigen Person (Lehrperson, Mitarbeitende, Eltern …)."""
         return _detail(c, pid, "allActive", abschnitte, optionen, format)
 
-    @app.patch("/personen/{pid}", dependencies=deps, tags=["Personen"])
+    @app.patch("/personen/{pid}", dependencies=deps, tags=["Personen"], summary="Felder einer Person ändern (nur Genanntes)")
     def personen_schreiben(pid: int, body: Aenderung, probelauf: bool = False, c: EscolaClient = Depends(get_client)):
         return _schreiben(c, pid, "allActive", body, probelauf)
 
@@ -1153,7 +1155,22 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
             "raeume": c.raeume(refresh), "raster": c.raster(refresh), "eintraege": c.eintraege(refresh),
         }
 
+    _plugin_json_einbinden(app)
     return app
+
+
+# Plugin-Beschreibung für Testplattform und Intranet (GET /plugin.json, #42). Fehlt shared/ (z. B. im Docker-Image),
+# entfällt /plugin.json; die Testplattform erzeugt die Beschreibung dann selbst aus /openapi.json.
+def _plugin_json_einbinden(app) -> None:
+    import sys
+    wurzel = str(Path(__file__).resolve().parents[3])
+    if wurzel not in sys.path:
+        sys.path.append(wurzel)
+    try:
+        from shared.plugin_export import einbinden
+    except ImportError:
+        return
+    einbinden(app, Path(__file__).resolve().parents[1])
 
 
 app = create_app()

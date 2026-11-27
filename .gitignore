@@ -22,3 +22,4 @@ exports/
 .DS_Store
 .idea/
 .vscode/
+_site/
