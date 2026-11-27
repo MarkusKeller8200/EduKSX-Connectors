@@ -1003,7 +1003,7 @@ class EscolaClient:
     def arbeitsgruppe_stundenplan(self, ag_id: int) -> list[dict]:
         """Stundenplan-Einträge einer Arbeitsgruppe (L8, #13). Escola zeigt Arbeitsgruppen nicht mit
         `application_class.php` (liefert „Es wurde keine Klasse gewählt“), sondern mit
-        `application_workgroup.php` (mode=0, workgroupId) – gleiches Raster, gleiche Zellen (live 28.11.2026)."""
+        `application_workgroup.php` (mode=0, workgroupId) – gleiches Raster (live 28.11.2026)."""
         ag = int(ag_id)
         if ag not in {w["id"] for w in self.arbeitsgruppen()}:
             raise KeyError(f"Unbekannte Arbeitsgruppe {ag}")
@@ -1012,7 +1012,20 @@ class EscolaClient:
             html = self._post("inc/ajax/timetable/application_workgroup.php", {"mode": 0, "workgroupId": ag})
         if "content_" not in html:
             raise RuntimeError(f"Escola hat keinen Stundenplan der Arbeitsgruppe {ag} geliefert: {P._clean(html)[:120]}")
-        return [{"arbeitsgruppe_id": ag, **e} for e in P.parse_stundenplan(html)]
+        return [self._ag_eintrag(ag, e) for e in P.parse_stundenplan(html)]
+
+    @staticmethod
+    def _ag_eintrag(ag: int, e: dict) -> dict:
+        """Zellen von Arbeitsgruppen weichen ab (live 28.11.2026, Test-Eintrag in AG TEST 3): der Tooltip hat
+        eine zusätzliche Zeile „Arbeitsgruppe: <Name>“, die Zeile unter dem Fach lautet „<LP-Kürzel>, <weitere
+        Angabe>“ (bei TEST TEST ohne Kürzel: „, O. SUS“). Die weitere Angabe kommt unverändert nach `zusatz`."""
+        lps = [x for x in e["lehrpersonen"] if not x.startswith("Arbeitsgruppe:")]
+        ag_name = next((x.split(":", 1)[1].strip() for x in e["lehrpersonen"] if x.startswith("Arbeitsgruppe:")), None)
+        zeile = "/".join(e["lehrpersonen_kuerzel"])
+        kuerzel, _, weiter = zeile.partition(",") if "," in zeile else (zeile, "", "")
+        zusatz = " | ".join(x for x in (weiter.strip(), e.get("zusatz", "")) if x)
+        return {"arbeitsgruppe_id": ag, **e, "lehrpersonen": lps, "arbeitsgruppe": ag_name,
+                "lehrpersonen_kuerzel": [k for k in kuerzel.strip().split("/") if k], "zusatz": zusatz}
 
     def schueler_arbeitsgruppen(self, pid: int, schuljahr: int = 0) -> list[dict]:
         import json as _json
@@ -1927,7 +1940,7 @@ class EscolaClient:
             for z in out:
                 bid = z["bezugsperson_id"]
                 if bid is None:
-                    z.update({"app_aktiviert": None, "anzahl_logins": None, "letzter_login": None})
+                    z.update({"app_aktiviert": None, "app_eingeloggt": None, "anzahl_logins": None, "letzter_login": None})
                     continue
                 if bid not in status:
                     try:
@@ -1935,7 +1948,7 @@ class EscolaClient:
                     except KeyError:
                         status[bid] = {}
                 st = status[bid]
-                z.update({k: st.get(k) for k in ("app_aktiviert", "anzahl_logins", "letzter_login")})
+                z.update({k: st.get(k) for k in ("app_aktiviert", "app_eingeloggt", "anzahl_logins", "letzter_login")})
         return out
 
     # ------------------------------------------------------------------ Dokumente im Schülerdossier (L11, #3)
@@ -2075,8 +2088,8 @@ class EscolaClient:
             vorhanden = PP.parse_reiter(reiter)
             if not vorhanden:
                 raise KeyError(f"Person {pid} nicht gefunden oder nicht sichtbar")
-            res = {"person_id": int(pid), "app_aktiviert": None, "app_schaltbar": False,
-                   "anzahl_logins": None, "letzter_login": None}
+            res = {"person_id": int(pid), "app_aktiviert": None, "app_manuell": None, "app_eingeloggt": None,
+                   "app_schaltbar": False, "anzahl_logins": None, "letzter_login": None}
             for abschnitt, parser in (("mobile", PP.parse_app_status), ("activity", PP.parse_aktivitaet)):
                 if abschnitt in vorhanden:
                     res.update(parser(self._raw(self.PERS + "show_person_details.php",

@@ -7,6 +7,9 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
 ## [Unveröffentlicht]
 
 ### Geändert
+- Escola-API 1.19.1 (#4, #13): mit Testdaten live geprüft – App-Status erkennt «App (manuell) aktiviert» (das
+  Symbol der Gerätezeile ist auch dann rot), neu `app_manuell` und `app_eingeloggt`; Zellen im Stundenplan von
+  Arbeitsgruppen trennen `arbeitsgruppe`, LP-Kürzel und Zusatz richtig
 - Escola-API 1.19.0 (#3, #4, #9, #11, #13): Erkundung 28.11.2026 an den Testobjekten – Dokumente im
   Schülerdossier über Escolas REST lesen, hochladen und löschen (Schalter `ESCOLA_DOKUMENTE`, ersetzt die
   501-Platzhalter; `/dokumente/struktur` entfällt), Absenzen über `/escola/api/absences` (`/klassen/{id}/absenzen…`,

@@ -993,7 +993,7 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
         rows = c.eltern_der_klasse(klasse_id, schuljahr, app=app or nur_ohne_app)
         if nur_ohne_app:
             rows = [r for r in rows if r["bezugsperson_id"] is not None
-                    and (r.get("app_aktiviert") is not True or not r.get("anzahl_logins"))]
+                    and (r.get("app_aktiviert") is not True or not (r.get("app_eingeloggt") or r.get("anzahl_logins")))]
         return out(rows, format, f"eltern_klasse_{klasse_id}")
 
     # ------------------------------------------------------------------ Absenzen (L17, #9)

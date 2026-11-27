@@ -717,14 +717,20 @@ H_A1a 92, Arbeitsgruppe TEST 3). Ins Repo kamen nur Aufrufe, Feldnamen und erfun
 - **Schülerdossier/Verhalten** (Modul «S»): `inc/ajax/journal/show.php` (unsetSemester=1), dann
   `inc/ajax/journal/show_entries.php` (classId, workgroupId=0); ohne SuS in der Klasse lehnt Escola ab.
   **Noten/LZK** (Modul «N»): `inc/ajax/noten_show.php`. Beide noch ohne Daten → noch keine Endpunkte.
-- **App-Status** (Reiter «Escola App» = Abschnitt `mobile`, «Aktivität» = `activity`): «App nicht aktiviert»
-  mit rotem Symbol; aktiviert = grünes Symbol (aus Escolas Skript, nicht live gesehen). «Aktiviert» heisst
-  freigeschaltet, nicht installiert – ob jemand die App nutzt, zeigen `anzahl_logins` und `letzter_login`.
+- **App-Status** (Reiter «Escola App» = Abschnitt `mobile`, «Aktivität» = `activity`), live geprüft 28.11.2026
+  an TEST TEST (649, App eingeschaltet und Übersteuerung wieder aufgehoben): aus = «App nicht aktiviert.»; an =
+  «App *manuell* aktiviert.» (ohne «manuell», wenn Escola automatisch freigibt) plus Zeile «<Name>: z.Z. auf keinem
+  Gerät via App eingeloggt». Achtung: das Symbol der Gerätezeile ist rot, auch wenn die App aktiviert ist – die API
+  liest deshalb den Text. Felder: `app_aktiviert`, `app_manuell`, `app_eingeloggt`, dazu `anzahl_logins`,
+  `letzter_login`. Die Formulierung mit Geräten («auf N Gerät…») ist noch nicht gesehen.
   Escola bietet den Massenversand der Zugänge selbst an: Aktion «Willkommensnachricht (Mail/PDF) für Eltern
   dieser SuS» in der Personenliste (nicht ausgelöst).
 - **Stundenplan Arbeitsgruppen:** `inc/ajax/timetable/application_workgroup.php` (mode=0, workgroupId) statt
-  `application_class.php` – gleiches Raster (`content_<tag>_<lektion>`). Alle 3 Arbeitsgruppen sind noch leer;
-  das Zellenformat ist deshalb nur am gleichen Raster geprüft.
+  `application_class.php` – gleiches Raster (`content_<tag>_<lektion>`). Live geprüft 28.11.2026 mit einem
+  Test-Eintrag (649, Deutsch, Mo 1. Lektion in AG TEST 3, danach Eintrag und Zuteilung entfernt). Die Zelle weicht
+  ab: Tooltip mit Zusatzzeile «Arbeitsgruppe: <Name>» (→ `arbeitsgruppe`), Zeile darunter «<LP-Kürzel>, <Angabe>»
+  (TEST TEST hat kein Kürzel: «, O. SUS»; die Angabe nach dem Komma geht unverändert nach `zusatz`). Schreiben in
+  Arbeitsgruppen: Escola nutzt dieselben Aufrufe wie bei Klassen mit `classOrWorkgroupMode=workgroup`.
 - **Rechte im kommenden Schuljahr (L6):** live geprüft 28.11.2026 an TEST_A1a mit TEST TEST (649): Fach Deutsch
   fürs kommende SJ zugeteilt (Zuteilung 711), die Spalten KLR/FP/SpM/Abs/Gesundheit sind da und nicht gesperrt,
   FP gesetzt und zurückgenommen, Zuteilung entfernt; Endstand gleich Anfang, aktuelles SJ unberührt. Escola schaltet
@@ -878,6 +884,7 @@ Felder abgewiesen werden und dass das Passwort nirgends gespeichert wird.
 
 | Version | Datum | Änderungen |
 |---|---|---|
+| 1.19.1 | 28.11.2026 | Live geprüft mit Testdaten: App-Status liest den echten Zustand «App (manuell) aktiviert» und neu `app_manuell`, `app_eingeloggt` (#4); Zellen im Stundenplan von Arbeitsgruppen mit `arbeitsgruppe` und LP-Kürzel richtig getrennt (#13) |
 | 1.19.0 | 28.11.2026 | Erkundung (nur lesen): Dokumente lesen/hochladen/löschen `/schueler/{id}/dokumente` (#3, Schalter `ESCOLA_DOKUMENTE`), Absenzen `/klassen/{id}/absenzen…` (#9), App-Status `/personen/{id}/app` und `/klassen/{id}/eltern?app=true` (#4), Stundenplan von Arbeitsgruppen (#13); Platzhalter `/dokumente/struktur` entfernt; Rechte auch fürs kommende Schuljahr (#11); Dokumente und Rechte kommendes SJ live in Escola geprüft |
 | 1.18.0 | 27.11.2026 | Plugin-Beschreibung für Testplattform und Intranet: `GET /plugin.json`, Beschriftungen für alle Endpunkte, Anmeldung und Import-Vorprüfung als lesend gekennzeichnet (`x-eduksx`), Sitzung in `api.json` → `plugin` (#42, #44) |
 | 1.17.0 | 26.11.2026 | Zeugnisse: `GET /schueler/{id}/zeugnisse`, `…/{zeugnis_id}/pdf`, `GET /klassen/{id}/zeugnisse`; Schalter `ESCOLA_ZEUGNISSE` (#39) |
