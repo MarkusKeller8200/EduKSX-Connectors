@@ -89,6 +89,17 @@ class Transfer(BaseModel):
     schuljahr: Literal[0, 1] = Field(0, description="0 = aktuelles, 1 = kommendes Schuljahr")
 
 
+class Klassenbeginn(BaseModel):
+    ab: str = Field("schuljahresbeginn", description="schuljahresbeginn (1.8.), eintritt (später von 1.8. und "
+                                                       "Eintrittsdatum) oder JJJJ-MM-TT")
+    schuljahr: int | None = Field(None, description="Startjahr des Schuljahrs, z. B. 2026 = 2026/27; Standard: aktuelles")
+    edit_id: str | None = Field(None, description="nur nötig, wenn das Schuljahr mehrere Klasseneinträge hat")
+
+
+class KlassenbeginnKlasse(BaseModel):
+    ab: str = Field("eintritt", description="schuljahresbeginn, eintritt oder JJJJ-MM-TT")
+
+
 class RollenAenderung(BaseModel):
     hinzufuegen: list[int] = Field(default_factory=list, description="Rollen-IDs, die die Person zusätzlich bekommt")
     entfernen: list[int] = Field(default_factory=list, description="Rollen-IDs, die der Person entzogen werden")
@@ -553,6 +564,39 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
             raise HTTPException(400, str(e))
         except RuntimeError as e:
             raise HTTPException(409, str(e))
+
+    @app.get("/schueler/{pid}/schullaufbahn", dependencies=deps, tags=["Schüler:innen"])
+    def schueler_schullaufbahn(pid: int, c: EscolaClient = Depends(get_client)):
+        """Schullaufbahn: Klassen je Schuljahr mit Von/Bis (z. B. „TEST_A1a 2026-08-01 – 2027-07-31“)."""
+        try:
+            return c.schullaufbahn(pid)
+        except RuntimeError as e:
+            raise HTTPException(409, str(e))
+
+    @app.put("/schueler/{pid}/klasse/beginn", dependencies=deps, tags=["Schüler:innen"])
+    def schueler_klassenbeginn(pid: int, body: Klassenbeginn,
+                               probelauf: bool = Query(False, description="nur zeigen, nichts speichern"),
+                               c: EscolaClient = Depends(get_client)):
+        """Beginn der Klassenzuteilung in der Schullaufbahn setzen, z. B. ab Schuljahresbeginn.
+        Nötig nach Import oder Transfer: Escola teilt dort immer ab heute ein."""
+        _schreib_check(probelauf)
+        try:
+            return c.klassenbeginn_setzen(pid, body.ab, body.schuljahr, body.edit_id, probelauf)
+        except KonfliktFehler as e:
+            return _konflikt(e)
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+        except RuntimeError as e:
+            raise HTTPException(409, str(e))
+
+    @app.post("/klassen/{klasse_id}/klassenbeginn", dependencies=deps, tags=["Schuljahr vorbereiten"])
+    def klasse_klassenbeginn(klasse_id: int, body: KlassenbeginnKlasse,
+                             probelauf: bool = Query(False, description="nur zeigen, nichts speichern"),
+                             c: EscolaClient = Depends(get_client)):
+        """Klassenbeginn für alle SuS einer Klasse setzen (nach dem Import einer Klasse, WF-11).
+        Standard `eintritt`: 1.8., bei späterem Eintritt das Eintrittsdatum. Fehler pro SuS stehen in der Liste."""
+        _schreib_check(probelauf)
+        return c.klasse_klassenbeginn(klasse_id, body.ab, probelauf)
 
     @app.delete("/schueler/{pid}/klasse", dependencies=deps, tags=["Schüler:innen"])
     def schueler_klasse_entfernen(pid: int, schuljahr: int = Query(0, description="0 = aktuelles, 1 = kommendes"),

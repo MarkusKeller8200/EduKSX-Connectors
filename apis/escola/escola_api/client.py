@@ -655,6 +655,121 @@ class EscolaClient:
         return {"entfernt": True, "id": pid, "klasse_id": klasse_id, "schuljahr": schuljahr,
                 "meldung": "Die Klassenzuordnungen wurden angepasst."}
 
+    # ------------------------------------------------------------------ Schullaufbahn / Klassenbeginn (L19)
+    # Escola teilt bei Import und Transfer immer ab heute ein; ein vergangenes Datum lehnt der Transfer
+    # auch serverseitig ab (live geprüft 24.11.2026). Der Beginn lässt sich nur in der Schullaufbahn
+    # ändern (Dialog „Klassen bearbeiten“ → „Von: Schuljahresbeginn“). Das Schuljahr läuft fix 1.8.–31.7.
+    SC = "rpc/collections/SchoolCareer/"
+    SC_KLASSE = "studentGroupsSchoolclass"
+
+    def _sc_rpc(self, methode: str, params: dict):
+        import json as _json
+        r = self._http.post(self.SC + methode + ".php", content=_json.dumps(
+            {"parameters": params, "rpcContext": {}}).encode(), headers={"Content-Type": "application/json"})
+        text = self._check(r)
+        if not text.strip():
+            return None  # updateEntry antwortet leer
+        try:
+            data = _json.loads(text)
+        except ValueError:
+            raise RuntimeError(f"Escola-Fehler bei {methode}: {text[:150]}")
+        if isinstance(data, dict) and "messageForUser" in data:
+            raise RuntimeError(data["messageForUser"])
+        return data
+
+    @staticmethod
+    def _sj_start(heute=None) -> int:
+        import datetime as _dt
+        d = heute or _dt.date.today()
+        return d.year if d.month >= 8 else d.year - 1
+
+    def schullaufbahn(self, pid: int) -> list[dict]:
+        """Einträge der Schullaufbahn (Klassen je Schuljahr) mit Von/Bis und Edit-ID."""
+        with self._lock:
+            data = self._sc_rpc("getSchoolCareer", {"personId": int(pid), "modulesFilter": None})
+        out = []
+        for sj in (data or {}).get("timeline", []):
+            for e in sj.get("entries", []):
+                out.append({"schuljahr": sj.get("schoolyear"), "schuljahr_text": sj.get("schoolyearLabel"),
+                            "modul": e.get("module"), "titel": e.get("title"), "von": e.get("dateFrom"),
+                            "bis": e.get("dateTo"), "edit_id": e.get("editId"),
+                            "felder": {f.get("title"): f.get("content") for f in e.get("fields", [])}})
+        return out
+
+    def _eintrittsdatum(self, pid: int) -> str | None:
+        """Eintrittsdatum (Personalien) als JJJJ-MM-TT oder None."""
+        import re as _re
+        p = self.person(pid, "schueler", ["personalien"])
+        m = _re.fullmatch(r"(\d{1,2})\.(\d{1,2})\.(\d{4})", str(p["felder"].get("eintritt") or "").strip())
+        return f"{m.group(3)}-{int(m.group(2)):02d}-{int(m.group(1)):02d}" if m else None
+
+    def klassenbeginn_setzen(self, pid: int, ab: str = "schuljahresbeginn", schuljahr: int | None = None,
+                             edit_id: str | None = None, probelauf: bool = False) -> dict:
+        """Beginn der Klassenzuteilung in der Schullaufbahn setzen.
+        `ab`: „schuljahresbeginn“ (1.8.), „eintritt“ (später von 1.8. und Eintrittsdatum) oder JJJJ-MM-TT.
+        Nur wenn die Person im Schuljahr genau einen Klasseneintrag hat (sonst `edit_id` angeben)."""
+        import re as _re
+        sj = schuljahr if schuljahr is not None else self._sj_start()
+        sj_von, sj_bis = f"{sj}-08-01", f"{sj + 1}-07-31"
+        if ab == "schuljahresbeginn":
+            ziel = sj_von
+        elif ab == "eintritt":
+            e = self._eintrittsdatum(pid)
+            ziel = max(sj_von, e) if e else sj_von
+        elif _re.fullmatch(r"\d{4}-\d{2}-\d{2}", ab or ""):
+            ziel = ab
+        else:
+            raise ValueError("ab: schuljahresbeginn, eintritt oder JJJJ-MM-TT")
+        if not (sj_von <= ziel <= sj_bis):
+            raise ValueError(f"{ziel} liegt nicht im Schuljahr {sj}/{str(sj + 1)[2:]} ({sj_von} bis {sj_bis})")
+        eintraege = [e for e in self.schullaufbahn(pid) if e["modul"] == self.SC_KLASSE and e["schuljahr"] == sj]
+        if edit_id is not None:
+            eintraege = [e for e in eintraege if str(e["edit_id"]) == str(edit_id)]
+        if not eintraege:
+            raise ValueError(f"Person {pid} hat im Schuljahr {sj} keinen Klasseneintrag in der Schullaufbahn")
+        if len(eintraege) > 1:
+            raise KonfliktFehler(f"Person {pid} hat im Schuljahr {sj} mehrere Klasseneinträge – `edit_id` angeben",
+                                 [{"edit_id": e["edit_id"], "klasse": e["titel"], "von": e["von"], "bis": e["bis"]}
+                                  for e in eintraege])
+        e = eintraege[0]
+        if ziel > e["bis"]:
+            raise ValueError(f"Beginn {ziel} liegt nach dem Ende des Eintrags ({e['bis']})")
+        res = {"id": pid, "schuljahr": sj, "klasse": e["titel"], "von_alt": e["von"], "von_neu": ziel,
+               "bis": e["bis"], "geaendert": False, "probelauf": probelauf}
+        if e["von"] == ziel:
+            return {**res, "meldung": "Beginn stimmt bereits"}
+        if probelauf:
+            return res
+        with self._lock:
+            felder = self._sc_rpc("getEntryEditFields", {"personId": int(pid), "module": self.SC_KLASSE,
+                                                         "editId": str(e["edit_id"]), "schoolyear": sj, "draft": []})
+            werte = [{"type": f["type"], "value": f.get("value")} for f in felder or []
+                     if f.get("type") in ("schoolclass", "levelYear")]
+            if not any(w["type"] == "schoolclass" and w["value"] for w in werte):
+                raise RuntimeError("Escola hat keine Klasse im Bearbeitungsformular geliefert")
+            self._sc_rpc("updateEntry", {"personId": int(pid), "module": self.SC_KLASSE, "editId": str(e["edit_id"]),
+                                         "schoolyear": sj, "dateFrom": ziel, "dateTo": e["bis"], "values": werte})
+        neu = [x for x in self.schullaufbahn(pid) if x["modul"] == self.SC_KLASSE and x["schuljahr"] == sj
+               and x["titel"] == e["titel"]]
+        if not any(x["von"] == ziel for x in neu):
+            raise RuntimeError(f"Escola hat den Beginn nicht übernommen (jetzt: {[x['von'] for x in neu]})")
+        return {**res, "geaendert": True}
+
+    def klasse_klassenbeginn(self, klasse_id: int, ab: str = "eintritt", probelauf: bool = False) -> dict:
+        """Klassenbeginn für alle SuS einer Klasse setzen (z. B. nach dem Import der Klasse).
+        Fehler einzelner SuS brechen nicht ab, sie stehen in der Liste."""
+        sus = [s for s in self.schueler(True) if s["klasse_id"] == klasse_id]
+        ergebnisse = []
+        for s in sus:
+            try:
+                r = self.klassenbeginn_setzen(s["id"], ab, probelauf=probelauf)
+                ergebnisse.append({**r, "name": f"{s['nachname']} {s['vorname']}", "fehler": None})
+            except (ValueError, RuntimeError, KonfliktFehler) as ex:
+                ergebnisse.append({"id": s["id"], "name": f"{s['nachname']} {s['vorname']}", "fehler": str(ex)})
+        return {"klasse_id": klasse_id, "ab": ab, "probelauf": probelauf, "anzahl": len(sus),
+                "geaendert": sum(1 for r in ergebnisse if r.get("geaendert")),
+                "fehler": sum(1 for r in ergebnisse if r.get("fehler")), "schueler": ergebnisse}
+
     # ------------------------------------------------------------------ Rollen
     # Rollen-IDs, die am 14.11.2026 im System waren – alles andere gilt als „neu“
     STANDARD_ROLLEN = {2, 3, 5, 6, 12, 13, 14, 15, 16, 17, 18, 21, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 39, 40}

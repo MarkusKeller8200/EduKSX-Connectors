@@ -1,6 +1,6 @@
 # Übergabe an einen neuen Chat – EduKSX-Connectors
 
-Stand: **2026-11-25 (12:00)** – CMI-API 0.1.0 (#23) gebaut, nicht live; davor 2026-11-16 (14:00): #17 umgesetzt (Repo und Claude-Projekt pseudonymisiert), doppelter CI-Workflow `tests` entfernt; GitHub-Blueprint angewendet; Escola-API 1.15.0 auf `main`, Login live bestätigt,
+Stand: **2026-11-27 (23:45)** – Escolas Import-Korrekturen live nachgeprüft, alle Fehler behoben (Doku WF-11/L10, #2); Testpersonen ID 723–734 danach gelöscht. Davor **2026-11-25 (12:00)** – CMI-API 0.1.0 (#23) gebaut, nicht live; davor 2026-11-24 (13:00): Escola-API 1.16.0 auf Branch `escola-klassenbeginn-import` (Klassenbeginn L19, Importerkenntnisse WF-11); davor 2026-11-16 (14:00): #17 umgesetzt (Repo und Claude-Projekt pseudonymisiert), doppelter CI-Workflow `tests` entfernt; GitHub-Blueprint angewendet; Escola-API 1.15.0 auf `main`, Login live bestätigt,
 Lesen live geprüft; Meilenstein «0.1.0 – Escola live getestet» mit #2–#15 freigegeben, noch kein Release.
 [PROJEKTSTAND.md](PROJEKTSTAND.md) (aktuell), Konzepte in `docs/KONZEPT-*.md` (noch keine).
 Kopien im Claude-Projekt ESCOLA: `claude/uebergabe.md` und `claude/projektstand.md` – bei jeder Übergabe beide Orte nachführen.
@@ -69,6 +69,24 @@ Schliessen erst nach «getestet ok» bzw. abgehakter Testliste.
 - Klassenzuteilung und Beteiligung sind in der öffentlichen API nicht beschrieben → konfigurierbar, bis dahin `501`.
 - Nächster Schritt: Zugang bei CM Informatik beantragen (Proxy-Gruppe, App-only-Anmeldung, Mandant), TentaQl-Syntax,
   Dossiervorlagen und Modell der Klassenzuteilung in CMI Schule klären; dann Live-Test mit erfundenem Testkontakt.
+
+### Sitzung 2026-11-24 – CMI-Import nach Escola, Klassenbeginn (L19)
+
+- Escola-Personenimport live getestet (Testklasse TEST_A1a, erfundene Testpersonen, alle wieder gelöscht):
+  Import per Zwischenablage; direkt in die Klasse möglich; **Escola-Fehler**: Spalte „Vertreter 1 Abteilung (Firma)“
+  lässt den Import beim ersten Vertreter 2 abbrechen (Spalte für Spalte eingegrenzt, Mail an Lars mit Beispieldatei);
+  Berechtigung der Vertreter wird ignoriert; Vertreter-Geburtstag verstümmelt; Klassenbeginn = Importtag.
+- Transfer mit vergangenem Datum lehnt Escola auch serverseitig ab → Klassenbeginn nur über die Schullaufbahn
+  (RPC `SchoolCareer/updateEntry`, live mitgeschnitten).
+- Escola-API 1.16.0: `GET /schueler/{id}/schullaufbahn`, `PUT /schueler/{id}/klasse/beginn`,
+  `POST /klassen/{id}/klassenbeginn`; 8 Tests. README (Personenimport, Klassenbeginn) und WORKFLOWS (WF-11, L10, L19).
+- Messung 24.11.2026 (13:00, eingebauter Browser, dieselben RPC-Aufrufe wie die API): Klassenbeginn setzen Ø 0,76 s
+  pro SuS, 6/6 Durchläufe ok, SuS 650 wieder ab 14.11.2026 in H_A1a.
+- **Offen:** Issue für L19 anlegen (gh-Token in der Sitzung ungültig) und mit `Refs` verknüpfen; Branch prüfen und
+  nach `main` übernehmen; Live-Test der laufenden API `PUT …/klasse/beginn` mit SuS SuS (650, aktuell H_A1a) (lesen → Probelauf → schreiben →
+  zurücksetzen → lesen).
+- Converter CMI → Escola (`cmi2escola.py`, ein Blatt pro Klasse) und Feldkataloge liegen im Claude-Projekt ESCOLA
+  (`cmi-escola-converter.md`, `escola-import-feldtest.md`, `escola-export-alle-felder.md`).
 
 ### Sitzung 2026-11-16 (23:15) – SL-Planer-API (#20)
 
