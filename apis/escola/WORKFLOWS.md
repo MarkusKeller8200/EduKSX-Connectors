@@ -279,7 +279,7 @@ Erhoben am 15.11.2026 aus dem Gesamtablauf (siehe `docs/workflows-escola.md`). T
   geschätzt 1–1,5 s → Klasse à 22 SuS ca. 20–30 s, alle ca. 1050 SuS ca. 15–25 min). Details: README › Personenimport.
 - **Nachprüfung 27.11.2026** (TEST_A1a, 4 erfundene SuS + 8 Vertreter:innen, ERGÄNZEN und ÜBERSCHREIBEN): Abteilung
   (Firma) und PLZ Geschäft, Berechtigung, Vertreter-Geburtstag, Ja/Nein-Felder inkl. Jod, Auto-Matching und eigene
-  Adresse neuer SuS ✔️; 12 Personen in unter 8 s. Testpersonen danach von Hand zu löschen (ID 723–734).
+  Adresse neuer SuS ✔️; 12 Personen in unter 8 s. Testpersonen (ID 723–734) danach gelöscht.
 
 ### WF-12: Übertrittsformular ins Schülerdossier
 

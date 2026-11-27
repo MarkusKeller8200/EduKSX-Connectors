@@ -2,7 +2,7 @@
 
 > Stand 2026-11-27 (23:45): Escolas Korrekturen am Personenimport live nachgeprüft (TEST_A1a, ERGÄNZEN und
 > ÜBERSCHREIBEN) – alle gemeldeten Fehler behoben; README › Personenimport und WORKFLOWS WF-11/L10 nachgeführt (#2).
-> Testpersonen ID 723–734 (TEST/TESTV) von Hand löschen. Weiterhin offen: Branch übernehmen, Upload über die API.
+> Testpersonen ID 723–734 (TEST/TESTV) danach gelöscht. Weiterhin offen: Branch übernehmen, Upload über die API.
 >
 > Stand 2026-11-25: CMI-API 0.1.0 eingecheckt (#23, nicht live). Davor 2026-11-16 (14:00): Escola-API 1.15.1 deckt WF-01 bis WF-10 ab und Teile von WF-11 bis WF-20; Login und
 > Lesen sind live geprüft, die Schreibabläufe noch nicht. Als Nächstes: Erkundung in Escola für die offenen Issues
