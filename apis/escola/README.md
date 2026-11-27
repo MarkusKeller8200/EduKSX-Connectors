@@ -11,6 +11,7 @@ REST-API für **Escola (sekbuelach.ch)** zur Weiterverwendung in anderen Projekt
 - **Eltern/Bezugspersonen** lesen, anlegen, verknüpfen, Sorgerecht setzen, entfernen
 - **Schüler:innen & Personen** lesen, anlegen (auch ohne Klasse), einer Klasse zuordnen und (optional) schreiben
 - **Schuljahr vorbereiten:** Klassenlisten, Eltern je Klasse, Vorprüfung von Importlisten auf Duplikate
+- **Zeugnisse** aus dem Zeugnis-/Formular-Archiv lesen und als PDF herunterladen (Schalter `ESCOLA_ZEUGNISSE`)
 - **Dokumente** als Platzhalter vorbereitet
 
 Escola hat keine offizielle API. Diese Schnittstelle nutzt dieselben internen Aufrufe wie die
@@ -199,6 +200,16 @@ docker run -p 8080:8080 --env-file apis/escola/.env escola-api
 | GET | `/arbeitsgruppen/{id}/lehrpersonen?schuljahr=0\|1` | 🔑 | Alle Lehrpersonen einer Arbeitsgruppe (Fachklasse) mit Fächern |
 | GET | `/lehrpersonen/{id}/faecher?klasse_id=…` bzw. `?arbeitsgruppe_id=…` | 🔑 | Alle Fächer, welche die Lehrperson hat, und ihre Rechte |
 | PATCH | `/lehrpersonen/{id}/faecher` | 🔑 ✏️ | Fächer zuteilen/entfernen, Rechte setzen oder Vorlage anwenden (`klassenlehrperson`, `fachlehrperson`, `sopae`); Klasse oder Arbeitsgruppe, `schuljahr` 0/1 |
+
+### Zeugnisse
+
+🔐 = nur mit `ESCOLA_ZEUGNISSE=1` **und** `ESCOLA_API_KEY` (sonst `403`).
+
+| Methode | Endpunkt | Zugriff | Zweck |
+|---|---|---|---|
+| GET | `/schueler/{id}/zeugnisse` | 🔑 🔐 | Archivierte Zeugnisse (Titel, Schuljahr, `definitiv`, erstellt, ID); `?schuljahr=2026/27`, `?nur_definitiv=true`, CSV |
+| GET | `/schueler/{id}/zeugnisse/{zeugnis_id}/pdf` | 🔑 🔐 | Zeugnis als PDF herunterladen |
+| GET | `/klassen/{id}/zeugnisse` | 🔑 🔐 | Zeugnisse aller SuS einer Klasse (je SuS und Titel das neueste; `?schuljahr`, `?titel`, `?nur_definitiv`) – Grundlage für WF-27 |
 
 ### Dokumente
 
@@ -653,6 +664,16 @@ curl -X PATCH localhost:8080/lehrpersonen/649/faecher … -d '{"klasse_id": 120,
 - Die Antwort enthält den Plan (`faecher_hinzu`, `faecher_weg`, `rechte`) und den Zustand `nachher`;
   übernimmt Escola etwas nicht, kommt `409`.
 
+### Zeugnisse (Zeugnis-/Formular-Archiv)
+
+Escola archiviert jedes erzeugte Zeugnis bei der Person (Personenverwaltung → «Zeugnis-/Formular-Archiv», seit
+Januar 2019). Die API liest diesen Bereich (`show_person_details.php`, `active_section=certificates`) und lädt das
+PDF über `GET /api/0/de/MediaServer/Download/<id>/<Dateiname>`. Pro Zeugnis: `id`, `titel` (z. B. «Zeugnis
+1. Semester»), `schuljahr` («2026/27»), `definitiv` (blauer Stern: die ausgedruckte, definitive Version),
+`erstellt` (ISO), `erstellt_von`, `datei`. Es kann mehrere Versionen desselben Zeugnisses geben; für die Ablage in
+CMI `nur_definitiv=true` verwenden. Zeugnisse erzeugen die Lehrpersonen; die API erzeugt keine.
+Aufgezeichnet am 26.11.2026 an der Testschülerin SUS OHNE KLASSE (ID 651).
+
 ### Dokumente (Platzhalter)
 
 `GET /schueler/{id}/dokumente`, `GET /schueler/{id}/dokumente/{datei_id}` und `GET /dokumente/struktur`
@@ -772,6 +793,7 @@ Felder abgewiesen werden und dass das Passwort nirgends gespeichert wird.
 | Login | `GET escola/login`, `POST login.php` (multipart `username`, `password`, Header `Referer`) |
 | 2FA | `GET escola/api/logged-in-person` (Methoden), `PATCH escola/api/login/two-factor/method`, `POST …/verification` `{code}`, `POST …/resend`, `POST …/request` + `GET …/state` (Escola-App); danach `redirectUrl` |
 | Logout / Keep-alive | `GET admin.php?action=logout&newLogout=true` / `GET escola/api/session/keep-alive` |
+| Zeugnis-Archiv | `POST inc/ajax/persons/show_reiter.php` (Person wählen), `POST …/show_person_details.php` `active_section=certificates`; PDF `GET api/0/de/MediaServer/Download/<id>/<Datei>` |
 | Klassenliste | `GET admin.php?page_request=6` → `#unifiedClassOrWorkgroupChooser` |
 | Stundenplan | `GET admin.php?page_request=6&klassen_id=<ID>`, `POST inc/ajax/timetable/application_class.php` `mode=0` |
 | Zelle ansehen | `POST inc/ajax/timetable/ajax_functions_timetable.php` `type=1` / `type=3` |
@@ -805,6 +827,7 @@ Felder abgewiesen werden und dass das Passwort nirgends gespeichert wird.
 
 | Version | Datum | Änderungen |
 |---|---|---|
+| 1.17.0 | 26.11.2026 | Zeugnisse: `GET /schueler/{id}/zeugnisse`, `…/{zeugnis_id}/pdf`, `GET /klassen/{id}/zeugnisse`; Schalter `ESCOLA_ZEUGNISSE` (#39) |
 | 1.16.0 | 24.11.2026 | Schullaufbahn und Klassenbeginn (L19): `GET /schueler/{id}/schullaufbahn`, `PUT /schueler/{id}/klasse/beginn`, `POST /klassen/{id}/klassenbeginn`; Erkenntnisse zum Escola-Personenimport (WF-11, #2) dokumentiert |
 | 1.15.1 | 16.11.2026 | Testdaten pseudonymisiert (#17): erfundene Namen und Kürzel statt echter Lehrpersonen |
 | 1.15.0 | 15.11.2026 | `POST /klassen/{id}/stundenplan/abgleich` (Issue #6), `GET /klassen/{id}/felder` (Issue #8) |

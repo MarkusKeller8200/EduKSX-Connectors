@@ -678,6 +678,64 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
         """Globale Ordnervorlage für Schüler:innen-Dokumente – noch nicht aktiviert."""
         _dok_platzhalter()
 
+    # Zeugnis-Archiv (Personenverwaltung → «Zeugnis-/Formular-Archiv»), schützenswert: eigener Schalter
+    zeugnisse_erlaubt = flag("ESCOLA_ZEUGNISSE")
+
+    def _zeugnis_check():
+        if not zeugnisse_erlaubt:
+            raise HTTPException(403, "Zeugnisse sind ausgeschaltet (ESCOLA_ZEUGNISSE=1 setzen)")
+        if not api_key:
+            raise HTTPException(403, "Für Zeugnisse muss ESCOLA_API_KEY gesetzt sein")
+
+    @app.get("/schueler/{pid}/zeugnisse", dependencies=deps, tags=["Zeugnisse"])
+    def schueler_zeugnisse(pid: int, schuljahr: str | None = Query(None, description="z. B. 2026/27"),
+                           nur_definitiv: bool = Query(False, description="nur ausgedruckte (definitive) Versionen"),
+                           format: Format = F, c: EscolaClient = Depends(get_client)):
+        """Archivierte Zeugnisse einer Schülerin / eines Schülers (Titel, Schuljahr, definitiv, erstellt, ID)."""
+        _zeugnis_check()
+        try:
+            rows = c.zeugnisse(pid)
+        except KeyError as e:
+            raise HTTPException(404, str(e))
+        rows = [z for z in rows if (not schuljahr or z["schuljahr"] == schuljahr) and (not nur_definitiv or z["definitiv"])]
+        return out([{k: v for k, v in z.items() if k != "url"} for z in rows], format, f"zeugnisse_{pid}")
+
+    @app.get("/schueler/{pid}/zeugnisse/{zeugnis_id}/pdf", dependencies=deps, tags=["Zeugnisse"])
+    def schueler_zeugnis_pdf(pid: int, zeugnis_id: str, c: EscolaClient = Depends(get_client)):
+        """Ein archiviertes Zeugnis als PDF herunterladen."""
+        _zeugnis_check()
+        try:
+            z, pdf = c.zeugnis_pdf(pid, zeugnis_id)
+        except KeyError as e:
+            raise HTTPException(404, str(e))
+        except RuntimeError as e:
+            raise HTTPException(502, str(e))
+        name = (z["datei"] or f"Zeugnis_{pid}") + ".pdf"
+        from urllib.parse import quote
+        return Response(pdf, media_type="application/pdf",
+                        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(name)}"})
+
+    @app.get("/klassen/{klasse_id}/zeugnisse", dependencies=deps, tags=["Zeugnisse"])
+    def klasse_zeugnisse(klasse_id: int, schuljahr: str | None = Query(None, description="z. B. 2026/27"),
+                         titel: str | None = Query(None, description="z. B. «Zeugnis 1. Semester»"),
+                         nur_definitiv: bool = Query(False), nur_neuestes: bool = Query(True, description="je SuS und Titel nur das neueste"),
+                         format: Format = F, c: EscolaClient = Depends(get_client)):
+        """Zeugnisse aller Schüler:innen einer Klasse – Grundlage für die Ablage in CMI (WF-27)."""
+        _zeugnis_check()
+        rows = []
+        for s in [s for s in c.schueler() if s["klasse_id"] == klasse_id]:
+            gesehen = set()
+            for z in c.zeugnisse(s["id"]):
+                if (schuljahr and z["schuljahr"] != schuljahr) or (titel and z["titel"] != titel) \
+                        or (nur_definitiv and not z["definitiv"]):
+                    continue
+                if nur_neuestes and (z["schuljahr"], z["titel"]) in gesehen:
+                    continue
+                gesehen.add((z["schuljahr"], z["titel"]))
+                rows.append({"schueler_id": s["id"], "nachname": s["nachname"], "vorname": s["vorname"],
+                             "klasse": s["klasse"], **{k: v for k, v in z.items() if k != "url"}})
+        return out(rows, format, f"zeugnisse_klasse_{klasse_id}")
+
     @app.get("/schueler/{pid}", dependencies=deps, tags=["Schüler:innen"])
     def schueler_detail(pid: int, abschnitte: str | None = Query(None, description="z. B. name,personalien,privat"),
                         optionen: bool = Query(False, description="Auswahlmöglichkeiten mitliefern"),

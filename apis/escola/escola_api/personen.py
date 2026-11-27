@@ -275,3 +275,44 @@ def schulmail(vorname: str, nachname: str, domain: str = "sekbuelach.ch") -> str
     if not v or not n:
         raise FeldFehler("Schulmail: Vor- und Nachname nötig")
     return f"{v}.{n}@{domain}"
+
+
+# ------------------------------------------------------------------ Zeugnis-Archiv
+_ZEUGNIS_ERSTELLT = re.compile(r"erstellt am (\d{1,2})\.(\d{1,2})\.(\d{4}) um (\d{1,2}):(\d{2})(?: von (.+))?")
+_DOWNLOAD = re.compile(r"/api/0/de/MediaServer/Download/([A-Za-z0-9_-]+)/([^\"'\s]*)")
+
+
+def parse_zeugnis_archiv(html: str) -> list[dict]:
+    """Personenverwaltung → «Zeugnis-/Formular-Archiv» (active_section=certificates).
+
+    Aufbau (aufgezeichnet 26.11.2026): je Schuljahr ein Block `archiveSchoolYear_<Jahr>`, darin je Zeugnis ein
+    Stern (`color-blue` = definitive, ausgedruckte Version), Vorschau, Download-Link
+    `/api/0/de/MediaServer/Download/<token>/<Dateiname>` und «erstellt am TT.MM.JJJJ um HH:MM von …»."""
+    soup = _soup(html)
+    out = []
+    for block in soup.select("div[id^=archiveSchoolYear_]"):
+        jahr = block["id"].rsplit("_", 1)[-1]
+        stern = None
+        for el in block.descendants:
+            if getattr(el, "name", None) != "a":
+                continue
+            klassen = el.get("class") or []
+            if "fav-icon" in klassen:
+                stern = "color-blue" in klassen
+                continue
+            m = _DOWNLOAD.search(el.get("href") or "")
+            if not m:
+                continue
+            info = el.find_next_sibling("span")
+            e = _ZEUGNIS_ERSTELLT.search(_clean(info.get_text()) if info else "")
+            out.append({
+                "id": m.group(1), "titel": _clean(el.get_text()),
+                "schuljahr": f"{jahr}/{(int(jahr) + 1) % 100:02d}" if jahr.isdigit() else jahr,
+                "definitiv": bool(stern),
+                "erstellt": (f"{e.group(3)}-{int(e.group(2)):02d}-{int(e.group(1)):02d}T{int(e.group(4)):02d}:{e.group(5)}"
+                             if e else None),
+                "erstellt_von": _clean(e.group(6)) if e and e.group(6) else None,
+                "datei": m.group(2).rstrip("."), "url": m.group(0),
+            })
+            stern = None
+    return out

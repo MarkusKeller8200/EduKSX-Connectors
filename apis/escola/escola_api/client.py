@@ -447,6 +447,33 @@ class EscolaClient:
                 self._raw(self.PERS + "ajax_functions_persons.php", "type=1&edit_mode=0")
         return vorhanden, felder, war_an
 
+    def zeugnisse(self, pid: int, kategorie: str = "schueler") -> list[dict]:
+        """Zeugnis-Archiv einer Person (Personenverwaltung → «Zeugnis-/Formular-Archiv»), neueste zuerst."""
+        from . import personen as PP
+        cat = kategorie if kategorie in ("schueler", "allInactive") else "allActive"
+        with self._lock:
+            reiter = self._raw(self.PERS + "show_reiter.php",
+                               f"active_person={pid}&pageRequest=154&personCategory={cat}&searchMode=false")
+            if not PP.parse_reiter(reiter):
+                raise KeyError(f"Person {pid} nicht gefunden oder nicht sichtbar")
+            html = self._raw(self.PERS + "show_person_details.php",
+                             f"active_section=certificates&pageRequest=154&personCategory={cat}&searchMode=false")
+        return sorted(PP.parse_zeugnis_archiv(html), key=lambda z: z["erstellt"] or "", reverse=True)
+
+    def zeugnis_pdf(self, pid: int, zeugnis_id: str, kategorie: str = "schueler") -> tuple[dict, bytes]:
+        """PDF eines archivierten Zeugnisses. Prüft, dass es zur Person gehört und ein PDF ist."""
+        z = next((x for x in self.zeugnisse(pid, kategorie) if x["id"] == zeugnis_id), None)
+        if not z:
+            raise KeyError(f"Zeugnis {zeugnis_id} nicht im Archiv von Person {pid}")
+        r = self._http.get(z["url"])
+        loc = r.headers.get("location", "")
+        if r.status_code in (301, 302, 303) and "login" in loc.lower():
+            raise SessionAbgelaufen("Escola-Session abgelaufen (Umleitung auf Login)")
+        r.raise_for_status()
+        if not r.content.startswith(b"%PDF"):
+            raise RuntimeError("Escola lieferte kein PDF")
+        return z, r.content
+
     def person(self, pid: int, kategorie: str = "allActive", abschnitte: list[str] | None = None,
                mit_optionen: bool = False, gesundheit: bool = False, sensibel_zeigen: bool = False) -> dict:
         """Alle Felder einer Person, gruppiert nach Abschnitt, plus flaches Dict `felder`."""
