@@ -320,20 +320,31 @@ def parse_zeugnis_archiv(html: str) -> list[dict]:
 
 # ---------------------------------------------------------------- Escola-App und Logins (L12, #4)
 def parse_app_status(html: str) -> dict:
-    """Reiter „Escola App“ (Abschnitt `mobile`). Escola zeigt ein Symbol: `text-danger` + „App nicht aktiviert.“
-    bzw. `text-success` (aus dem Escola-Skript `enableDisableMobile`). Aktiviert heisst: die Person darf die App
-    nutzen – nicht, dass sie sie schon installiert hat (dafür Logins/Geräte). Live geprüft 28.11.2026 nur der
-    Zustand „nicht aktiviert“ (niemand hatte die App aktiviert)."""
+    """Reiter „Escola App“ (Abschnitt `mobile`), live geprüft 28.11.2026 an TEST TEST (649):
+    - aus:  „App nicht aktiviert.“ (Button „aktivieren“)
+    - an:   „App <i>manuell</i> aktiviert.“ (bzw. ohne „manuell“, wenn Escola es automatisch freigibt), danach eine
+            Zeile pro Person „<Name>: z.Z. auf keinem Gerät via App eingeloggt“ bzw. mit Geräten.
+    „Aktiviert“ heisst freigeschaltet; ob die App auf einem Gerät läuft, sagt `app_eingeloggt`."""
     box = _soup(html).select_one("#mobile")
     if box is None:
-        return {"app_aktiviert": None, "app_schaltbar": False}
-    icon = box.select_one("i.text-success, i.text-danger")
+        return {"app_aktiviert": None, "app_manuell": None, "app_eingeloggt": None, "app_schaltbar": False}
+    for s in box.select("script"):
+        s.decompose()
     txt = _clean(box.get_text(" "))
-    if icon is not None:
-        aktiv = "text-success" in (icon.get("class") or [])
+    if re.search(r"App\s+nicht\s+aktiviert", txt):
+        aktiv = False
+    elif re.search(r"App\s+(?:\w+\s+)?aktiviert", txt):
+        aktiv = True
     else:
-        aktiv = None if not txt else "nicht aktiviert" not in txt
-    return {"app_aktiviert": aktiv, "app_schaltbar": box.select_one("button") is not None}
+        aktiv = None
+    eingeloggt = None
+    if aktiv:
+        eingeloggt = False if re.search(r"auf keinem Gerät", txt) else (True if re.search(r"eingeloggt", txt) else None)
+    elif aktiv is False:
+        eingeloggt = False
+    return {"app_aktiviert": aktiv, "app_manuell": bool(aktiv) and bool(re.search(r"App\s+manuell\s+aktiviert", txt)),
+            "app_eingeloggt": eingeloggt,
+            "app_schaltbar": any("enableDisableMobile" in (x.get("onclick") or "") for x in box.select("button"))}
 
 
 def parse_aktivitaet(html: str) -> dict:

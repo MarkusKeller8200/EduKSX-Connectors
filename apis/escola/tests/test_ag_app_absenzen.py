@@ -15,7 +15,12 @@ MOBILE_AUS = '<div id="mobile"><br><i class="fas fa-window-close text-danger"></
 MOBILE_AUS_SCHALTBAR = ('<div id="mobile"><br><i class="fas fa-window-close text-danger"></i> App nicht aktiviert.<hr>'
                         '<button type="button" class="btn btn-primary btn-sm" onclick="javascript:enableDisableMobile(649,false);">'
                         'aktivieren</button><hr></div>')
-MOBILE_AN = '<div id="mobile"><br><i class="fas fa-check text-success"></i> App aktiviert.<hr></div>'  # abgeleitet, nicht live
+MOBILE_AN = ('<div id="mobile"><br><i class="fas fa-check-square text-info"></i> App <i>manuell</i> aktiviert.<br>'  # live 28.11.2026
+             '<i class="fas fa-window-close text-danger"></i> TEST TEST: z.Z. auf keinem Gerät via App eingeloggt<hr>'
+             '<button type="button" class="btn btn-danger btn-sm" onclick="javascript:enableDisableMobile(649,false);">deaktivieren</button>'
+             '&nbsp;<button type="button" class="btn btn-secondary btn-sm" onclick="javascript:enableDisableMobile(649,true);">'
+             'manuelle Übersteuerung aufheben</button><hr><script>if(enabled){}</script>'
+             '<button type="button" class="btn btn-default btn-sm show-welcome-message-modal">Willkommensnachricht (PDF)</button></div>')
 AKTIVITAET = ('<table class="niceTableNarrow" width="100%"><tr valign="top"><td width="130">Erstellung</td>'
               '<td>Sa, 14. Nov 2026, 20:50<div class="smaller-font-size">Erstellt von Keller Markus</div></td></tr>'
               '<tr valign="top"><td width="130">Anzahl Logins</td><td>{n}</td></tr>'
@@ -24,10 +29,15 @@ AKTIVITAET = ('<table class="niceTableNarrow" width="100%"><tr valign="top"><td 
 
 # ------------------------------------------------------------------ Parser App-Status
 def test_parse_app_status():
-    assert PP.parse_app_status(MOBILE_AUS) == {"app_aktiviert": False, "app_schaltbar": False}
-    assert PP.parse_app_status(MOBILE_AUS_SCHALTBAR) == {"app_aktiviert": False, "app_schaltbar": True}
-    assert PP.parse_app_status(MOBILE_AN)["app_aktiviert"] is True
-    assert PP.parse_app_status("<div>kein Reiter</div>") == {"app_aktiviert": None, "app_schaltbar": False}
+    aus = {"app_aktiviert": False, "app_manuell": False, "app_eingeloggt": False}
+    assert PP.parse_app_status(MOBILE_AUS) == {**aus, "app_schaltbar": False}
+    assert PP.parse_app_status(MOBILE_AUS_SCHALTBAR) == {**aus, "app_schaltbar": True}
+    assert PP.parse_app_status(MOBILE_AN) == {"app_aktiviert": True, "app_manuell": True, "app_eingeloggt": False,
+                                              "app_schaltbar": True}
+    an_auto = MOBILE_AN.replace("App <i>manuell</i> aktiviert", "App aktiviert").replace(
+        "z.Z. auf keinem Gerät via App eingeloggt", "z.Z. auf 1 Gerät via App eingeloggt")
+    assert PP.parse_app_status(an_auto)["app_manuell"] is False and PP.parse_app_status(an_auto)["app_eingeloggt"] is True
+    assert PP.parse_app_status("<div>kein Reiter</div>")["app_aktiviert"] is None
 
 
 def test_parse_aktivitaet():
@@ -46,7 +56,8 @@ class FakeApp(FakePersonen):
 
 def test_endpunkt_person_app(monkeypatch):
     api = make(monkeypatch, FakeApp(), schreiben=False)
-    assert api.get("/personen/650/app").json() == {"person_id": 650, "app_aktiviert": False, "app_schaltbar": False,
+    assert api.get("/personen/650/app").json() == {"person_id": 650, "app_aktiviert": False, "app_manuell": False,
+                                                    "app_eingeloggt": False, "app_schaltbar": False,
                                                     "anzahl_logins": 0, "letzter_login": None}
     assert api.get("/personen/1/app").status_code == 404
 
@@ -55,6 +66,7 @@ def test_endpunkt_person_app(monkeypatch):
 class FakeAG:
     def __init__(self):
         self.posts = []
+        self.html = (FX / "stundenplan_92.html").read_text(encoding="utf-8")
 
     def __call__(self, req: httpx.Request) -> httpx.Response:
         url = str(req.url)
@@ -67,10 +79,27 @@ class FakeAG:
                 [{"id": 3, "name": "TEST", "schoolName": "Hinterbirch", "count": 1}] if form["schul_id"] == "1" else []))
         if "application_workgroup.php" in url:
             assert form == {"mode": "0", "workgroupId": "3"}
-            return httpx.Response(200, text=(FX / "stundenplan_92.html").read_text(encoding="utf-8"))
+            return httpx.Response(200, text=self.html)
         if "application_class.php" in url:
             return httpx.Response(200, text="Es wurde keine Klasse gewählt")
         return httpx.Response(404)
+
+
+AG_ZELLE = ('<div id="content_A_2" class="timetable-lesson-container"><table width="100%" height="33" class="stundenplan_innen">'
+            '<tbody><tr><td width="166" style="border:none;"><a class="tipped" title="&lt;b&gt;Deutsch&lt;/b&gt;&lt;br&gt;TEST TEST '
+            '&lt;br /&gt;Arbeitsgruppe: TEST "><span class="timetable-course-name">D</span></a>'
+            '<div style="font-size:9px;margin-top:3px;line-height:12px;">, O. SUS</div></td></tr></tbody></table></div>')
+
+
+def test_stundenplan_arbeitsgruppe_zelle_live(monkeypatch):
+    """Zelle wie live am 28.11.2026 (Test-Eintrag Deutsch/TEST TEST in AG TEST 3, danach gelöscht)."""
+    fake = FakeAG()
+    fake.html = "<div>" + AG_ZELLE + "</div>"
+    api = make(monkeypatch, fake, schreiben=False)
+    assert api.get("/arbeitsgruppen/3/stundenplan").json() == [{
+        "arbeitsgruppe_id": 3, "tag_code": "A", "lektion_id": 2, "fach_kuerzel": "D", "fach": "Deutsch",
+        "lehrpersonen": ["TEST TEST"], "lehrpersonen_kuerzel": [], "raeume": [], "raeume_kuerzel": [],
+        "zusatz": "O. SUS", "arbeitsgruppe": "TEST"}]
 
 
 def test_stundenplan_arbeitsgruppe(monkeypatch):
