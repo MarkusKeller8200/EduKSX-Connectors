@@ -6,11 +6,6 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
 
 ## [Unveröffentlicht]
 
-### Hinzugefügt
-- CMI-API 0.8.0 (#38): `POST /zeugnisse` – Zeugnis-PDFs gesammelt in die Lernendendossiers ablegen
-- Escola-API 1.16.0 (#39): Zeugnisse aus dem Zeugnis-/Formular-Archiv lesen und als PDF herunterladen
-  (`/schueler/{id}/zeugnisse`, `/klassen/{id}/zeugnisse`), Schalter `ESCOLA_ZEUGNISSE`
-
 ### Geändert
 - Escola-Doku (README › Personenimport, WORKFLOWS WF-11/L10, #2): Escolas Import-Korrekturen am 27.11.2026 live
   nachgeprüft – Abteilung (Firma), PLZ Geschäft, Berechtigung (EB/IB/Keine, mit ÜBERSCHREIBEN auch bei verknüpften
@@ -20,6 +15,7 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
   Klassenzuteilung endet am Vortag, neue Zuteilung mit eigener Dauer
 
 ### Hinzugefügt
+- CMI-API 0.8.0 (#38): `POST /zeugnisse` – Zeugnis-PDFs gesammelt in die Lernendendossiers ablegen
 - Escola-API 1.17.0 (#39): Zeugnisse aus dem Zeugnis-/Formular-Archiv lesen und als PDF herunterladen
   (`/schueler/{id}/zeugnisse`, `/klassen/{id}/zeugnisse`), Schalter `ESCOLA_ZEUGNISSE`
 - Escola-API 1.16.0: Schullaufbahn lesen, Klassenbeginn setzen (pro SuS und pro Klasse, z. B. ab 1.8.), weil

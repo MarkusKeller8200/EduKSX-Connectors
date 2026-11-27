@@ -11,7 +11,7 @@ gehören nie ins Repo (nur `.env.example`).
 
 | Ordner | System | Version | Stand | Doku |
 |---|---|---|---|---|
-| [`apis/escola`](apis/escola) | Escola (sekbuelach.ch) – Stammdaten, Stundenplan, Schüler:innen, Personen, Rollen, Fächer-Zuteilung, Bezugspersonen, Schuljahr vorbereiten, Zeugnisse | 1.16.0 | Login mit 2FA live bestätigt, Lesen live geprüft; Schreib-Testläufe offen | [README](apis/escola/README.md) · [Workflows](apis/escola/WORKFLOWS.md) |
+| [`apis/escola`](apis/escola) | Escola (sekbuelach.ch) – Stammdaten, Stundenplan, Schüler:innen, Personen, Rollen, Fächer-Zuteilung, Bezugspersonen, Schuljahr vorbereiten, Zeugnisse | 1.17.0 | Login mit 2FA live bestätigt, Lesen live geprüft; Schreib-Testläufe offen | [README](apis/escola/README.md) · [Workflows](apis/escola/WORKFLOWS.md) |
 | [`apis/slplaner`](apis/slplaner) | SL-Planer (Seabird AG) – Ressourcen, Einheiten, Pensenplanung, Pensen, Personaldossier/MAB (nur lesen) | 0.1.0 | nach Doku 18.2.2026 gebaut, noch nicht live geprüft | [README](apis/slplaner/README.md) · [Workflows](apis/slplaner/WORKFLOWS.md) |
 | [`apis/cmi`](apis/cmi) | CMI (CM Informatik, CMI Schule) – Kontakte synchronisieren und vollständig lesen, Schüler-/Personaldossiers, Klassenzuteilung, Dokumente hochladen | 0.8.0 | nach Swagger des CMI-Connectors gebaut, noch nicht live geprüft | [README](apis/cmi/README.md) · [Workflows](apis/cmi/WORKFLOWS.md) |
 
