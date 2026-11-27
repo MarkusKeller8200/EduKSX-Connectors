@@ -6,6 +6,14 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
 
 ## [Unveröffentlicht]
 
+### Geändert
+- Escola-Doku (README › Personenimport, WORKFLOWS WF-11/L10, #2): Escolas Import-Korrekturen am 27.11.2026 live
+  nachgeprüft – Abteilung (Firma), PLZ Geschäft, Berechtigung (EB/IB/Keine, mit ÜBERSCHREIBEN auch bei verknüpften
+  Vertreter:innen), Vertreter-Geburtstag, Ja/Nein-Felder inkl. Jod, Auto-Matching, eigene Adresse neuer SuS;
+  Umgehungen (Spalte weglassen, Berechtigung nachträglich per API) entfallen
+- CMI-API 0.7.1 (#36): Klassenwechsel wie «Klassenumteilung» in CMI – Schullaufbahn bleibt, bisherige
+  Klassenzuteilung endet am Vortag, neue Zuteilung mit eigener Dauer
+
 ### Hinzugefügt
 - Testplattform 0.1.0 (#41, #43): Webseite zum Testen aller APIs (`testplattform/`, Port 8090,
   `start-testplattform.command`/`.bat`); jede API ist ein Plugin mit eigener Testseite, Tester mit Beispielwerten,
@@ -17,16 +25,6 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
   (`shared/plugin_export.py`), Prüfung in `pruefen.py`, Export für das Intranet (#48)
 - Escola-API 1.18.0 (#44), CMI-API 0.9.0 (#45), SL-Planer-API 0.2.0 (#46), Vorlage 0.2.0 (#47): Beschreibungen
   für alle Endpunkte, `api.json` → `plugin`
-
-### Geändert
-- Escola-Doku (README › Personenimport, WORKFLOWS WF-11/L10, #2): Escolas Import-Korrekturen am 27.11.2026 live
-  nachgeprüft – Abteilung (Firma), PLZ Geschäft, Berechtigung (EB/IB/Keine, mit ÜBERSCHREIBEN auch bei verknüpften
-  Vertreter:innen), Vertreter-Geburtstag, Ja/Nein-Felder inkl. Jod, Auto-Matching, eigene Adresse neuer SuS;
-  Umgehungen (Spalte weglassen, Berechtigung nachträglich per API) entfallen
-- CMI-API 0.7.1 (#36): Klassenwechsel wie «Klassenumteilung» in CMI – Schullaufbahn bleibt, bisherige
-  Klassenzuteilung endet am Vortag, neue Zuteilung mit eigener Dauer
-
-### Hinzugefügt
 - CMI-API 0.8.0 (#38): `POST /zeugnisse` – Zeugnis-PDFs gesammelt in die Lernendendossiers ablegen
 - Escola-API 1.17.0 (#39): Zeugnisse aus dem Zeugnis-/Formular-Archiv lesen und als PDF herunterladen
   (`/schueler/{id}/zeugnisse`, `/klassen/{id}/zeugnisse`), Schalter `ESCOLA_ZEUGNISSE`

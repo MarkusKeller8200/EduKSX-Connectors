@@ -29,7 +29,7 @@
 | SL-Planer: Ressourcen, Einheiten, Pensenplanung, Pensen, Personaldossier/MAB (nur lesen) | nach Doku gebaut, nicht live; Annahmen ZU PRÜFEN | SL-Planer 0.1.0 | `apis/slplaner/README.md`, #20 |
 | CMI: Kontakte synchronisieren, Schüler-/Personaldossier, Klassen ein-/umteilen, Dokumente hochladen | nach Swagger des CMI-Connectors gebaut, nicht live; Annahmen ZU PRÜFEN | CMI 0.1.0 | `apis/cmi/README.md`, #23 |
 | Testplattform: Webseite für alle APIs, je API eine Testseite aus `GET /plugin.json` | gebaut, Tests ohne Netzwerk, lokal im Browser geprüft (ohne Fremdsysteme) | Testplattform 0.1.0 | `testplattform/README.md`, #41, #43 |
-| Plugin-Beschreibung je API (OpenAPI + `x-eduksx` + `api.json`), Export fürs Intranet | gebaut, in `pruefen.py` | Escola 1.17.0, CMI 0.9.0, SL-Planer 0.2.0 | `docs/konventionen.md`, #42, #48 |
+| Plugin-Beschreibung je API (OpenAPI + `x-eduksx` + `api.json`), Export fürs Intranet | gebaut, in `pruefen.py` | Escola 1.18.0, CMI 0.9.0, SL-Planer 0.2.0 | `docs/konventionen.md`, #42, #48 |
 | GitHub-Blueprint | angewendet (Rest von Hand) | Repo 0.1.0 | `docs/GITHUB-ABLAUF.md` |
 
 ## Offen bzw. geplant
