@@ -1000,6 +1000,20 @@ class EscolaClient:
             return sorted(res.values(), key=lambda x: (x["schulhaus"] or "", x["name"] or ""))
         return self._cached(f"arbeitsgruppen:{schuljahr}", load, refresh)
 
+    def arbeitsgruppe_stundenplan(self, ag_id: int) -> list[dict]:
+        """Stundenplan-Einträge einer Arbeitsgruppe (L8, #13). Escola zeigt Arbeitsgruppen nicht mit
+        `application_class.php` (liefert „Es wurde keine Klasse gewählt“), sondern mit
+        `application_workgroup.php` (mode=0, workgroupId) – gleiches Raster, gleiche Zellen (live 28.11.2026)."""
+        ag = int(ag_id)
+        if ag not in {w["id"] for w in self.arbeitsgruppen()}:
+            raise KeyError(f"Unbekannte Arbeitsgruppe {ag}")
+        with self._lock:
+            self._aktivieren({"typ": "Arbeitsgruppe", "id": ag})
+            html = self._post("inc/ajax/timetable/application_workgroup.php", {"mode": 0, "workgroupId": ag})
+        if "content_" not in html:
+            raise RuntimeError(f"Escola hat keinen Stundenplan der Arbeitsgruppe {ag} geliefert: {P._clean(html)[:120]}")
+        return [{"arbeitsgruppe_id": ag, **e} for e in P.parse_stundenplan(html)]
+
     def schueler_arbeitsgruppen(self, pid: int, schuljahr: int = 0) -> list[dict]:
         import json as _json
         with self._lock:
@@ -1134,7 +1148,9 @@ class EscolaClient:
         - Abs gibt es nur für die ganze Klasse -> für Nicht-Klassenlehrpersonen nicht setzbar.
         - Gesundheit wird nicht über die API gesetzt (folgt KLR).
         - Arbeitsgruppen: nur Fächer (keine KLR/FP/SpM; Abs nicht vorgesehen).
-        - Kommendes Schuljahr: nur Fächer (Rechte dort noch nicht live geprüft).
+        - Kommendes Schuljahr: Fächer und Rechte (live geprüft 28.11.2026 an TEST_A1a/649: FP gesetzt und
+          zurückgenommen). Escola schaltet Rechte und entfernt Zuteilungen im Schuljahr, auf das die Sitzung
+          steht -> vorher Matrix mit school_year=1 öffnen, danach immer zurückstellen.
         Vorlagen: klassenlehrperson (KLR), fachlehrperson (nur Fächer, keine Rechte),
         sopae (alle Fächer + SpM + FP)."""
         lp_id = int(lp_id)
@@ -1191,9 +1207,6 @@ class EscolaClient:
             if not klr_end and aktuell["abs"] and "abs" not in aktuell["automatisch"]:
                 soll.setdefault("abs", False)
         rechte_aend = {k: v for k, v in soll.items() if v != aktuell[k]}
-        if rechte_aend and schuljahr:
-            raise ValueError("Rechte fürs kommende Schuljahr setzt die API noch nicht (nur Fächer); "
-                             "Rechte nach dem Schuljahreswechsel setzen")
         reihenfolge = sorted(rechte_aend, key=lambda k: (k != "klr", k))
         plan = {"lehrperson_id": lp_id, **self._kopf(ziel, schuljahr), "faecher_hinzu": sorted(hinzu),
                 "faecher_weg": sorted(weg), "rechte": {k: rechte_aend[k] for k in reihenfolge}}
@@ -1208,6 +1221,9 @@ class EscolaClient:
                     self._lehrperson_oeffnen(lp_id, ziel, schuljahr)
                     self._post(self.LP + "ajax_functions_lehrpersonen.php",
                                {"type": 1, "fach_id": fid, "wert": 1, **self._ziel_params(ziel, schuljahr)})
+                if schuljahr and (reihenfolge or weg):
+                    self._aktivieren(ziel)
+                    self._post(self.LP + "lehrpersonen_faecher.php", {"mode": 0, "school_year": 1})
                 if endfaecher:
                     for k in reihenfolge:
                         d = {"mode": self.RECHTE_MODI[k], "lehrer_id": lp_id, "new_value": int(rechte_aend[k])}
@@ -1216,7 +1232,8 @@ class EscolaClient:
                         self._post(self.LP + "lehrpersonen_faecher.php", d)
                 if weg:
                     # Zuteilungsnummern gelten nur im aktiven Kontext (Klasse bzw. Arbeitsgruppe) -> neu aktivieren
-                    self._aktivieren(ziel)
+                    if not schuljahr:
+                        self._aktivieren(ziel)
                     for fid in sorted(weg):
                         self._post(self.LP + "lehrpersonen_faecher.php", {"mode": 2, "assignment": assign[fid]})
             finally:
@@ -1892,7 +1909,7 @@ class EscolaClient:
                         "nachname": s.get("nachname"), "vorname": s.get("vorname")} for s in rows),
                       key=lambda r: (r["schulhaus"] or "", r["klasse"] or "", r["nachname"] or "", r["vorname"] or ""))
 
-    def eltern_der_klasse(self, klasse_id: int, schuljahr: int = 0) -> list[dict]:
+    def eltern_der_klasse(self, klasse_id: int, schuljahr: int = 0, app: bool = False) -> list[dict]:
         """Alle Bezugspersonen der Schüler:innen einer Klasse, eine Zeile pro Kind und Bezugsperson –
         Grundlage für App-Onboarding, Zuteilungsbrief und Nachfassen (WF-14, WF-15). Kinder ohne
         Bezugsperson erscheinen mit leeren Feldern, damit Lücken auffallen."""
@@ -1905,7 +1922,166 @@ class EscolaClient:
                             "bezugsperson_id": b.get("person_id"), "bezugsperson": b.get("name"),
                             "funktion": b.get("funktion"), "sorgerecht": b.get("sorgerecht"),
                             "aktiv": b.get("aktiv"), "gleiche_adresse": b.get("gleiche_adresse")})
+        if app:  # pro Bezugsperson einmal lesen (Geschwister teilen sich die Eltern)
+            status: dict[int, dict] = {}
+            for z in out:
+                bid = z["bezugsperson_id"]
+                if bid is None:
+                    z.update({"app_aktiviert": None, "anzahl_logins": None, "letzter_login": None})
+                    continue
+                if bid not in status:
+                    try:
+                        status[bid] = self.app_status(bid)
+                    except KeyError:
+                        status[bid] = {}
+                st = status[bid]
+                z.update({k: st.get(k) for k in ("app_aktiviert", "anzahl_logins", "letzter_login")})
         return out
+
+    # ------------------------------------------------------------------ Dokumente im Schülerdossier (L11, #3)
+    # Reiter „Dokumente“ ist die Vue-Komponente escola-docs-folder auf /escola/api/docs/root/global/students/{id}
+    # (live 28.11.2026 an SuS SuS 650: Wurzelordner „Schüler:innen-Dokumente“ mit Unterordnern der globalen Vorlage,
+    # z. B. „10_Schülergrunddaten“). Hochladen → lesen → herunterladen → löschen → lesen live geprüft (Testdatei).
+    # Dateien: `folderFileId` (für Download/Löschen), `name` ohne Endung + `extension`, `mimeType`, `size`, …
+    DOCS = "escola/api/docs/root/global/students/"
+
+    def _docs(self, methode: str, pfad: str, **kw):
+        import json as _json
+        r = self._http.request(methode, self.DOCS + pfad, headers={"Accept": "application/json"}, **kw)
+        if r.status_code in (403, 404):
+            raise KeyError(f"Escola: {r.status_code} für Dokumente {pfad}")
+        text = self._check(r)
+        data = _json.loads(text) if text.strip() else {}
+        return data.get("data", data) if isinstance(data, dict) else data
+
+    @staticmethod
+    def _ordner(d: dict) -> dict:
+        return {"id": d.get("id"), "name": d.get("name"), "pfad": [p.get("name") for p in d.get("path") or []],
+                "zugriff": d.get("accessLevel"), "sichtbar_eltern": d.get("isReachableForGuardians"),
+                "sichtbar_schueler": d.get("isReachableForStudents"),
+                "unterordner": [{"id": f.get("id"), "name": f.get("name"), "anzahl_dateien": f.get("filesCount"),
+                                 "sichtbar_eltern": f.get("isVisibleForGuardians"),
+                                 "sichtbar_schueler": f.get("isVisibleForStudents")} for f in d.get("folders") or []],
+                "dateien": d.get("files") or []}
+
+    def dokumente_ordner(self, pid: int, ordner_id: int | None = None) -> dict:
+        """Einen Ordner (Standard: Wurzelordner) mit Unterordnern und Dateien lesen."""
+        with self._lock:
+            if ordner_id is None:
+                ordner_id = (self._docs("GET", f"{int(pid)}") or {}).get("rootFolderId")
+                if not ordner_id:
+                    raise KeyError(f"Kein Dokumenten-Ordner für Person {pid}")
+            return self._ordner(self._docs("GET", f"{int(pid)}/folders/{int(ordner_id)}"))
+
+    def dokumente_alle(self, pid: int) -> list[dict]:
+        """Alle Dateien aller Ordner (rekursiv), je Datei mit Ordner-ID und Ordnerpfad."""
+        out, offen, gesehen = [], [None], set()
+        while offen:
+            o = self.dokumente_ordner(pid, offen.pop(0))
+            if o["id"] in gesehen:
+                continue
+            gesehen.add(o["id"])
+            out += [{"ordner_id": o["id"], "ordner": " / ".join(o["pfad"]), **f} for f in o["dateien"]]
+            offen += [u["id"] for u in o["unterordner"]]
+        return out
+
+    def dokument_herunterladen(self, pid: int, datei_id: int) -> tuple[bytes, str, str]:
+        with self._lock:
+            r = self._http.get(f"{self.DOCS}{int(pid)}/folder-files/{int(datei_id)}")
+        if r.status_code in (403, 404):
+            raise KeyError(f"Datei {datei_id} nicht gefunden")
+        self._check(r) if "text/html" in r.headers.get("content-type", "") else r.raise_for_status()
+        name = r.headers.get("content-disposition", "")
+        return r.content, r.headers.get("content-type", "application/octet-stream"), name
+
+    def dokument_hochladen(self, pid: int, ordner_id: int, dateiname: str, inhalt: bytes,
+                           mime: str = "application/octet-stream", probelauf: bool = True) -> dict:
+        """Datei in einen Ordner hochladen (Escola: multipart, Feld „file“). Probelauf prüft Ordner und Name."""
+        o = self.dokumente_ordner(pid, ordner_id)
+        if not dateiname or "/" in dateiname or "\\" in dateiname:
+            raise ValueError("Ungültiger Dateiname")
+        voll = lambda f: f"{f.get('name')}.{f['extension']}" if f.get("extension") else (f.get("name") or "")
+        if any(voll(f).lower() == dateiname.lower() for f in o["dateien"]):
+            raise ValueError(f"Im Ordner „{o['name']}“ gibt es schon eine Datei „{dateiname}“")
+        plan = {"person_id": int(pid), "ordner_id": o["id"], "ordner": " / ".join(o["pfad"]), "datei": dateiname,
+                "groesse": len(inhalt), "probelauf": probelauf}
+        if probelauf:
+            return plan
+        with self._lock:
+            data = self._docs("POST", f"{int(pid)}/folders/{o['id']}/files", files={"file": (dateiname, inhalt, mime)})
+        if not isinstance(data, dict) or not data.get("folderFileId"):
+            raise RuntimeError(f"Escola hat den Upload nicht bestätigt: {str(data)[:150]}")
+        return {**plan, "datei_id": data["folderFileId"], "escola": data}
+
+    def dokument_loeschen(self, pid: int, datei_id: int, probelauf: bool = True) -> dict:
+        plan = {"person_id": int(pid), "datei_id": int(datei_id), "probelauf": probelauf}
+        if probelauf:
+            return plan
+        with self._lock:
+            self._docs("DELETE", f"{int(pid)}/folder-files/{int(datei_id)}")
+        return {**plan, "geloescht": True}
+
+    # ------------------------------------------------------------------ Absenzen (L17, #9)
+    # Das Absenzen-Modul („A“ in Klassen/Gruppen) ist eine Vue-Komponente auf Escolas REST-Schnittstelle
+    # /escola/api/absences/… (Sitzungs-Cookie, JSON; live mitgeschnitten 28.11.2026). Einträge brauchen
+    # `semester` (Ganzzahl aus absence-semesters) und `sorting`. Am 28.11.2026 hatte keine Klasse ein
+    # Absenzen-Semester (Modul noch ungenutzt) – das Format der Einträge ist deshalb noch nicht geprüft.
+    ABS = "escola/api/absences/"
+    ABS_SORTIERUNG = ("date-asc", "date-desc", "created-at-asc", "created-at-desc")
+
+    def _abs_get(self, pfad: str, params: dict | None = None):
+        import json as _json
+        r = self._http.get(self.ABS + pfad, params=params, headers={"Accept": "application/json"})
+        if r.status_code == 404:
+            raise KeyError(f"Escola kennt {pfad} nicht")
+        if r.status_code == 422:
+            try:
+                raise ValueError(_json.loads(r.text).get("message", r.text[:200]))
+            except ValueError as e:
+                raise ValueError(str(e)) from None
+        text = self._check(r)
+        return _json.loads(text) if text.strip() else None
+
+    def absenzen_auswahl(self, klasse_id: int) -> dict:
+        """Semester, Schüler:innen und Absenzarten einer Klasse (Auswahllisten des Moduls)."""
+        k = int(klasse_id)
+        with self._lock:
+            sem = self._abs_get(f"selects/schoolclasses/{k}/absence-semesters") or {}
+            sus = self._abs_get(f"selects/schoolclasses/{k}/students") or {}
+            arten = self._abs_get(f"selects/schoolclasses/{k}/types") or []
+        opt = lambda d: [{"id": o.get("value"), "text": o.get("text")} for o in (d.get("options") if isinstance(d, dict) else d) or []
+                         if not o.get("isGroup") and o.get("value") is not None]
+        return {"klasse_id": k, "semester": opt(sem), "schueler": opt(sus),
+                "arten": [{"code": a["id"], "text": a["text"]} for a in opt(arten)]}
+
+    def absenzen(self, semester: int, klasse_id: int | None = None, schueler_id: int | None = None,
+                 sortierung: str = "date-asc") -> list:
+        """Absenz-Einträge einer Klasse bzw. einer Schülerin in einem Absenzen-Semester (unverändert von Escola)."""
+        if bool(klasse_id) == bool(schueler_id):
+            raise ValueError("Genau eines angeben: klasse_id oder schueler_id")
+        if sortierung not in self.ABS_SORTIERUNG:
+            raise ValueError(f"sortierung: {', '.join(self.ABS_SORTIERUNG)}")
+        pfad = f"schoolclasses/{int(klasse_id)}/absences" if klasse_id else f"students/{int(schueler_id)}/absences"
+        with self._lock:
+            data = self._abs_get(pfad, {"semester": int(semester), "sorting": sortierung})
+        return data if isinstance(data, list) else []
+
+    def app_status(self, pid: int) -> dict:
+        """App freigeschaltet? je angemeldet? (Reiter „Escola App“ und „Aktivität“, nur lesen, L12/#4)."""
+        from . import personen as PP
+        with self._lock:
+            reiter = self._raw(self.PERS + "show_reiter.php",
+                               f"active_person={int(pid)}&pageRequest=154&personCategory=allActive&searchMode=false")
+            vorhanden = PP.parse_reiter(reiter)
+            if not vorhanden:
+                raise KeyError(f"Person {pid} nicht gefunden oder nicht sichtbar")
+            res = {"person_id": int(pid), "app_aktiviert": None, "app_schaltbar": False,
+                   "anzahl_logins": None, "letzter_login": None}
+            for abschnitt, parser in (("mobile", PP.parse_app_status), ("activity", PP.parse_aktivitaet)):
+                if abschnitt in vorhanden:
+                    res.update(parser(self._raw(self.PERS + "show_person_details.php",
+                                                f"active_section={abschnitt}&pageRequest=154&personCategory=allActive&searchMode=false")))
+        return res
 
     def import_pruefen(self, personen: list[dict]) -> list[dict]:
         """Vorprüfung einer Importliste mit der Escola-Duplikatprüfung („Neue Person“), ohne etwas anzulegen.

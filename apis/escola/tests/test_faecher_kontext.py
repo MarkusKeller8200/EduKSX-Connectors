@@ -21,6 +21,7 @@ class Fake:
         self.sitzung_sj = 0
         self.zut = {}               # (ziel, sj) -> {assign_id: (lp, fach)}
         self.next = {"k": 700, "ag": 4}
+        self.rechte = {}            # (ziel, sj, lp) -> {prefix: 0/1}; wirkt im Sitzungs-Schuljahr
 
     def _tab(self, ziel, sj):
         return self.zut.setdefault((ziel, sj), {})
@@ -32,7 +33,7 @@ class Fake:
                 f'<tr valign="top"><td><strong>{FAECHER[f]}</strong></td><td><table class="normal"><tr>'
                 f'<td><input type="checkbox" class="teacher-course-assignment-cb" id="teacherCourseAssign_{a}">'
                 f'<span class="shrink-0">LP {lp}</span></td>'
-                + "".join(f'<td><input class="offscreen" id="{p}x" /></td>' for p in
+                + "".join(f'<td><input class="offscreen" id="{p}x" {"checked" if self.rechte.get((self.ziel, self.sitzung_sj, lp), {}).get(p) else ""}/></td>' for p in
                           ("edit-admin-rights", "edit-sne-rights", "edit-measures-rights", "edit-absences-rights",
                            "edit-access-to-health-data"))
                 + f'<td><a href="javascript:edit_assignment({lp},{f});"></a></td></tr></table></td></tr>'
@@ -74,6 +75,10 @@ class Fake:
         if mode == "0":
             if "school_year" in f:
                 self.sitzung_sj = int(f["school_year"])
+        elif mode in ("3", "16", "22", "23"):
+            prefix = {"3": "edit-admin-rights", "16": "edit-sne-rights", "22": "edit-measures-rights",
+                      "23": "edit-absences-rights"}[mode]
+            self.rechte.setdefault((self.ziel, self.sitzung_sj, int(f["lehrer_id"])), {})[prefix] = int(f["new_value"])
         elif mode == "2":
             # Zuteilungsnummer gilt im aktiven Kontext + Sitzungs-Schuljahr
             for sj in (self.sitzung_sj, 0, 1):
@@ -105,9 +110,11 @@ def test_kommendes_schuljahr_und_sitzung_zurueck(env):
     assert r["schuljahr"] == 1 and [f["id"] for f in r["nachher"]["faecher"]] == [12]
     assert fake._tab(("k", 120), 1) and not fake._tab(("k", 120), 0)
     assert fake.sitzung_sj == 0, "Sitzung muss wieder aufs aktuelle Schuljahr stehen"
-    with pytest.raises(ValueError, match="kommende Schuljahr"):
-        c.lehrperson_faecher_setzen(649, 120, rechte={"fp": True}, schuljahr=1)
-    assert fake.sitzung_sj == 0
+    r = c.lehrperson_faecher_setzen(649, 120, rechte={"fp": True}, schuljahr=1)  # live geprüft 28.11.2026
+    assert r["nachher"]["fp"] is True and fake.sitzung_sj == 0
+    assert fake.rechte[(("k", 120), 1, 649)]["edit-sne-rights"] == 1 and (("k", 120), 0, 649) not in fake.rechte
+    c.lehrperson_faecher_setzen(649, 120, rechte={"fp": False}, schuljahr=1)
+    assert fake.rechte[(("k", 120), 1, 649)]["edit-sne-rights"] == 0 and fake.sitzung_sj == 0
     c.lehrperson_faecher_setzen(649, 120, faecher_weg=[12], schuljahr=1)
     assert not fake._tab(("k", 120), 1) and fake.sitzung_sj == 0
 

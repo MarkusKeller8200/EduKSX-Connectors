@@ -633,6 +633,16 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
         """Alle Arbeitsgruppen mit ID, Name, Schulhaus und Anzahl Schüler:innen."""
         return out(c.arbeitsgruppen(schuljahr, refresh), format, "arbeitsgruppen")
 
+    @app.get("/arbeitsgruppen/{ag_id}/stundenplan", dependencies=deps, tags=["Arbeitsgruppen"],
+             summary="Stundenplan-Einträge einer Arbeitsgruppe")
+    def arbeitsgruppe_stundenplan(ag_id: int, format: Format = F, c: EscolaClient = Depends(get_client)):
+        """Einträge im Stundenplan einer Arbeitsgruppe (L8, #13), gleiche Felder wie bei Klassen."""
+        try:
+            rows = c.arbeitsgruppe_stundenplan(ag_id)
+        except KeyError as e:
+            raise HTTPException(404, str(e))
+        return out(rows, format, f"stundenplan_ag_{ag_id}")
+
     @app.get("/schueler/{pid}/arbeitsgruppen", dependencies=deps, tags=["Arbeitsgruppen"])
     def schueler_arbeitsgruppen(pid: int, schuljahr: int = Query(0), c: EscolaClient = Depends(get_client)):
         """Arbeitsgruppen einer Schülerin / eines Schülers."""
@@ -660,25 +670,59 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
         except RuntimeError as e:
             raise HTTPException(409, str(e))
 
-    # Dokumente: vorbereitet, in Escola für dieses Konto noch nicht freigeschaltet
-    def _dok_platzhalter():
-        raise HTTPException(501, "Dokumente sind noch nicht aktiviert (Escola-Berechtigung „Schüler:innen-Dokumente“ fehlt). "
-                                 "Endpunkt ist als Platzhalter vorbereitet.")
+    # Dokumente im Schülerdossier (L11, #3) – schützenswert: eigener Schalter wie Zeugnisse
+    dokumente_erlaubt = flag("ESCOLA_DOKUMENTE")
 
-    @app.get("/schueler/{pid}/dokumente", dependencies=deps, tags=["Dokumente (Platzhalter)"])
-    def schueler_dokumente(pid: int):
-        """Ordner und Dateien einer Schülerin / eines Schülers – noch nicht aktiviert."""
-        _dok_platzhalter()
+    def _dok_check():
+        if not dokumente_erlaubt:
+            raise HTTPException(403, "Dokumente sind ausgeschaltet (ESCOLA_DOKUMENTE=1 setzen)")
+        if not api_key:
+            raise HTTPException(403, "Für Dokumente muss ESCOLA_API_KEY gesetzt sein")
 
-    @app.get("/schueler/{pid}/dokumente/{datei_id}", dependencies=deps, tags=["Dokumente (Platzhalter)"])
-    def schueler_dokument(pid: int, datei_id: int):
-        """Einzelne Datei herunterladen – noch nicht aktiviert."""
-        _dok_platzhalter()
+    def _dok(fn):
+        try:
+            return fn()
+        except KeyError as e:
+            raise HTTPException(404, str(e))
+        except ValueError as e:
+            raise HTTPException(400, str(e))
 
-    @app.get("/dokumente/struktur", dependencies=deps, tags=["Dokumente (Platzhalter)"])
-    def dokumente_struktur():
-        """Globale Ordnervorlage für Schüler:innen-Dokumente – noch nicht aktiviert."""
-        _dok_platzhalter()
+    @app.get("/schueler/{pid}/dokumente", dependencies=deps, tags=["Dokumente"],
+             summary="Ordner mit Unterordnern und Dateien (Schüler:innen-Dokumente)")
+    def schueler_dokumente(pid: int, ordner_id: int | None = Query(None, description="leer = Wurzelordner"),
+                           alle: bool = Query(False, description="alle Dateien aller Ordner als Liste"),
+                           c: EscolaClient = Depends(get_client)):
+        """Reiter „Dokumente“ einer Schülerin / eines Schülers. Dateifelder unverändert von Escola."""
+        _dok_check()
+        return _dok(lambda: c.dokumente_alle(pid) if alle else c.dokumente_ordner(pid, ordner_id))
+
+    @app.get("/schueler/{pid}/dokumente/{datei_id}", dependencies=deps, tags=["Dokumente"], summary="Datei herunterladen")
+    def schueler_dokument(pid: int, datei_id: int, c: EscolaClient = Depends(get_client)):
+        _dok_check()
+        inhalt, typ, cd = _dok(lambda: c.dokument_herunterladen(pid, datei_id))
+        return Response(inhalt, media_type=typ, headers={"Content-Disposition": cd} if cd else {})
+
+    @app.post("/schueler/{pid}/dokumente/{ordner_id}", dependencies=deps, tags=["Dokumente"],
+              summary="Datei in einen Ordner hochladen")
+    async def schueler_dokument_hochladen(pid: int, ordner_id: int, request: Request,
+                                         dateiname: str = Query(..., description="Name der Datei in Escola"),
+                                         probelauf: bool = Query(True), c: EscolaClient = Depends(get_client)):
+        """Rohdaten im Body (z. B. `curl --data-binary @datei.pdf`). Zuerst Probelauf."""
+        _dok_check()
+        _schreib_check(probelauf)
+        inhalt = await request.body()
+        if not inhalt:
+            raise HTTPException(400, "Leere Datei")
+        typ = request.headers.get("content-type", "application/octet-stream")
+        return _dok(lambda: c.dokument_hochladen(pid, ordner_id, dateiname, inhalt, typ, probelauf))
+
+    @app.delete("/schueler/{pid}/dokumente/{datei_id}", dependencies=deps, tags=["Dokumente"], summary="Datei löschen")
+    def schueler_dokument_loeschen(pid: int, datei_id: int, probelauf: bool = Query(True),
+                                   c: EscolaClient = Depends(get_client)):
+        """Nur für das Rückgängigmachen eines eigenen Uploads gedacht. Zuerst Probelauf."""
+        _dok_check()
+        _schreib_check(probelauf)
+        return _dok(lambda: c.dokument_loeschen(pid, datei_id, probelauf))
 
     # Zeugnis-Archiv (Personenverwaltung → «Zeugnis-/Formular-Archiv»), schützenswert: eigener Schalter
     zeugnisse_erlaubt = flag("ESCOLA_ZEUGNISSE")
@@ -937,12 +981,58 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
         return out(rows, format, f"felder_klasse_{klasse_id}")
 
     @app.get("/klassen/{klasse_id}/eltern", dependencies=deps, tags=["Schuljahr vorbereiten"])
-    def klasse_eltern(klasse_id: int, schuljahr: int = Query(0, ge=0, le=1), format: Format = F,
-                      c: EscolaClient = Depends(get_client)):
+    def klasse_eltern(klasse_id: int, schuljahr: int = Query(0, ge=0, le=1),
+                      app: bool = Query(False, description="App-Status je Bezugsperson mitlesen (langsamer): "
+                                                           "app_aktiviert, anzahl_logins, letzter_login"),
+                      nur_ohne_app: bool = Query(False, description="nur Bezugspersonen, die die App nicht aktiviert "
+                                                                    "oder sich nie angemeldet haben (setzt app=true)"),
+                      format: Format = F, c: EscolaClient = Depends(get_client)):
         """Alle Bezugspersonen der Schüler:innen einer Klasse (eine Zeile pro Kind und Bezugsperson) –
         für App-Onboarding, Zuteilungsbrief und Nachfassen. Kinder ohne Bezugsperson mit leeren Feldern.
-        Ob die Eltern die Escola-App aktiviert haben, kann die API noch nicht lesen (Issue L12)."""
-        return out(c.eltern_der_klasse(klasse_id, schuljahr), format, f"eltern_klasse_{klasse_id}")
+        Mit `app=true` zusätzlich der App-Status (L12, #4); `nur_ohne_app=true` liefert die Liste zum Nachfassen."""
+        rows = c.eltern_der_klasse(klasse_id, schuljahr, app=app or nur_ohne_app)
+        if nur_ohne_app:
+            rows = [r for r in rows if r["bezugsperson_id"] is not None
+                    and (r.get("app_aktiviert") is not True or not r.get("anzahl_logins"))]
+        return out(rows, format, f"eltern_klasse_{klasse_id}")
+
+    # ------------------------------------------------------------------ Absenzen (L17, #9)
+    def _abs(fn):
+        try:
+            return fn()
+        except KeyError as e:
+            raise HTTPException(404, str(e))
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+
+    @app.get("/klassen/{klasse_id}/absenzen/auswahl", dependencies=deps, tags=["Absenzen"],
+             summary="Absenzen-Semester, Schüler:innen und Absenzarten einer Klasse")
+    def absenzen_auswahl(klasse_id: int, c: EscolaClient = Depends(get_client)):
+        """Auswahllisten des Absenzen-Moduls. `semester` liefert die IDs für die Einträge (leer = noch keine Absenzen)."""
+        return _abs(lambda: c.absenzen_auswahl(klasse_id))
+
+    @app.get("/klassen/{klasse_id}/absenzen", dependencies=deps, tags=["Absenzen"], summary="Absenzen einer Klasse")
+    def klasse_absenzen(klasse_id: int, semester: int = Query(..., description="ID aus /absenzen/auswahl"),
+                        sortierung: str = Query("date-asc"), format: Format = F, c: EscolaClient = Depends(get_client)):
+        """Absenz-Einträge einer Klasse in einem Absenzen-Semester, Felder unverändert von Escola
+        (Format noch nicht live geprüft, weil Escola noch keine Absenzen enthält)."""
+        return out(_abs(lambda: c.absenzen(semester, klasse_id=klasse_id, sortierung=sortierung)), format,
+                   f"absenzen_klasse_{klasse_id}")
+
+    @app.get("/schueler/{pid}/absenzen", dependencies=deps, tags=["Absenzen"], summary="Absenzen einer Schülerin")
+    def schueler_absenzen(pid: int, semester: int = Query(...), sortierung: str = Query("date-asc"),
+                          format: Format = F, c: EscolaClient = Depends(get_client)):
+        """Absenz-Einträge einer Schülerin / eines Schülers in einem Absenzen-Semester."""
+        return out(_abs(lambda: c.absenzen(semester, schueler_id=pid, sortierung=sortierung)), format, f"absenzen_{pid}")
+
+    @app.get("/personen/{pid}/app", dependencies=deps, tags=["Schuljahr vorbereiten"],
+             summary="Escola-App: freigeschaltet, Anzahl Logins, letzter Login")
+    def person_app(pid: int, c: EscolaClient = Depends(get_client)):
+        """App-Status einer Person (Reiter „Escola App“ und „Aktivität“), nur lesen."""
+        try:
+            return c.app_status(pid)
+        except KeyError as e:
+            raise HTTPException(404, str(e))
 
     @app.post("/import/pruefen", dependencies=deps, tags=["Schuljahr vorbereiten"], openapi_extra={"x-eduksx": {"effect": "read", "danger": False}})
     def import_pruefen(body: ImportListe, format: Format = F, c: EscolaClient = Depends(get_client)):

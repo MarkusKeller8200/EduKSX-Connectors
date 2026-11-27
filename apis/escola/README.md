@@ -165,6 +165,7 @@ docker run -p 8080:8080 --env-file apis/escola/.env escola-api
 | Methode | Endpunkt | Zugriff | Zweck |
 |---|---|---|---|
 | GET | `/arbeitsgruppen` | 🔑 | Alle Arbeitsgruppen mit ID, Name, Schulhaus und Anzahl Schüler:innen |
+| GET | `/arbeitsgruppen/{id}/stundenplan` | 🔑 | Stundenplan-Einträge einer Arbeitsgruppe (L8, #13), CSV |
 | GET | `/schueler/{id}/arbeitsgruppen` | 🔑 | Arbeitsgruppen einer Schülerin / eines Schülers |
 | POST | `/schueler/{id}/arbeitsgruppen` | 🔑 ✏️ | In eine Arbeitsgruppe einteilen (`{"arbeitsgruppe_id": 3}`) |
 | DELETE | `/schueler/{id}/arbeitsgruppen/{ag_id}` | 🔑 ✏️ | Aus einer Arbeitsgruppe entfernen |
@@ -199,7 +200,7 @@ docker run -p 8080:8080 --env-file apis/escola/.env escola-api
 | GET | `/klassen/{id}/lehrpersonen?schuljahr=0\|1` | 🔑 | Alle Lehrpersonen einer Klasse mit Fächern, Art und Rechten KLR/FP/SpM/Abs/Gesundheit |
 | GET | `/arbeitsgruppen/{id}/lehrpersonen?schuljahr=0\|1` | 🔑 | Alle Lehrpersonen einer Arbeitsgruppe (Fachklasse) mit Fächern |
 | GET | `/lehrpersonen/{id}/faecher?klasse_id=…` bzw. `?arbeitsgruppe_id=…` | 🔑 | Alle Fächer, welche die Lehrperson hat, und ihre Rechte |
-| PATCH | `/lehrpersonen/{id}/faecher` | 🔑 ✏️ | Fächer zuteilen/entfernen, Rechte setzen oder Vorlage anwenden (`klassenlehrperson`, `fachlehrperson`, `sopae`); Klasse oder Arbeitsgruppe, `schuljahr` 0/1 |
+| PATCH | `/lehrpersonen/{id}/faecher` | 🔑 ✏️ | Fächer zuteilen/entfernen, Rechte setzen oder Vorlage anwenden (`klassenlehrperson`, `fachlehrperson`, `sopae`); Klasse oder Arbeitsgruppe, `schuljahr` 0/1 (Rechte im kommenden SJ seit 1.19) |
 
 ### Zeugnisse
 
@@ -211,13 +212,31 @@ docker run -p 8080:8080 --env-file apis/escola/.env escola-api
 | GET | `/schueler/{id}/zeugnisse/{zeugnis_id}/pdf` | 🔑 🔐 | Zeugnis als PDF herunterladen |
 | GET | `/klassen/{id}/zeugnisse` | 🔑 🔐 | Zeugnisse aller SuS einer Klasse (je SuS und Titel das neueste; `?schuljahr`, `?titel`, `?nur_definitiv`) – Grundlage für WF-27 |
 
-### Dokumente
+### Dokumente (L11, #3)
+
+📁 = nur mit `ESCOLA_DOKUMENTE=1` **und** `ESCOLA_API_KEY` (sonst `403`).
 
 | Methode | Endpunkt | Zugriff | Zweck |
 |---|---|---|---|
-| GET | `/dokumente/struktur` | ⏳ | Ordnervorlage der Schüler:innen-Dokumente |
-| GET | `/schueler/{id}/dokumente` | ⏳ | Ordner und Dateien einer Schülerin / eines Schülers |
-| GET | `/schueler/{id}/dokumente/{datei_id}` | ⏳ | Einzelne Datei herunterladen |
+| GET | `/schueler/{id}/dokumente` | 🔑 📁 | Wurzelordner bzw. `?ordner_id=` mit Unterordnern und Dateien; `?alle=true`: alle Dateien aller Ordner |
+| GET | `/schueler/{id}/dokumente/{datei_id}` | 🔑 📁 | Datei herunterladen |
+| POST | `/schueler/{id}/dokumente/{ordner_id}?dateiname=…` | 🔑 📁 ✏️ | Datei hochladen (Rohdaten im Body), Standard Probelauf |
+| DELETE | `/schueler/{id}/dokumente/{datei_id}` | 🔑 📁 ✏️ | Datei löschen (zum Rückgängigmachen eines Uploads), Standard Probelauf |
+
+### Absenzen (L17, #9)
+
+| Methode | Endpunkt | Zugriff | Zweck |
+|---|---|---|---|
+| GET | `/klassen/{id}/absenzen/auswahl` | 🔑 | Absenzen-Semester (IDs), Schüler:innen und Absenzarten einer Klasse |
+| GET | `/klassen/{id}/absenzen?semester=…` | 🔑 | Absenz-Einträge einer Klasse (Felder unverändert von Escola), CSV |
+| GET | `/schueler/{id}/absenzen?semester=…` | 🔑 | Absenz-Einträge einer Schülerin / eines Schülers |
+
+### Escola-App (L12, #4)
+
+| Methode | Endpunkt | Zugriff | Zweck |
+|---|---|---|---|
+| GET | `/personen/{id}/app` | 🔑 | App freigeschaltet (`app_aktiviert`), Anzahl Logins, letzter Login |
+| GET | `/klassen/{id}/eltern?app=true` | 🔑 | Eltern einer Klasse mit App-Status; `?nur_ohne_app=true` = Liste zum Nachfassen |
 
 ### Dokumentation der API selbst
 
@@ -674,11 +693,43 @@ PDF über `GET /api/0/de/MediaServer/Download/<id>/<Dateiname>`. Pro Zeugnis: `i
 CMI `nur_definitiv=true` verwenden. Zeugnisse erzeugen die Lehrpersonen; die API erzeugt keine.
 Aufgezeichnet am 26.11.2026 an der Testschülerin SUS OHNE KLASSE (ID 651).
 
-### Dokumente (Platzhalter)
+### Dokumente, Absenzen, App-Status, Arbeitsgruppen-Stundenplan (Erkundung 28.11.2026)
 
-`GET /schueler/{id}/dokumente`, `GET /schueler/{id}/dokumente/{datei_id}` und `GET /dokumente/struktur`
-sind vorbereitet, antworten aber mit `501 – noch nicht aktiviert`, bis die Escola-Berechtigung
-„Schüler:innen-Dokumente“ freigeschaltet und der Zugriff geprüft ist.
+Erkundet im eingebauten Browser mit angemeldetem Konto, **nur lesend**, an den Testobjekten (SuS SuS 650,
+H_A1a 92, Arbeitsgruppe TEST 3). Ins Repo kamen nur Aufrufe, Feldnamen und erfundene Testdaten.
+
+- **Stand Escola:** In allen echten Klassen meldet Escola «Es sind noch keine Schülerinnen und Schüler erfasst».
+  Nur H_A1a (92) hat Schüler:innen (Testpersonen 650, 651). Absenzen, Schülerdossier-Einträge und
+  Lernzielkontrollen gibt es deshalb noch nirgends. Bei 25 geprüften Lehrpersonen ist die App nicht aktiviert.
+- **Dokumente** (Reiter «Dokumente», Vue-Komponente `escola-docs-folder`): REST unter
+  `/escola/api/docs/root/global/students/{id}` → `rootFolderId`; `…/folders/{ordner}` → Ordner, Unterordner,
+  Dateien, `accessLevel`, Sichtbarkeit für Eltern/SuS; Hochladen `POST …/folders/{ordner}/files` (multipart,
+  Feld `file`), Herunterladen `GET …/folder-files/{datei}`, Löschen `DELETE …/folder-files/{datei}`. Bei 650:
+  Wurzel «Schüler:innen-Dokumente» (63) mit Vorlagenordner «10_Schülergrunddaten» (65), noch ohne Dateien.
+  **Live geprüft 28.11.2026** mit einer Testdatei bei 650 in «10_Schülergrunddaten»: hochladen → lesen →
+  herunterladen → löschen («File deleted.») → lesen, Endstand gleich Anfang. Datei-Felder: `folderFileId` (für
+  Download/Löschen), `name` **ohne** Endung plus `extension`, `mimeType`, `size`, `createdByName`, `createdAt`,
+  `isLocked`, `isSigned`. Der Download liefert die Datei mit `Content-Disposition: attachment; filename*=UTF-8''…`.
+- **Absenzen** (Modul «A», Vue-Komponente `escola-absences-schoolclass`): REST unter `/escola/api/absences/`:
+  `selects/schoolclasses/{id}/absence-semesters|students|types`, Einträge `schoolclasses/{id}/absences` bzw.
+  `students/{id}/absences` mit `semester` (Ganzzahl) und `sorting` (`date-asc|date-desc|created-at-asc|created-at-desc`).
+  Keine Klasse hat ein Absenzen-Semester → Einträge noch nie gesehen, Format offen.
+- **Schülerdossier/Verhalten** (Modul «S»): `inc/ajax/journal/show.php` (unsetSemester=1), dann
+  `inc/ajax/journal/show_entries.php` (classId, workgroupId=0); ohne SuS in der Klasse lehnt Escola ab.
+  **Noten/LZK** (Modul «N»): `inc/ajax/noten_show.php`. Beide noch ohne Daten → noch keine Endpunkte.
+- **App-Status** (Reiter «Escola App» = Abschnitt `mobile`, «Aktivität» = `activity`): «App nicht aktiviert»
+  mit rotem Symbol; aktiviert = grünes Symbol (aus Escolas Skript, nicht live gesehen). «Aktiviert» heisst
+  freigeschaltet, nicht installiert – ob jemand die App nutzt, zeigen `anzahl_logins` und `letzter_login`.
+  Escola bietet den Massenversand der Zugänge selbst an: Aktion «Willkommensnachricht (Mail/PDF) für Eltern
+  dieser SuS» in der Personenliste (nicht ausgelöst).
+- **Stundenplan Arbeitsgruppen:** `inc/ajax/timetable/application_workgroup.php` (mode=0, workgroupId) statt
+  `application_class.php` – gleiches Raster (`content_<tag>_<lektion>`). Alle 3 Arbeitsgruppen sind noch leer;
+  das Zellenformat ist deshalb nur am gleichen Raster geprüft.
+- **Rechte im kommenden Schuljahr (L6):** live geprüft 28.11.2026 an TEST_A1a mit TEST TEST (649): Fach Deutsch
+  fürs kommende SJ zugeteilt (Zuteilung 711), die Spalten KLR/FP/SpM/Abs/Gesundheit sind da und nicht gesperrt,
+  FP gesetzt und zurückgenommen, Zuteilung entfernt; Endstand gleich Anfang, aktuelles SJ unberührt. Escola schaltet
+  im Schuljahr, auf das die Sitzung steht (Matrix mit `school_year=1`). Die API setzt seit 1.19 Rechte auch mit
+  `"schuljahr": 1`.
 
 ### Lesen
 
@@ -827,6 +878,7 @@ Felder abgewiesen werden und dass das Passwort nirgends gespeichert wird.
 
 | Version | Datum | Änderungen |
 |---|---|---|
+| 1.19.0 | 28.11.2026 | Erkundung (nur lesen): Dokumente lesen/hochladen/löschen `/schueler/{id}/dokumente` (#3, Schalter `ESCOLA_DOKUMENTE`), Absenzen `/klassen/{id}/absenzen…` (#9), App-Status `/personen/{id}/app` und `/klassen/{id}/eltern?app=true` (#4), Stundenplan von Arbeitsgruppen (#13); Platzhalter `/dokumente/struktur` entfernt; Rechte auch fürs kommende Schuljahr (#11); Dokumente und Rechte kommendes SJ live in Escola geprüft |
 | 1.18.0 | 27.11.2026 | Plugin-Beschreibung für Testplattform und Intranet: `GET /plugin.json`, Beschriftungen für alle Endpunkte, Anmeldung und Import-Vorprüfung als lesend gekennzeichnet (`x-eduksx`), Sitzung in `api.json` → `plugin` (#42, #44) |
 | 1.17.0 | 26.11.2026 | Zeugnisse: `GET /schueler/{id}/zeugnisse`, `…/{zeugnis_id}/pdf`, `GET /klassen/{id}/zeugnisse`; Schalter `ESCOLA_ZEUGNISSE` (#39) |
 | 1.16.0 | 24.11.2026 | Schullaufbahn und Klassenbeginn (L19): `GET /schueler/{id}/schullaufbahn`, `PUT /schueler/{id}/klasse/beginn`, `POST /klassen/{id}/klassenbeginn`; Erkenntnisse zum Escola-Personenimport (WF-11, #2) dokumentiert |
