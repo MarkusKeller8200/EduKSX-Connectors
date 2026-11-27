@@ -12,14 +12,17 @@ gehören nie ins Repo (nur `.env.example`).
 | Ordner | System | Version | Stand | Doku |
 |---|---|---|---|---|
 | [`apis/escola`](apis/escola) | Escola (sekbuelach.ch) – Stammdaten, Stundenplan, Schüler:innen, Personen, Rollen, Fächer-Zuteilung, Bezugspersonen, Schuljahr vorbereiten, Zeugnisse | 1.17.0 | Login mit 2FA live bestätigt, Lesen live geprüft; Schreib-Testläufe offen | [README](apis/escola/README.md) · [Workflows](apis/escola/WORKFLOWS.md) |
-| [`apis/slplaner`](apis/slplaner) | SL-Planer (Seabird AG) – Ressourcen, Einheiten, Pensenplanung, Pensen, Personaldossier/MAB (nur lesen) | 0.1.0 | nach Doku 18.2.2026 gebaut, noch nicht live geprüft | [README](apis/slplaner/README.md) · [Workflows](apis/slplaner/WORKFLOWS.md) |
-| [`apis/cmi`](apis/cmi) | CMI (CM Informatik, CMI Schule) – Kontakte synchronisieren und vollständig lesen, Schüler-/Personaldossiers, Klassenzuteilung, Dokumente hochladen | 0.8.0 | nach Swagger des CMI-Connectors gebaut, noch nicht live geprüft | [README](apis/cmi/README.md) · [Workflows](apis/cmi/WORKFLOWS.md) |
+| [`apis/slplaner`](apis/slplaner) | SL-Planer (Seabird AG) – Ressourcen, Einheiten, Pensenplanung, Pensen, Personaldossier/MAB (nur lesen) | 0.2.0 | nach Doku 18.2.2026 gebaut, noch nicht live geprüft | [README](apis/slplaner/README.md) · [Workflows](apis/slplaner/WORKFLOWS.md) |
+| [`apis/cmi`](apis/cmi) | CMI (CM Informatik, CMI Schule) – Kontakte synchronisieren und vollständig lesen, Schüler-/Personaldossiers, Klassenzuteilung, Dokumente hochladen | 0.9.0 | nach Swagger des CMI-Connectors gebaut, noch nicht live geprüft | [README](apis/cmi/README.md) · [Workflows](apis/cmi/WORKFLOWS.md) |
 
 Neue APIs entstehen aus [`apis/_vorlage`](apis/_vorlage).
 
 - **Workflows aller Systeme:** [docs/workflows.md](docs/workflows.md) – erweiterbare Liste der Geschäftsfälle
 - **Workflows aus Sicht Escola:** [docs/workflows-escola.md](docs/workflows-escola.md) – Aufwand heute, Automatisierung, Wünsche an Escola (zum Teilen mit dem Anbieter)
-- **Testseite:** jede API bringt `/testseite` mit (Escola: lesen → schreiben → lesen → rückgängig → lesen)
+- **Testplattform:** [`testplattform/`](testplattform) – eine Webseite für alle APIs, je API eine Testseite aus
+  ihrer Plugin-Beschreibung (`GET /plugin.json`); Start mit `start-testplattform.command` / `.bat`. Dieselbe
+  Beschreibung übernimmt das Intranet als Plugin. Der Doppelklick startet alle APIs mit; die Oberfläche gibt es auch
+  auf [GitHub Pages](https://markuskeller8200.github.io/EduKSX-Connectors/) (APIs laufen trotzdem lokal). Escola behält zusätzlich `/testseite` (Workflows)
 - **Einsatz in Webanwendungen:** [docs/betrieb-webanwendung.md](docs/betrieb-webanwendung.md) – die APIs laufen als
   Server-Dienst (z. B. Docker), Webanwendungen rufen sie per HTTP auf
 - **Archiv:** [`_old/`](_old) – Stände vor dem Umzug ins Repo (nur zum Nachschlagen)
@@ -29,7 +32,8 @@ Neue APIs entstehen aus [`apis/_vorlage`](apis/_vorlage).
 ```
 apis/<system>/        eine API = ein Dienst (Python/FastAPI), eigene requirements, Tests, README, WORKFLOWS
 apis/_vorlage/        Gerüst für die nächste API
-shared/               gemeinsame Bausteine – erst befüllen, wenn eine zweite API sie braucht
+shared/               gemeinsame Bausteine (Plugin-Beschreibung plugin_export.py)
+testplattform/        Webseite zum Testen aller APIs (Plugins)
 docs/                 Architektur, Konventionen, Betrieb, Workflow-Übersicht
 _old/                 Archiv (frühere Kopien, nicht mehr pflegen)
 .github/workflows/    Tests aller APIs bei jedem Push

@@ -30,6 +30,23 @@ def schreib_check(probelauf: bool = False):
 app = FastAPI(title="Vorlage-API", version=json.loads((Path(__file__).resolve().parent.parent / "api.json").read_text(encoding="utf-8"))["version"], dependencies=[Depends(api_key_pruefen)])
 
 
-@app.get("/status")
+@app.get("/status", tags=["Status"], summary="Version und Schalter")
 def status():
     return {"ok": True, "schreiben": SCHREIBEN}
+
+
+# Plugin-Beschreibung für Testplattform und Intranet (GET /plugin.json, #42). Fehlt shared/ (z. B. im Docker-Image),
+# entfällt /plugin.json; die Testplattform erzeugt die Beschreibung dann selbst aus /openapi.json.
+def _plugin_json_einbinden(app) -> None:
+    import sys
+    wurzel = str(Path(__file__).resolve().parents[3])
+    if wurzel not in sys.path:
+        sys.path.append(wurzel)
+    try:
+        from shared.plugin_export import einbinden
+    except ImportError:
+        return
+    einbinden(app, Path(__file__).resolve().parents[1])
+
+
+_plugin_json_einbinden(app)

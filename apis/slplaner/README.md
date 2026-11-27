@@ -10,7 +10,7 @@ Der SL-Planer bietet nur lesende Endpunkte an; **diese API schreibt nie** (der C
 
 ## Stand
 
-Version 0.1.0 – Gerüst nach Dokumentation, **noch nicht live geprüft** (kein Zugang). Tests laufen gegen einen
+Version 0.2.0 – Gerüst nach Dokumentation, **noch nicht live geprüft** (kein Zugang). Tests laufen gegen einen
 nachgebauten SL-Planer mit den Beispielen aus der Doku (erfundene Personen).
 
 ### ZU PRÜFEN (mit Seabird bzw. Kapitel 1–5.1.2 der Doku)
@@ -97,4 +97,5 @@ Nur `GET`: `/ressourcentypen`, `/einheiten`, `/personen`, `/{bereich}`, `/pensen
 
 | Version | Datum | Änderung |
 |---|---|---|
+| 0.2.0 | 2026-11-27 | Plugin-Beschreibung für Testplattform und Intranet: `GET /plugin.json`, Beschriftungen für alle Endpunkte, `api.json` → `plugin` (#42, #46) |
 | 0.1.0 | 2026-11-16 | Erste Fassung nach SL-Planer API-Dokumentation 18.2.2026: Ressourcen, Einheiten, Personen, Pensenplanung, Pensen, Personaldossier/MAB (geschützt); CSV-Ausgabe; Tests gegen nachgebauten SL-Planer |

@@ -827,6 +827,7 @@ Felder abgewiesen werden und dass das Passwort nirgends gespeichert wird.
 
 | Version | Datum | Änderungen |
 |---|---|---|
+| 1.18.0 | 27.11.2026 | Plugin-Beschreibung für Testplattform und Intranet: `GET /plugin.json`, Beschriftungen für alle Endpunkte, Anmeldung und Import-Vorprüfung als lesend gekennzeichnet (`x-eduksx`), Sitzung in `api.json` → `plugin` (#42, #44) |
 | 1.17.0 | 26.11.2026 | Zeugnisse: `GET /schueler/{id}/zeugnisse`, `…/{zeugnis_id}/pdf`, `GET /klassen/{id}/zeugnisse`; Schalter `ESCOLA_ZEUGNISSE` (#39) |
 | 1.16.0 | 24.11.2026 | Schullaufbahn und Klassenbeginn (L19): `GET /schueler/{id}/schullaufbahn`, `PUT /schueler/{id}/klasse/beginn`, `POST /klassen/{id}/klassenbeginn`; Erkenntnisse zum Escola-Personenimport (WF-11, #2) dokumentiert |
 | 1.15.1 | 16.11.2026 | Testdaten pseudonymisiert (#17): erfundene Namen und Kürzel statt echter Lehrpersonen |

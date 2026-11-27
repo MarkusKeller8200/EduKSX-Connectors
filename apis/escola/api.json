@@ -1,5 +1,19 @@
 {
   "name": "escola",
   "titel": "Escola-API",
-  "version": "1.17.0"
+  "version": "1.18.0",
+  "plugin": {
+    "port": 8080,
+    "status": "full",
+    "kategorie": "school",
+    "beschreibung": "Escola-Schulverwaltung (sekbuelach.ch): Stammdaten, Stundenplan, Schüler:innen, Personen, Bezugspersonen, Rollen und Zeugnisse lesen und schreiben – mit Probelauf und Kontrolle nach dem Schreiben.",
+    "data_notice": "Liefert Personendaten von Schüler:innen, Eltern und Mitarbeitenden aus Escola. Schreibend nur mit den Testobjekten (TEST TEST 649, SuS SuS 650, TEST_A1a 120, Arbeitsgruppe TEST 3).",
+    "sitzung": {
+      "header": "X-Escola-Session",
+      "feld": "session",
+      "anmeldung": "/auth/login",
+      "status": "/auth/status",
+      "hinweis": "Anmeldung mit Benutzername, Passwort und 2FA-Code; die Sitzung lebt nur im Arbeitsspeicher der API."
+    }
+  }
 }
