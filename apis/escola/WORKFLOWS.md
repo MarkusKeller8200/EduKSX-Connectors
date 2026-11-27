@@ -39,16 +39,16 @@ Test-Arbeitsgruppe TEST 3).
 | Nr | Lücke | Status |
 |---|---|---|
 | L1 | Stundenplan schreiben | ✅ seit 1.12 (anlegen, ändern, löschen, Lehrperson ersetzen) |
-| L2 | Fächer-Zuteilung fürs kommende Schuljahr | ✅ seit 1.12 (nur Fächer, siehe L6) |
+| L2 | Fächer-Zuteilung fürs kommende Schuljahr | ✅ seit 1.12, Rechte seit 1.19 (siehe L6) |
 | L3 | Fächer-Zuteilung für Arbeitsgruppen (Fachklassen) | ✅ seit 1.12 |
 | L4 | Bezugspersonen | ✅ seit 1.12 (lesen, verknüpfen, anlegen, Sorgerecht, entfernen, Eltern deaktivieren) |
 | L5 | Stichtag – Escola-Änderungen gelten sofort | offen, ausserhalb der API: IDA/CONNECT plant und löst am Datum aus |
-| L6 | Rechte (KLR/FP/SpM/Abs) fürs kommende Schuljahr | offen – lesend nicht klärbar (28.11.2026: im kommenden SJ hat keine Klasse Zuordnungen); braucht Test-Zuordnung in TEST_A1a ([#11](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/11)) |
+| L6 | Rechte (KLR/FP/SpM/Abs) fürs kommende Schuljahr | ✅ seit 1.19; Escola-Verhalten live geprüft 28.11.2026 (TEST_A1a, 649: FP gesetzt/zurück), API-Ablauf noch nicht live ([#11](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/11)) |
 | L7 | Neue Bezugsperson anlegen (`createNewPersonAndRelationshipRpc`) | eingebaut, nicht live getestet (legt eine nicht löschbare Person an) – im ersten Testlauf prüfen ([#12](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/12)) |
 | L8 | Stundenplan von Arbeitsgruppen | ✅ Lesen seit 1.19 `GET /arbeitsgruppen/{id}/stundenplan` (`application_workgroup.php`, live 28.11.2026; alle AG noch leer); Schreiben offen ([#13](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/13)) |
 | L9 | Lehrpersonen-Schalter im Stundenplan bei mehreren Lehrpersonen pro Fach | eingebaut, live nur gelesen (H_A1a), nicht geschaltet ([#14](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/14)) |
 | L10 | Escola-Importformat und Upload | ⚠️ Format geklärt und nach Escolas Korrekturen live nachgeprüft 27.11.2026 (Excel-Zeilen per Zwischenablage, Feldliste, Werte für Berechtigung und Ja/Nein – README › Personenimport); Upload über die API offen, bei Escola ohne Termin geplant ([#2](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/2)) |
-| L11 | Dokumente im Schülerdossier lesen und ablegen | ⚠️ seit 1.19: Lesen live geprüft (650), Hochladen/Löschen eingebaut, nicht live ([#3](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/3)) |
+| L11 | Dokumente im Schülerdossier lesen und ablegen | ✅ seit 1.19; Escola-Aufrufe live geprüft 28.11.2026 (650: hochladen, lesen, herunterladen, löschen), API-Ablauf noch nicht live ([#3](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/3)) |
 | L12 | Eltern-App: Aktivierungsstatus, Zugänge | ✅ seit 1.19 `GET /personen/{id}/app`, `/klassen/{id}/eltern?app=true` bzw. `?nur_ohne_app=true`; Zugänge versendet Escola selbst (Aktion «Willkommensnachricht … für Eltern dieser SuS»); Zustand «aktiviert» nicht live gesehen ([#4](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/4)) |
 | L13 | Mitteilungen über Escola senden, Rücklauf lesen | offen ([#5](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/5)) |
 | L14 | Stundenplan-Abgleich mit dem Stundenplaner | ✅ eingebaut `POST /klassen/{id}/stundenplan/abgleich` (neutrales Format; Umwandlung des Stundenplaner-Exports in IDA/CONNECT), nicht live ([#6](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/6)) |
@@ -149,7 +149,7 @@ Alle Fragen F-01 bis F-09 am 15.11.2026 beantwortet (siehe Entscheidungen).
 | 2a | SJ-Wechsel | `PUT /klassen/{k}/klassenlehrpersonen` `{"kommend": [<id>, …]}` |
 | 2b | sofort/Stichtag | `PUT /klassen/{k}/klassenlehrpersonen` `{"aktuell": [<id>, …]}` |
 | 3a | Fächer aktuelles SJ | `PATCH /lehrpersonen/{id}/faecher` `{"klasse_id": k, "vorlage": "fachlehrperson", "faecher": [...]}` |
-| 3b | Fächer kommendes SJ | dito mit `"schuljahr": 1` (nur Fächer, L6) |
+| 3b | Fächer und Rechte kommendes SJ | dito mit `"schuljahr": 1` (Rechte seit 1.19, L6) |
 | 3c | Fachklasse | `PATCH /lehrpersonen/{id}/faecher` `{"arbeitsgruppe_id": ag, "faecher": [...]}` |
 | 4 | Lektionen | `POST/PATCH /klassen/{k}/stundenplan/{tag}/{lektion}` (Lehrperson ergibt sich aus der Fächer-Zuteilung) |
 | 5 | Kontrolle | `GET /lehrpersonen/{id}/einsatz` |

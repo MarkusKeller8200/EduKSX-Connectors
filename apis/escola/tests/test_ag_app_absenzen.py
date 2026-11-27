@@ -136,8 +136,13 @@ def test_absenzen_auswahl_und_eintraege(monkeypatch):
 class FakeDocs:
     """Antworten wie live am 28.11.2026 für SuS SuS 650 (Wurzel 63, Unterordner 65 leer); Datei erfunden."""
     def __init__(self):
-        self.dateien = {65: [{"folderFileId": 900, "name": "alt.pdf"}]}
+        self.dateien = {65: [self._datei(900, "alt", "pdf")]}
         self.calls = []
+
+    @staticmethod
+    def _datei(fid, name, ext):  # Felder wie live am 28.11.2026 (Upload einer Testdatei bei 650)
+        return {"id": fid - 70, "folderFileId": fid, "folderId": 65, "name": name, "extension": ext,
+                "mimeType": "application/pdf", "size": 10, "createdByName": "Keller Markus", "isUnseen": False}
 
     def __call__(self, req: httpx.Request) -> httpx.Response:
         p = req.url.path
@@ -161,14 +166,14 @@ class FakeDocs:
                 "folders": [], "files": self.dateien[65]}})
         if rest == "/folders/65/files" and req.method == "POST":
             assert b'name="file"; filename="neu.pdf"' in req.content
-            self.dateien[65].append({"folderFileId": 901, "name": "neu.pdf"})
-            return httpx.Response(200, json={"status": 200, "data": {"folderFileId": 901}})
+            self.dateien[65].append(self._datei(901, "neu", "pdf"))
+            return httpx.Response(200, json={"status": 200, "data": self._datei(901, "neu", "pdf")})
         if rest == "/folder-files/900" and req.method == "GET":
             return httpx.Response(200, content=b"%PDF erfunden", headers={"content-type": "application/pdf",
                                                                          "content-disposition": 'attachment; filename="alt.pdf"'})
         if rest == "/folder-files/901" and req.method == "DELETE":
             self.dateien[65] = [d for d in self.dateien[65] if d["folderFileId"] != 901]
-            return httpx.Response(200, json={"status": 200, "data": None})
+            return httpx.Response(200, json={"status": 200, "msg": "File deleted."})
         return httpx.Response(404, json={"status": 404})
 
 
@@ -184,7 +189,8 @@ def test_dokumente_lesen(monkeypatch):
     assert w["unterordner"] == [{"id": 65, "name": "10_Schülergrunddaten", "anzahl_dateien": 1,
                                  "sichtbar_eltern": False, "sichtbar_schueler": False}]
     alle = api.get("/schueler/650/dokumente", params={"alle": True}).json()
-    assert alle == [{"ordner_id": 65, "ordner": "Schüler:innen-Dokumente / 10_Schülergrunddaten", "folderFileId": 900, "name": "alt.pdf"}]
+    assert len(alle) == 1 and alle[0]["ordner"] == "Schüler:innen-Dokumente / 10_Schülergrunddaten"
+    assert (alle[0]["folderFileId"], alle[0]["name"], alle[0]["extension"]) == (900, "alt", "pdf")
     r = api.get("/schueler/650/dokumente/900")
     assert r.content == b"%PDF erfunden" and r.headers["content-type"] == "application/pdf"
     assert api.get("/schueler/650/dokumente/777").status_code == 404
@@ -197,10 +203,10 @@ def test_dokument_hochladen_und_zuruecksetzen(monkeypatch):
     probe = api.post("/schueler/650/dokumente/65", params={"dateiname": "neu.pdf"}, content=b"%PDF neu").json()
     assert probe["probelauf"] is True and probe["ordner"] == "Schüler:innen-Dokumente / 10_Schülergrunddaten"
     assert not any(m == "POST" for m, _ in fake.calls)
-    assert api.post("/schueler/650/dokumente/65", params={"dateiname": "alt.pdf", "probelauf": False}, content=b"x").status_code == 400
+    assert api.post("/schueler/650/dokumente/65", params={"dateiname": "ALT.pdf", "probelauf": False}, content=b"x").status_code == 400
     neu = api.post("/schueler/650/dokumente/65", params={"dateiname": "neu.pdf", "probelauf": False}, content=b"%PDF neu",
                    headers={"content-type": "application/pdf"}).json()
-    assert neu["escola"] == {"folderFileId": 901} and len(fake.dateien[65]) == 2
+    assert neu["datei_id"] == 901 and neu["escola"]["name"] == "neu" and len(fake.dateien[65]) == 2
     assert api.delete("/schueler/650/dokumente/901").json()["probelauf"] is True and len(fake.dateien[65]) == 2
     assert api.delete("/schueler/650/dokumente/901", params={"probelauf": False}).json()["geloescht"] is True
     assert [d["folderFileId"] for d in fake.dateien[65]] == [900]

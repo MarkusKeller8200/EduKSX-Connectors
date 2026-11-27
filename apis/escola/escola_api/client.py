@@ -1148,7 +1148,9 @@ class EscolaClient:
         - Abs gibt es nur für die ganze Klasse -> für Nicht-Klassenlehrpersonen nicht setzbar.
         - Gesundheit wird nicht über die API gesetzt (folgt KLR).
         - Arbeitsgruppen: nur Fächer (keine KLR/FP/SpM; Abs nicht vorgesehen).
-        - Kommendes Schuljahr: nur Fächer (Rechte dort noch nicht live geprüft).
+        - Kommendes Schuljahr: Fächer und Rechte (live geprüft 28.11.2026 an TEST_A1a/649: FP gesetzt und
+          zurückgenommen). Escola schaltet Rechte und entfernt Zuteilungen im Schuljahr, auf das die Sitzung
+          steht -> vorher Matrix mit school_year=1 öffnen, danach immer zurückstellen.
         Vorlagen: klassenlehrperson (KLR), fachlehrperson (nur Fächer, keine Rechte),
         sopae (alle Fächer + SpM + FP)."""
         lp_id = int(lp_id)
@@ -1205,9 +1207,6 @@ class EscolaClient:
             if not klr_end and aktuell["abs"] and "abs" not in aktuell["automatisch"]:
                 soll.setdefault("abs", False)
         rechte_aend = {k: v for k, v in soll.items() if v != aktuell[k]}
-        if rechte_aend and schuljahr:
-            raise ValueError("Rechte fürs kommende Schuljahr setzt die API noch nicht (nur Fächer); "
-                             "Rechte nach dem Schuljahreswechsel setzen")
         reihenfolge = sorted(rechte_aend, key=lambda k: (k != "klr", k))
         plan = {"lehrperson_id": lp_id, **self._kopf(ziel, schuljahr), "faecher_hinzu": sorted(hinzu),
                 "faecher_weg": sorted(weg), "rechte": {k: rechte_aend[k] for k in reihenfolge}}
@@ -1222,6 +1221,9 @@ class EscolaClient:
                     self._lehrperson_oeffnen(lp_id, ziel, schuljahr)
                     self._post(self.LP + "ajax_functions_lehrpersonen.php",
                                {"type": 1, "fach_id": fid, "wert": 1, **self._ziel_params(ziel, schuljahr)})
+                if schuljahr and (reihenfolge or weg):
+                    self._aktivieren(ziel)
+                    self._post(self.LP + "lehrpersonen_faecher.php", {"mode": 0, "school_year": 1})
                 if endfaecher:
                     for k in reihenfolge:
                         d = {"mode": self.RECHTE_MODI[k], "lehrer_id": lp_id, "new_value": int(rechte_aend[k])}
@@ -1230,7 +1232,8 @@ class EscolaClient:
                         self._post(self.LP + "lehrpersonen_faecher.php", d)
                 if weg:
                     # Zuteilungsnummern gelten nur im aktiven Kontext (Klasse bzw. Arbeitsgruppe) -> neu aktivieren
-                    self._aktivieren(ziel)
+                    if not schuljahr:
+                        self._aktivieren(ziel)
                     for fid in sorted(weg):
                         self._post(self.LP + "lehrpersonen_faecher.php", {"mode": 2, "assignment": assign[fid]})
             finally:
@@ -1937,8 +1940,9 @@ class EscolaClient:
 
     # ------------------------------------------------------------------ Dokumente im Schülerdossier (L11, #3)
     # Reiter „Dokumente“ ist die Vue-Komponente escola-docs-folder auf /escola/api/docs/root/global/students/{id}
-    # (live mitgeschnitten 28.11.2026 an SuS SuS 650: Wurzelordner „Schüler:innen-Dokumente“ mit Unterordnern der
-    # globalen Vorlage, z. B. „10_Schülergrunddaten“). Hochladen/Löschen-Aufrufe aus dem Escola-Skript, nicht live.
+    # (live 28.11.2026 an SuS SuS 650: Wurzelordner „Schüler:innen-Dokumente“ mit Unterordnern der globalen Vorlage,
+    # z. B. „10_Schülergrunddaten“). Hochladen → lesen → herunterladen → löschen → lesen live geprüft (Testdatei).
+    # Dateien: `folderFileId` (für Download/Löschen), `name` ohne Endung + `extension`, `mimeType`, `size`, …
     DOCS = "escola/api/docs/root/global/students/"
 
     def _docs(self, methode: str, pfad: str, **kw):
@@ -1996,7 +2000,8 @@ class EscolaClient:
         o = self.dokumente_ordner(pid, ordner_id)
         if not dateiname or "/" in dateiname or "\\" in dateiname:
             raise ValueError("Ungültiger Dateiname")
-        if any((f.get("name") or f.get("fileName")) == dateiname for f in o["dateien"]):
+        voll = lambda f: f"{f.get('name')}.{f['extension']}" if f.get("extension") else (f.get("name") or "")
+        if any(voll(f).lower() == dateiname.lower() for f in o["dateien"]):
             raise ValueError(f"Im Ordner „{o['name']}“ gibt es schon eine Datei „{dateiname}“")
         plan = {"person_id": int(pid), "ordner_id": o["id"], "ordner": " / ".join(o["pfad"]), "datei": dateiname,
                 "groesse": len(inhalt), "probelauf": probelauf}
@@ -2004,7 +2009,9 @@ class EscolaClient:
             return plan
         with self._lock:
             data = self._docs("POST", f"{int(pid)}/folders/{o['id']}/files", files={"file": (dateiname, inhalt, mime)})
-        return {**plan, "escola": data}
+        if not isinstance(data, dict) or not data.get("folderFileId"):
+            raise RuntimeError(f"Escola hat den Upload nicht bestätigt: {str(data)[:150]}")
+        return {**plan, "datei_id": data["folderFileId"], "escola": data}
 
     def dokument_loeschen(self, pid: int, datei_id: int, probelauf: bool = True) -> dict:
         plan = {"person_id": int(pid), "datei_id": int(datei_id), "probelauf": probelauf}
