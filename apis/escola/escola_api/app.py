@@ -646,7 +646,10 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
     @app.get("/schueler/{pid}/arbeitsgruppen", dependencies=deps, tags=["Arbeitsgruppen"])
     def schueler_arbeitsgruppen(pid: int, schuljahr: int = Query(0), c: EscolaClient = Depends(get_client)):
         """Arbeitsgruppen einer Schülerin / eines Schülers."""
-        return c.schueler_arbeitsgruppen(pid, schuljahr)
+        try:
+            return c.schueler_arbeitsgruppen(pid, schuljahr)
+        except RuntimeError as e:
+            raise HTTPException(502, str(e))
 
     @app.post("/schueler/{pid}/arbeitsgruppen", dependencies=deps, tags=["Arbeitsgruppen"])
     def schueler_arbeitsgruppe_hinzu(pid: int, body: ArbeitsgruppeZuteilung, c: EscolaClient = Depends(get_client)):

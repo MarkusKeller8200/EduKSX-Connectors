@@ -1054,11 +1054,21 @@ class EscolaClient:
         return {"arbeitsgruppe_id": ag, **e, "lehrpersonen": lps, "arbeitsgruppe": ag_name,
                 "lehrpersonen_kuerzel": [k for k in kuerzel.strip().split("/") if k], "zusatz": zusatz}
 
+    def _wg_kontext(self) -> None:
+        """Seite „SuS-Zuordnungen“ öffnen. Ohne diesen Aufruf antwortet `assignments.php` (mode 2/3) in einer
+        frischen Sitzung nur mit „Es ist ein Fehler aufgetreten.“ (live 28.11.2026)."""
+        self._get(self.WG + "assignments.php")
+
     def schueler_arbeitsgruppen(self, pid: int, schuljahr: int = 0) -> list[dict]:
         import json as _json
         with self._lock:
+            self._wg_kontext()
             r = self._post(self.WG + "assignments.php", {"mode": 2, "student_id": pid, "schoolYear": schuljahr, "updateStudent": 0})
-        ids = [w.get("workgroup_id") for w in (_json.loads(r).get("workgroups") or []) if w.get("workgroup_id")]
+        try:
+            data = _json.loads(r)
+        except ValueError:
+            raise RuntimeError(f"Escola hat die Arbeitsgruppen von {pid} nicht geliefert: {P._clean(r)[:120]}") from None
+        ids = [w.get("workgroup_id") for w in (data.get("workgroups") or []) if w.get("workgroup_id")]
         namen = {w["id"]: w for w in self.arbeitsgruppen(schuljahr)}
         return [namen.get(int(i), {"id": int(i), "name": None, "schulhaus": None}) for i in ids]
 
@@ -1070,6 +1080,7 @@ class EscolaClient:
             raise ValueError(f"Unbekannte Arbeitsgruppe {wg_id}")
         vorher = {w["id"] for w in self.schueler_arbeitsgruppen(pid, schuljahr)}
         with self._lock:
+            self._wg_kontext()
             if dabei and wg_id not in vorher:
                 # Escola speichert „angezeigte“ Gruppen: nur die betroffene Gruppe anzeigen -> andere bleiben unberührt
                 self._raw(self.WG + "assignments.php",

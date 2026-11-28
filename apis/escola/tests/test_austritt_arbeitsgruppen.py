@@ -22,6 +22,7 @@ class Fake:
         self.wg = {652: set()}
         self.aktiv = True
         self.calls = []
+        self.wg_kontext = False
 
     def __call__(self, req):
         p = req.url.path
@@ -54,6 +55,11 @@ class Fake:
                 self.wg[int(f["studentId"])].discard(int(f["workgroupId"]))
                 return httpx.Response(200, text="")
         if p.endswith("assignments.php"):
+            if req.method == "GET":
+                self.wg_kontext = True
+                return httpx.Response(200, text="<div>SuS-Zuordnungen</div>")
+            if not self.wg_kontext:  # wie live: ohne geöffnete Seite nur eine Fehlermeldung
+                return httpx.Response(200, text="Es ist ein Fehler aufgetreten.")
             sid = int(f["student_id"])
             if f["mode"] == "2":
                 return httpx.Response(200, json={"workgroups": [{"workgroup_id": w} for w in sorted(self.wg[sid])]})
@@ -99,3 +105,11 @@ def test_arbeitsgruppen(monkeypatch):
     d = api.delete("/schueler/652/arbeitsgruppen/3")
     assert d.status_code == 200 and fake.wg[652] == {1}
     assert api.post("/schueler/652/arbeitsgruppen", json={"arbeitsgruppe_id": 99}).status_code == 400
+
+
+def test_arbeitsgruppen_ohne_kontext_klare_meldung(monkeypatch):
+    fake, api = make(monkeypatch)
+    from escola_api.client import EscolaClient
+    monkeypatch.setattr(EscolaClient, "_wg_kontext", lambda self: None)
+    r = api.get("/schueler/652/arbeitsgruppen")
+    assert r.status_code == 502 and "nicht geliefert" in r.text
