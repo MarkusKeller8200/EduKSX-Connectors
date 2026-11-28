@@ -329,6 +329,11 @@ class EscolaClient:
         beobachtet 15.11.2026), wird die Personenverwaltung neu geöffnet und einmal wiederholt."""
         r = self._http.post(url, content=body.encode(),
                             headers={"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
+        if r.status_code == 400 and not _wiederholt and "show_reiter.php" in url:
+            # Direkt nach dem Anlegen einer Person (#15, live 28.11.2026) antwortet show_reiter.php mit 400,
+            # bis die Personenverwaltung neu geöffnet ist.
+            self._personen_kontext()
+            return self._raw(url, body, _wiederholt=True)
         text = self._check(r)
         if not _wiederholt and url.startswith(self.PERS) and len(text) < 300 and any(m in text for m in self._NEU_LADEN):
             self._personen_kontext()
@@ -1055,8 +1060,10 @@ class EscolaClient:
                 "lehrpersonen_kuerzel": [k for k in kuerzel.strip().split("/") if k], "zusatz": zusatz}
 
     def _wg_kontext(self) -> None:
-        """Seite „SuS-Zuordnungen“ öffnen. Ohne diesen Aufruf antwortet `assignments.php` (mode 2/3) in einer
-        frischen Sitzung nur mit „Es ist ein Fehler aufgetreten.“ (live 28.11.2026)."""
+        """Seite „Arbeitsgruppen“ und darin „SuS-Zuordnungen“ öffnen – wie in der Oberfläche. Ohne diese Aufrufe
+        antwortet `assignments.php` (mode 2/3) in einer frischen Sitzung nur mit „Es ist ein Fehler aufgetreten.“;
+        das Öffnen von „SuS-Zuordnungen“ allein genügte live nicht (28.11.2026)."""
+        self._get("admin.php?page_request=6&sub_k=26")
         self._get(self.WG + "assignments.php")
 
     def schueler_arbeitsgruppen(self, pid: int, schuljahr: int = 0) -> list[dict]:

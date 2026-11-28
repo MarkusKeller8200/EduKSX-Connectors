@@ -519,9 +519,13 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
         if not res["angelegt"]:
             return JSONResponse(status_code=409, content=res)
         if body.felder:
-            res["felder"] = c.person_schreiben(res["id"], body.felder,
-                                               "schueler" if kategorie in ("schueler", "students-without-schoolclass", "future-students") else "allActive",
-                                               False, gesundheit)
+            try:
+                res["felder"] = c.person_schreiben(res["id"], body.felder,
+                                                   "schueler" if kategorie in ("schueler", "students-without-schoolclass", "future-students") else "allActive",
+                                                   False, gesundheit)
+            except Exception as e:  # Person ist angelegt – ID nicht hinter einem 500 verstecken
+                res["felder"] = {"id": res["id"], "geschrieben": False,
+                                 "fehler": [{"feld": "*", "fehler": f"Felder nicht geschrieben: {e}"}]}
         return JSONResponse(status_code=201, content=res)
 
     @app.get("/schueler", dependencies=deps, tags=["Schüler:innen"])

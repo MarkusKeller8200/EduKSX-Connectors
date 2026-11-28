@@ -229,3 +229,27 @@ def test_neue_person_falsche_klasse_wird_gemeldet_59(monkeypatch):
     assert j["angelegt"] is True and j["klasse_geprueft"] is False and "TEST_A1a" in j["warnung"]
     assert j["klasse_ist"] == ["H_A1a - Riedhofer Ulmrist"]
     assert api.post("/schueler", json={"nachname": "A", "vorname": "B", "geschlecht": "w", "schulhaus": "Hinterbirch", "klasse_id": 999}).status_code == 400
+
+
+def test_show_reiter_400_nach_anlegen_oeffnet_personenverwaltung():
+    """#15 (live 28.11.2026): direkt nach dem Anlegen antwortet show_reiter.php mit 400, bis die
+    Personenverwaltung neu geöffnet ist – dann einmal wiederholen."""
+    aufrufe = []
+    zustand = {"offen": False}
+
+    def fake(req):
+        aufrufe.append((req.method, req.url.path, req.url.params.get("page_request")))
+        if req.url.path == "/admin.php" and req.url.params.get("page_request") == "154":
+            zustand["offen"] = True
+            return httpx.Response(200, text="<html></html>")
+        if req.url.path.endswith("personManagement.php"):
+            return httpx.Response(200, text="")
+        if req.url.path.endswith("show_reiter.php"):
+            return httpx.Response(200 if zustand["offen"] else 400, text='<ul><li id="li_name">Name</li></ul>')
+        return httpx.Response(200, text="")
+
+    c = EscolaClient(EscolaConfig(base_url="https://x.test/", cookie="PHPSESSID=a"), transport=httpx.MockTransport(fake))
+    t = c._raw(c.PERS + "show_reiter.php", "active_person=740&pageRequest=154&personCategory=schueler&searchMode=false")
+    assert "li_name" in t
+    assert ("GET", "/admin.php", "154") in aufrufe
+    assert [a for a in aufrufe if a[1].endswith("show_reiter.php")].__len__() == 2

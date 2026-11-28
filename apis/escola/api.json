@@ -1,7 +1,7 @@
 {
   "name": "escola",
   "titel": "Escola-API",
-  "version": "1.19.6",
+  "version": "1.19.7",
   "plugin": {
     "port": 8080,
     "status": "full",
