@@ -14,6 +14,9 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
 - Escola-API 1.19.4: Endpunkte in 14 Themen gruppiert (`escola_api/themen.py`, Test: jeder Endpunkt genau ein Thema)
 
 ### Behoben
+- Escola-API 1.19.8 (#15): Arbeitsgruppen einer SuS – in der Escola-Oberfläche mitgelesen: vor dem Lesen kommt
+  `assignments.php` `mode=2&updateStudent=1`; das Öffnen der Seite «Arbeitsgruppen» (1.19.7) half nicht und liess
+  Klassen- und SuS-Listen leer, weil Escola sich den Unterbereich merkt – entfernt, Klassenliste mit Rückfall auf `sub_k=10`
 - Escola-API 1.19.7 (#15): `POST /schueler`/`/personen` mit `felder` meldete 500, obwohl die Person angelegt war
   (`show_reiter.php` antwortet direkt danach mit 400) – Personenverwaltung wird neu geöffnet und einmal wiederholt;
   scheitern die Felder trotzdem, kommt 201 mit ID und Fehler. Arbeitsgruppen einer SuS: zusätzlich die Seite

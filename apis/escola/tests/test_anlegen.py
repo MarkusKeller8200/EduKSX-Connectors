@@ -253,3 +253,14 @@ def test_show_reiter_400_nach_anlegen_oeffnet_personenverwaltung():
     assert "li_name" in t
     assert ("GET", "/admin.php", "154") in aufrufe
     assert [a for a in aufrufe if a[1].endswith("show_reiter.php")].__len__() == 2
+
+
+def test_klassen_wenn_sitzung_im_unterbereich_steht():
+    """#15: Steht die Sitzung im Unterbereich „Arbeitsgruppen“, fehlt auf admin.php?page_request=6 die
+    Klassenauswahl – dann „Einstellungen → Klassen“ (sub_k=10) öffnen."""
+    def fake(req):
+        if req.url.params.get("sub_k") == "10":
+            return httpx.Response(200, text="<html><body>" + CHOOSER + "</body></html>")
+        return httpx.Response(200, text="<html><body><div>Arbeitsgruppen</div></body></html>")
+    c = EscolaClient(EscolaConfig(base_url="https://x.test/", cookie="PHPSESSID=a"), transport=httpx.MockTransport(fake))
+    assert c.klassen(refresh=True)

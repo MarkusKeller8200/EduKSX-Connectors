@@ -871,7 +871,7 @@ Felder abgewiesen werden und dass das Passwort nirgends gespeichert wird.
 | Inaktive anzeigen | `POST inc/ajax/ajax_functions.php` `type=85` (Umschalter) |
 | Ressourcen | `POST inc/ajax/raumverwaltung/rooms.php` (Kategorien `tr.head_2`, Ressourcen `li#item_<id>`) |
 | Zeiteinteilung | `POST inc/ajax/raumverwaltung/stundeneinteilung.php` (`select#profileChooser`; Profil wechseln `mode=0&selectedProfile=<id>`) |
-| Arbeitsgruppen | Liste `POST inc/ajax/workgroups/ajax_functions_workgroups.php` `type=7`; Zuteilung lesen `POST …/assignments.php` `mode=2`; einteilen `mode=3&workgroups[]&allDisplayedWorkgroups[]`; entfernen `…/ajax_functions_workgroups.php` `type=9` |
+| Arbeitsgruppen | Liste `POST inc/ajax/workgroups/ajax_functions_workgroups.php` `type=7`; Zuteilung lesen `POST …/assignments.php` `mode=2` (in neuer Sitzung zuerst `GET assignments.php` und `mode=2&updateStudent=1`); einteilen `mode=3&workgroups[]&allDisplayedWorkgroups[]`; entfernen `…/ajax_functions_workgroups.php` `type=9` |
 | Rollen einer Person | Reiter `active_section=rollen` im Bearbeitungsmodus (Häkchen `role_<id>`); ändern: `POST …/ajax_functions_persons.php` `type=24&role=<id>&new_value=1\|0` |
 | Fächer-Matrix einer Klasse | `GET admin.php?page_request=6&klassen_id=<ID>`, dann `POST inc/ajax/lehrpersonen/lehrpersonen_faecher.php` `mode=0` |
 | Fächer einer Lehrperson | `POST inc/ajax/lehrpersonen/zeige_faecher.php` `type=1&lehrperson&fach_id=0&class_id&workgroup_id=0&schoolYear=0` (Häkchen `fach_<id>`) |
@@ -892,6 +892,7 @@ Felder abgewiesen werden und dass das Passwort nirgends gespeichert wird.
 | 1.19.5 | 28.11.2026 | `GET /schueler/{id}/arbeitsgruppen` lieferte in einer frischen Sitzung 500: Escola beantwortet `assignments.php` erst, wenn die Seite «SuS-Zuordnungen» geöffnet wurde – wird jetzt vor dem Lesen und Einteilen geöffnet (#15) |
 | 1.19.6 | 28.11.2026 | `POST /mitarbeitende` liest den Personen-Index (alle aktiven und inaktiven Personen, dauert Minuten) nur noch einmal statt zweimal (#15) |
 | 1.19.7 | 28.11.2026 | `POST /schueler` mit `felder`: 500, obwohl die Person angelegt war (show_reiter.php antwortet direkt nach dem Anlegen mit 400) – Personenverwaltung wird neu geöffnet und wiederholt, Fehler beim Schreiben der Felder kommen im Ergebnis statt als 500; Arbeitsgruppen einer SuS: vorher auch die Seite «Arbeitsgruppen» öffnen (#15) |
+| 1.19.8 | 28.11.2026 | Arbeitsgruppen einer SuS: wie die Oberfläche zuerst `assignments.php` `mode=2&updateStudent=1` (setzt die Auswahl in der Sitzung), nicht mehr die Seite «Arbeitsgruppen» öffnen – das leerte in 1.19.7 die Klassen- und SuS-Listen; Klassenliste fällt bei leerer Auswahl auf `sub_k=10` zurück (#15) |
 | 1.19.3 | 28.11.2026 | Fehler #59: `POST /schueler` aktiviert vor dem Anlegen die Zielklasse (Escola nimmt sonst die Klasse der Sitzung) und prüft danach die Schullaufbahn (`klasse_geprueft`, bei Abweichung `warnung`) |
 | 1.19.2 | 28.11.2026 | Absenzen live mit Test-Absenz geprüft (#9): flache Ausgabe mit Datum in Schweizer Zeit, `?roh=true` für die Escola-Felder |
 | 1.19.1 | 28.11.2026 | Live geprüft mit Testdaten: App-Status liest den echten Zustand «App (manuell) aktiviert» und neu `app_manuell`, `app_eingeloggt` (#4); Zellen im Stundenplan von Arbeitsgruppen mit `arbeitsgruppe` und LP-Kürzel richtig getrennt (#13) |
