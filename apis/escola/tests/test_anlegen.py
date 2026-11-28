@@ -19,11 +19,20 @@ class FakeAnlegen:
         self.rpc = []
         self.transfers = []
         self.form_offen = None
+        self.sitzung_klasse = 92  # #59: Escola nimmt die in der Sitzung aktive Klasse
 
     def __call__(self, req: httpx.Request) -> httpx.Response:
         p = req.url.path
         if p == "/admin.php":
+            if "klassen_id" in req.url.params:
+                self.sitzung_klasse = int(req.url.params["klassen_id"])
             return httpx.Response(200, text="<html><body>" + CHOOSER + "</body></html>")
+        if p == "/rpc/collections/SchoolCareer/getSchoolCareer.php":
+            q = self.personen.get(json.loads(req.content)["parameters"]["personId"], {})
+            namen = {92: "H_A1a - Riedhofer Ulmrist", 120: "TEST_A1a"}
+            entries = [{"module": "studentGroupsSchoolclass", "title": namen.get(q.get("klasse"), "?"), "dateFrom": "2026-11-28",
+                        "dateTo": "2027-07-31", "editId": "1", "fields": []}] if q.get("klasse") else []
+            return httpx.Response(200, json={"timeline": [{"schoolyear": 2026, "schoolyearLabel": "2026/27", "entries": entries}]})
         if p.startswith("/rpc/collections/CaptureNewPersonAdmin/"):
             j = json.loads(req.content)
             s, ctx = j["parameters"]["newPersonStruct"], j["rpcContext"]
@@ -37,8 +46,9 @@ class FakeAnlegen:
                      "gender": s["gender"], "listOfAllRoles": "Schüler:innen", "active": True} for q in same]})
             pid = self.next_id
             self.next_id += 1
+            klasse = self.sitzung_klasse if ctx["personCategoryGroup"] == "schueler" else ctx["schoolclassId"]
             self.personen[pid] = {"id": pid, "vorname": s["firstName"], "nachname": s["lastName"],
-                                  "kategorie": ctx["personCategoryGroup"], "klasse": ctx["schoolclassId"]}
+                                  "kategorie": ctx["personCategoryGroup"], "klasse": klasse}
             return httpx.Response(200, text=f'[{pid},""]')
         form = {k: v[0] for k, v in parse_qs(req.content.decode(), keep_blank_values=True).items()}
         if p == "/inc/ajax/persons/show_reiter.php":
@@ -195,3 +205,27 @@ def test_umteilen_entfernen_kommendes_sj(monkeypatch):
     assert e0.status_code == 200 and e0.json()["klasse_id"] == 93
     assert fake.personen[pid]["kategorie"] == "students-without-schoolclass"
     assert api.delete(f"/schueler/{pid}/klasse").status_code == 400  # keine Klasse mehr
+
+
+def test_neue_person_in_der_angegebenen_klasse_59(monkeypatch):
+    """#59: Sitzung steht auf H_A1a (92), Ziel TEST_A1a (120) -> API aktiviert die Zielklasse vorher."""
+    import escola_api.client as C
+    monkeypatch.setattr(C.EscolaClient, "_sj_start", staticmethod(lambda heute=None: 2026))
+    fake, api = make(monkeypatch)
+    fake.sitzung_klasse = 92
+    r = api.post("/schueler", json={"nachname": "TEST", "vorname": "Neu", "geschlecht": "w", "schulhaus": "Hinterbirch", "klasse_id": 120})
+    assert r.status_code == 201, r.text
+    j = r.json()
+    assert fake.personen[j["id"]]["klasse"] == 120 and j["klasse_geprueft"] is True and "warnung" not in j
+
+
+def test_neue_person_falsche_klasse_wird_gemeldet_59(monkeypatch):
+    import escola_api.client as C
+    monkeypatch.setattr(C.EscolaClient, "_sj_start", staticmethod(lambda heute=None: 2026))
+    monkeypatch.setattr(C.EscolaClient, "_aktivieren", lambda self, k: None)  # Escola ignoriert die Aktivierung
+    fake, api = make(monkeypatch)
+    fake.sitzung_klasse = 92
+    j = api.post("/schueler", json={"nachname": "TEST", "vorname": "Falsch", "geschlecht": "w", "schulhaus": "Hinterbirch", "klasse_id": 120}).json()
+    assert j["angelegt"] is True and j["klasse_geprueft"] is False and "TEST_A1a" in j["warnung"]
+    assert j["klasse_ist"] == ["H_A1a - Riedhofer Ulmrist"]
+    assert api.post("/schueler", json={"nachname": "A", "vorname": "B", "geschlecht": "w", "schulhaus": "Hinterbirch", "klasse_id": 999}).status_code == 400

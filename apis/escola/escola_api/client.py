@@ -559,7 +559,16 @@ class EscolaClient:
             raise ValueError(f"Unbekanntes Schulhaus '{schulhaus}'")
         struct = {"id": -1, "firstName": vorname.strip(), "lastName": nachname.strip(), "gender": geschlecht}
         kl = klasse_id if kategorie == "schueler" else None
+        ziel = None
+        if kl is not None:
+            ziel = next((k for k in self._klassen_nur() if k["id"] == int(kl)), None)
+            if ziel is None:
+                raise ValueError(f"Unbekannte Klasse {kl}")
         with self._lock:
+            if ziel is not None:
+                # #59: Escola legt SuS in die Klasse, die in der Sitzung aktiv ist – `schoolclassId` im rpcContext
+                # allein genügt nicht (live 28.11.2026: Zielklasse 120, angelegt in 92). Darum vorher aktivieren.
+                self._aktivieren(ziel)
             dup = self._neue_person_rpc("checkForDuplicatePersonsRpc", kategorie, kl, unit, struct)
             dups = [{"id": d.get("id"), "name": d.get("displayName"), "rollen": d.get("listOfAllRoles"), "aktiv": d.get("active")}
                     for d in ((dup or {}).get("duplicatePersonStructs") or [])] if isinstance(dup, dict) else []
@@ -571,7 +580,25 @@ class EscolaClient:
         for k in list(self._cache):
             if k.startswith(("personen:", "schueler", "lehrpersonen")):
                 self._cache.pop(k, None)
-        return {"angelegt": True, "id": res[0], "duplikate_ignoriert": dups}
+        out = {"angelegt": True, "id": res[0], "duplikate_ignoriert": dups}
+        if ziel is not None:
+            out.update(self._klasse_pruefen(res[0], ziel))
+        return out
+
+    def _klasse_pruefen(self, pid: int, ziel: dict) -> dict:
+        """Nach dem Anlegen: steht die Person laut Schullaufbahn in der gewünschten Klasse? (#59)"""
+        try:
+            sj = self._sj_start()
+            titel = [e["titel"] or "" for e in self.schullaufbahn(pid)
+                     if e["modul"] == self.SC_KLASSE and e["schuljahr"] == sj]
+        except Exception as e:  # Prüfung darf das Anlegen nicht verdecken
+            return {"klasse_geprueft": None, "warnung": f"Klasse nicht prüfbar: {e}"}
+        ok = any(t == ziel["name"] or t.startswith(ziel["name"] + " ") for t in titel)
+        if ok:
+            return {"klasse_geprueft": True}
+        return {"klasse_geprueft": False, "klasse_ist": titel,
+                "warnung": f"Person wurde angelegt, steht aber nicht in {ziel['name']} (Schullaufbahn: {', '.join(titel) or 'keine Klasse'}). "
+                           f"Mit POST /schueler/{pid}/klasse umteilen."}
 
     def schueler_ohne_klasse(self, refresh: bool = False) -> list[dict]:
         from . import personen as PP

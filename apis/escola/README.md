@@ -888,6 +888,7 @@ Felder abgewiesen werden und dass das Passwort nirgends gespeichert wird.
 
 | Version | Datum | Änderungen |
 |---|---|---|
+| 1.19.3 | 28.11.2026 | Fehler #59: `POST /schueler` aktiviert vor dem Anlegen die Zielklasse (Escola nimmt sonst die Klasse der Sitzung) und prüft danach die Schullaufbahn (`klasse_geprueft`, bei Abweichung `warnung`) |
 | 1.19.2 | 28.11.2026 | Absenzen live mit Test-Absenz geprüft (#9): flache Ausgabe mit Datum in Schweizer Zeit, `?roh=true` für die Escola-Felder |
 | 1.19.1 | 28.11.2026 | Live geprüft mit Testdaten: App-Status liest den echten Zustand «App (manuell) aktiviert» und neu `app_manuell`, `app_eingeloggt` (#4); Zellen im Stundenplan von Arbeitsgruppen mit `arbeitsgruppe` und LP-Kürzel richtig getrennt (#13) |
 | 1.19.0 | 28.11.2026 | Erkundung (nur lesen): Dokumente lesen/hochladen/löschen `/schueler/{id}/dokumente` (#3, Schalter `ESCOLA_DOKUMENTE`), Absenzen `/klassen/{id}/absenzen…` (#9), App-Status `/personen/{id}/app` und `/klassen/{id}/eltern?app=true` (#4), Stundenplan von Arbeitsgruppen (#13); Platzhalter `/dokumente/struktur` entfernt; Rechte auch fürs kommende Schuljahr (#11); Dokumente und Rechte kommendes SJ live in Escola geprüft |
