@@ -44,14 +44,14 @@ Test-Arbeitsgruppe TEST 3).
 | L4 | Bezugspersonen | ✅ seit 1.12 (lesen, verknüpfen, anlegen, Sorgerecht, entfernen, Eltern deaktivieren) |
 | L5 | Stichtag – Escola-Änderungen gelten sofort | offen, ausserhalb der API: IDA/CONNECT plant und löst am Datum aus |
 | L6 | Rechte (KLR/FP/SpM/Abs) fürs kommende Schuljahr | ✅ seit 1.19; Escola-Verhalten live geprüft 28.11.2026 (TEST_A1a, 649: FP gesetzt/zurück), API-Ablauf noch nicht live ([#11](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/11)) |
-| L7 | Neue Bezugsperson anlegen (`createNewPersonAndRelationshipRpc`) | eingebaut, nicht live getestet (legt eine nicht löschbare Person an) – im ersten Testlauf prüfen ([#12](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/12)) |
+| L7 | Neue Bezugsperson anlegen (`createNewPersonAndRelationshipRpc`) | ✅ live über die API geprüft 28.11.2026 (Testlauf unten); die Person lässt sich in Escola endgültig löschen ([#12](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/12)) |
 | L8 | Stundenplan von Arbeitsgruppen | ✅ Lesen seit 1.19 `GET /arbeitsgruppen/{id}/stundenplan` (`application_workgroup.php`, live mit Test-Eintrag geprüft 28.11.2026); Schreiben offen ([#13](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/13)) |
-| L9 | Lehrpersonen-Schalter im Stundenplan bei mehreren Lehrpersonen pro Fach | eingebaut, live nur gelesen (H_A1a), nicht geschaltet ([#14](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/14)) |
+| L9 | Lehrpersonen-Schalter im Stundenplan bei mehreren Lehrpersonen pro Fach | ✅ live über die API geschaltet 28.11.2026 (Testlauf unten) ([#14](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/14)) |
 | L10 | Escola-Importformat und Upload | ⚠️ Format geklärt und nach Escolas Korrekturen live nachgeprüft 27.11.2026 (Excel-Zeilen per Zwischenablage, Feldliste, Werte für Berechtigung und Ja/Nein – README › Personenimport); Upload über die API offen, bei Escola ohne Termin geplant ([#2](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/2)) |
 | L11 | Dokumente im Schülerdossier lesen und ablegen | ✅ seit 1.19; Escola-Aufrufe live geprüft 28.11.2026 (650: hochladen, lesen, herunterladen, löschen), API-Ablauf noch nicht live ([#3](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/3)) |
 | L12 | Eltern-App: Aktivierungsstatus, Zugänge | ✅ seit 1.19 `GET /personen/{id}/app`, `/klassen/{id}/eltern?app=true` bzw. `?nur_ohne_app=true`; Zugänge versendet Escola selbst (Aktion «Willkommensnachricht … für Eltern dieser SuS»); an/aus live geprüft 28.11.2026 (649) ([#4](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/4)) |
 | L13 | Mitteilungen über Escola senden, Rücklauf lesen | offen ([#5](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/5)) |
-| L14 | Stundenplan-Abgleich mit dem Stundenplaner | ✅ eingebaut `POST /klassen/{id}/stundenplan/abgleich` (neutrales Format; Umwandlung des Stundenplaner-Exports in IDA/CONNECT), nicht live ([#6](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/6)) |
+| L14 | Stundenplan-Abgleich mit dem Stundenplaner | ✅ `POST /klassen/{id}/stundenplan/abgleich` (neutrales Format; Umwandlung des Stundenplaner-Exports in IDA/CONNECT), live über die API geprüft 28.11.2026 (Testlauf unten) ([#6](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/6)) |
 | L15 | Sichtbarkeit in der Eltern-App pro Phase | offen, mit Escola klären ([#7](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/7)) |
 | L16 | Arzt-/Zahnarztkontrollen: Status, Liste der offenen | Lesen ✅ `GET /klassen/{id}/felder?nur_leer=true` (falls Escola-Feld); Entscheid Escola/CMI/eigene Anwendung offen ([#8](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/8)) |
 | L17 | Absenzen, Verhalten, Prüfungsresultate lesen | ⚠️ Absenzen ✅ seit 1.19.2 (live mit Test-Absenz 28.11.2026); Verhalten/Noten: Aufrufe bekannt, noch keine Daten in Escola → Format offen ([#9](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/9)) |
@@ -360,3 +360,14 @@ Erhoben am 15.11.2026 aus dem Gesamtablauf (siehe `docs/workflows-escola.md`). T
 
 - **Aufräumen nach dem Testlauf:** …
 - **Lücken / offene Punkte:** …
+
+## Testläufe über die API (28.11.2026)
+
+Escola-API 1.19.3 lokal auf dem Rechner des Projektverantwortlichen, angemeldet mit 2FA, bedient über die Testplattform-
+Sitzung im Browser. Nur Testobjekte; Endstand jeweils gleich Anfang.
+
+| Nr | Ablauf | Ergebnis |
+|---|---|---|
+| L14 / #6 | TEST TEST (649) Deutsch + Mathematik in TEST_A1a zugeteilt (`PATCH /lehrpersonen/649/faecher`) → Abgleich Soll Mo L1 D, Mo L2 M im Probelauf (Plan: 1 neu, 1 unverändert – Mo L1 D bestand schon) → ausgeführt → Zellen gelesen (Ist = Soll) → zweiter Probelauf: nichts zu tun → Aufräumen mit Soll nur D und `loeschen` (M gelöscht) → Fächer entfernt | ✔️ |
+| L7 / #12 | `POST /schueler/650/bezugspersonen` neu «TEST Bezugsperson» (Mutter, informationsberechtigt, nicht abholberechtigt) → gelesen → `PATCH …/bezugspersonen/50` sorgeberechtigt → `DELETE …/bezugspersonen/50` → 650 ohne Bezugsperson; Testperson danach in Escola gelöscht | ✔️ |
+| L9 / #14 | zweite Test-Lehrperson «TEST Zweite» (`POST /personen`, Rolle lehrperson) → beide Deutsch in TEST_A1a → Eintrag Mo L3 mit `lehrperson_ids [649]` → umgeschaltet auf `[738]` → auf `[649, 738]` → Eintrag gelöscht, Fächer entfernt, Testperson gelöscht | ✔️ |
