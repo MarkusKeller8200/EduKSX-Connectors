@@ -62,18 +62,19 @@ def test_einstellen_ablauf(c, monkeypatch):
     monkeypatch.setattr(c, "person_schreiben", lambda pid, f: log.append(("felder", sorted(f))) or
                         {"geschrieben": True, "aenderungen": [{"feld": k} for k in f]})
     monkeypatch.setattr(c, "ahv_setzen", lambda pid, a: log.append(("ahv", a)) or {"ahv": "gesetzt"})
-    monkeypatch.setattr(c, "schulmail_setzen", lambda pid, v, n: log.append(("mail", v)) or {"email": "max.muster@sekbuelach.ch"})
+    monkeypatch.setattr(c, "schulmail_setzen", lambda pid, v, n, index_neu=True: log.append(("mail", v, index_neu)) or {"email": "max.muster@sekbuelach.ch"})
     r = c.mitarbeiter_einstellen("Muster", "Max", "m", "Hinterbirch", "gruppe_14", [13], "756.1234.5678.97",
                                  {"geburtstag": "01.02.1990", "natel": "079 000 00 00"})
     assert r["id"] == 700 and r["vollstaendig"]
     assert [x[0] for x in log] == ["anlegen", "rollen", "felder", "ahv", "mail"]
     assert ("ahv", "756.1234.5678.97") in log
+    assert ("mail", "Max", False) in log  # Personen-Index nicht ein zweites Mal einlesen
 
 
 def test_einstellen_teilfehler_wird_gemeldet(c, monkeypatch):
     monkeypatch.setattr(c, "personen_suchen", lambda **k: {"treffer": []})
     monkeypatch.setattr(c, "person_anlegen", lambda *a: {"angelegt": True, "id": 701})
-    monkeypatch.setattr(c, "schulmail_setzen", lambda *a: (_ for _ in ()).throw(RuntimeError("Escola hat die E-Mail nicht übernommen")))
+    monkeypatch.setattr(c, "schulmail_setzen", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("Escola hat die E-Mail nicht übernommen")))
     r = c.mitarbeiter_einstellen("Muster", "Max", "m", "Hinterbirch", "lehrperson")
     assert r["id"] == 701 and not r["vollstaendig"]
     assert r["schritte"][-1] == {"schritt": "schulmail", "ok": False, "fehler": "Escola hat die E-Mail nicht übernommen"}
@@ -107,3 +108,12 @@ def test_rollen_ausgetreten(c, monkeypatch):
     monkeypatch.setattr(c, "person_rollen_setzen", lambda pid, h, e, p=False: aufruf.update(h=h, e=e) or {"geaendert": True})
     r = c.rollen_ausgetreten(649)
     assert aufruf == {"h": [50], "e": [13, 41]} and r["nicht_entfernt"] == ["Administrator:innen"]
+
+
+def test_schulmail_index_neu(c, monkeypatch):
+    aufrufe = []
+    monkeypatch.setattr(c, "personen_suchen", lambda ahv=None, email=None, refresh=False:
+                        aufrufe.append(refresh) or {"treffer": []})
+    assert c.schulmail_setzen(5, "Max", "Muster", probelauf=True)["email"] == "max.muster@sekbuelach.ch"
+    c.schulmail_setzen(5, "Max", "Muster", probelauf=True, index_neu=False)
+    assert aufrufe == [True, False]

@@ -14,6 +14,8 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
 - Escola-API 1.19.4: Endpunkte in 14 Themen gruppiert (`escola_api/themen.py`, Test: jeder Endpunkt genau ein Thema)
 
 ### Behoben
+- Escola-API 1.19.6 (#15): `POST /mitarbeitende` las vor dem Setzen der Schulmail alle Personen ein zweites Mal
+  ein (live über 20 Minuten); jetzt wird der in der Vorprüfung gelesene Index verwendet
 - Escola-API 1.19.5 (#15): `GET /schueler/{id}/arbeitsgruppen` lieferte in einer frischen Sitzung 500
   (Escola antwortet auf `assignments.php` nur mit «Es ist ein Fehler aufgetreten.», solange die Seite
   «SuS-Zuordnungen» nicht geöffnet ist); die Seite wird jetzt vorher geöffnet, sonst 502 mit klarer Meldung

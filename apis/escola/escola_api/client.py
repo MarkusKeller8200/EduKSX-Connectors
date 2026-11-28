@@ -1455,8 +1455,9 @@ class EscolaClient:
         return {"id": pid, "geaendert": True, "ahv": "gesetzt"}
 
     def schulmail_setzen(self, pid: int, vorname: str | None = None, nachname: str | None = None,
-                         kategorie: str = "allActive", probelauf: bool = False) -> dict:
-        """Schulmail vorname.nachname@sekbuelach.ch bilden, auf Doppelte prüfen und als E-Mail (Geschäft) setzen."""
+                         kategorie: str = "allActive", probelauf: bool = False, index_neu: bool = True) -> dict:
+        """Schulmail vorname.nachname@sekbuelach.ch bilden, auf Doppelte prüfen und als E-Mail (Geschäft) setzen.
+        `index_neu=False`: den eben gelesenen Personen-Index verwenden (WF-01 liest ihn vor dem Anlegen schon)."""
         from . import personen as PP
         if not vorname or not nachname:
             with self._lock:
@@ -1467,7 +1468,7 @@ class EscolaClient:
             adresse = PP.schulmail(vorname or "", nachname or "", self.SCHULMAIL_DOMAIN)
         except PP.FeldFehler as e:
             raise ValueError(str(e))
-        andere = [t for t in self.personen_suchen(email=adresse, refresh=True)["treffer"] if t["id"] != pid]
+        andere = [t for t in self.personen_suchen(email=adresse, refresh=index_neu)["treffer"] if t["id"] != pid]
         if andere:
             raise KonfliktFehler(f"{adresse} ist schon vergeben – bitte von Hand lösen", andere)
         if probelauf:
@@ -1539,7 +1540,8 @@ class EscolaClient:
         if ahv_schoen:
             schritt("ahv", lambda: self.ahv_setzen(pid, ahv_schoen)["ahv"])
         if adresse:
-            schritt("schulmail", lambda: self.schulmail_setzen(pid, vorname, nachname)["email"])
+            # Index wurde in Schritt 1 frisch gelesen; ein zweites Einlesen aller Personen dauert Minuten (live 28.11.2026)
+            schritt("schulmail", lambda: self.schulmail_setzen(pid, vorname, nachname, index_neu=False)["email"])
         return {"id": pid, "vollstaendig": all(s["ok"] for s in schritte), "schritte": schritte}
 
     def lehrperson_einsatz(self, lp_id: int) -> dict:
