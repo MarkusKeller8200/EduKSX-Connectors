@@ -19,7 +19,7 @@ Test-Arbeitsgruppe TEST 3).
 | WF-04 | Lehrperson verlässt die Schule | ✅ | ◐ | Stichtag (L5) |
 | WF-05 | Lehrperson übernimmt zusätzliche Klasse (KLP oder Fach) | ✅ | ◐ | – |
 | WF-06 | Lehrperson übernimmt eine neue Klasse (Wechsel) | ✅ | ◐ | Rechte fürs kommende SJ (L6) |
-| WF-07 | Schüler:in anmelden ab Datum, Klasse, Eltern als gesetzliche Vertretung | ✅ | ◐ | neue Bezugsperson anlegen noch nicht live (L7) |
+| WF-07 | Schüler:in anmelden ab Datum, Klasse, Eltern als gesetzliche Vertretung | ✅ | ◐ | neue Bezugsperson anlegen live über die API ✔️ 28.11.2026 (L7) |
 | WF-08 | Schüler:in wechselt die Klasse ab Datum | ✅ | 🧪 | – |
 | WF-09 | Schüler:in verlässt die Schule zum Zeitpunkt X | ✅ | ◐ | – |
 | WF-10 | Schüler:in zieht um | ✅ | ◐ | Ausführung ab Datum: IDA/CONNECT (L5) |
@@ -28,7 +28,7 @@ Test-Arbeitsgruppe TEST 3).
 | WF-13 | Klasseneinteilung durch die Schulleitung, Kontrolle | ✅ | 🧪 | Einteilung im Escola-Tool; Kontrolle `GET /klassenlisten` |
 | WF-14 | App-Zugang für Eltern, Nachfassen | ⚠️ | 🧪 | Eltern je Klasse ✅ `GET /klassen/{id}/eltern`; App-Status ([#4](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/4)) |
 | WF-15 | Zuteilungsbrief, Rekurs, Zuteilung definitiv | ⚠️ | 🧪 | Umteilung ✅ (WF-08); Brief ([#5](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/5)), Sichtbarkeit App ([#7](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/7)) |
-| WF-16 | Stundenpläne aus dem Stundenplaner einspielen | ⚠️ | ◐ | Einzelschreiben ✅, Abgleich ✅ (nicht live) ([#6](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/6)) |
+| WF-16 | Stundenpläne aus dem Stundenplaner einspielen | ⚠️ | ◐ | Einzelschreiben ✅, Abgleich ✅ live über die API ✔️ 28.11.2026 ([#6](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/6)) |
 | WF-17 | ICT: Klassenlisten, Zugänge, Geräte, Nutzungsvereinbarung | ⚠️ | 🧪 | Klassenlisten ✅; Vereinbarung + Rücklauf ([#5](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/5)), Ablage ([#3](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/3)) |
 | WF-18 | Arzt- und Zahnarztkontrollen | ❌ | – | Gutscheine ([#5](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/5)), Rückmeldung ablegen ([#3](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/3)), Status/Liste ([#8](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/8)) |
 | WF-19 | Prüfungen mit Note an Eltern | ❌ | – | ([#10](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/10)), hängt an [#3](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/3), [#9](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/9) |
