@@ -1,6 +1,6 @@
 # Escola-API – Workflows (Prüfliste und spätere Testläufe)
 
-Stand API: 1.19.9 · Liste wird laufend ergänzt (zuletzt 28.11.2026: Erkundung L8, L11, L12, L17).
+Stand API: 1.19.10 · Liste wird laufend ergänzt (zuletzt 28.11.2026: Erkundung L8, L11, L12, L17).
 
 Jeder Workflow wird zuerst **theoretisch** gegen die vorhandene API geprüft (reichen die Endpunkte?).
 Später dient er als **Testlauf** auf dem Testsystem (Testpersonen TEST TEST 649, SuS SuS 650, Testklasse TEST_A1a 120,
@@ -13,16 +13,16 @@ Test-Arbeitsgruppe TEST 3).
 
 | Nr | Workflow | Status | Live | Offen |
 |---|---|---|---|---|
-| WF-01 | Mitarbeiter:in einstellen und erfassen | ✅ | 🧪 | – (Postfach M365: IDA/CONNECT) |
-| WF-02 | Mitarbeiter:in tritt auf ein Datum aus | ✅ | ◐ | Stichtag: IDA/CONNECT (L5) |
-| WF-03 | Neue Lehrperson ab Datum, mit Klasse oder Fachklasse | ✅ | ◐ | Rechte fürs kommende SJ (L6) |
-| WF-04 | Lehrperson verlässt die Schule | ✅ | ◐ | Stichtag (L5) |
-| WF-05 | Lehrperson übernimmt zusätzliche Klasse (KLP oder Fach) | ✅ | ◐ | – |
-| WF-06 | Lehrperson übernimmt eine neue Klasse (Wechsel) | ✅ | ◐ | Rechte fürs kommende SJ (L6) |
-| WF-07 | Schüler:in anmelden ab Datum, Klasse, Eltern als gesetzliche Vertretung | ✅ | ◐ | neue Bezugsperson anlegen live über die API ✔️ 28.11.2026 (L7) |
-| WF-08 | Schüler:in wechselt die Klasse ab Datum | ✅ | 🧪 | – |
-| WF-09 | Schüler:in verlässt die Schule zum Zeitpunkt X | ✅ | ◐ | – |
-| WF-10 | Schüler:in zieht um | ✅ | ◐ | Ausführung ab Datum: IDA/CONNECT (L5) |
+| WF-01 | Mitarbeiter:in einstellen und erfassen | ✅ | ✔️ 28.11.2026 | – (Postfach M365: IDA/CONNECT) |
+| WF-02 | Mitarbeiter:in tritt auf ein Datum aus | ✅ | ✔️ 28.11.2026 | Stichtag: IDA/CONNECT (L5); Rolle «Ausgetreten» fehlt in Escola |
+| WF-03 | Neue Lehrperson ab Datum, mit Klasse oder Fachklasse | ✅ | ✔️ 28.11.2026 | – |
+| WF-04 | Lehrperson verlässt die Schule | ✅ | ✔️ 28.11.2026 | Stichtag (L5) |
+| WF-05 | Lehrperson übernimmt zusätzliche Klasse (KLP oder Fach) | ✅ | ✔️ 28.11.2026 | – |
+| WF-06 | Lehrperson übernimmt eine neue Klasse (Wechsel) | ✅ | ✔️ 28.11.2026 | `ersetzen` nur aktuelles SJ; kommendes SJ separat |
+| WF-07 | Schüler:in anmelden ab Datum, Klasse, Eltern als gesetzliche Vertretung | ✅ | ✔️ 28.11.2026 | – |
+| WF-08 | Schüler:in wechselt die Klasse ab Datum | ✅ | ✔️ 28.11.2026 | – |
+| WF-09 | Schüler:in verlässt die Schule zum Zeitpunkt X | ✅ | ✔️ 28.11.2026 | Zurücknehmen: Wegzug ausdrücklich leeren |
+| WF-10 | Schüler:in zieht um | ✅ | ✔️ 28.11.2026 | Ausführung ab Datum: IDA/CONNECT (L5); gemeinsame Adresse mit Eltern |
 | WF-11 | Massenimport Schüler:innen und Eltern (Einschulung) | ⚠️ | ◐ | Import in Escola per Zwischenablage, live getestet 24.11.2026, Escola-Korrekturen nachgeprüft 27.11.2026 ✔️; Klassenbeginn ✅ `POST /klassen/{id}/klassenbeginn` (L19); Upload über die API offen ([#2](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/2)) |
 | WF-12 | Übertrittsformular ins Schülerdossier | ❌ | – | Dokumente ablegen ([#3](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/3)) |
 | WF-13 | Klasseneinteilung durch die Schulleitung, Kontrolle | ✅ | 🧪 | Einteilung im Escola-Tool; Kontrolle `GET /klassenlisten` |
@@ -58,7 +58,7 @@ Test-Arbeitsgruppe TEST 3).
 | L18 | Prüfungen mit Note an Eltern | offen ([#10](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/10)) |
 | L19 | Klassenbeginn in der Vergangenheit (Import/Transfer teilen ab heute ein) | ✅ seit 1.16 über die Schullaufbahn (`PUT /schueler/{id}/klasse/beginn`, `POST /klassen/{id}/klassenbeginn`); Escola-Aufrufe live geprüft 24.11.2026 (SuS 650, 6 Durchläufe ok, Ø 0,76 s pro SuS), API-Ablauf noch nicht |
 
-Testläufe der Schreib-Workflows WF-01 bis WF-10: [#15](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/15).
+Testläufe der Schreib-Workflows WF-01 bis WF-10: [#15](https://github.com/MarkusKeller8200/EduKSX-Connectors/issues/15) – live über die API durchgeführt am 28.11.2026 (Abschnitt «Testläufe über die API»).
 
 ## Offene Fragen
 
@@ -363,7 +363,7 @@ Erhoben am 15.11.2026 aus dem Gesamtablauf (siehe `docs/workflows-escola.md`). T
 
 ## Testläufe über die API (28.11.2026)
 
-Escola-API 1.19.3 lokal auf dem Rechner des Projektverantwortlichen, angemeldet mit 2FA, bedient über die Testplattform-
+Escola-API lokal auf dem Rechner des Projektverantwortlichen (L7/L9/L14: 1.19.3; #15: 1.19.4 bis 1.19.9, Korrekturen laufend nachgezogen), angemeldet mit 2FA, bedient über die Testplattform-
 Sitzung im Browser. Nur Testobjekte; Endstand jeweils gleich Anfang.
 
 | Nr | Ablauf | Ergebnis |
@@ -371,3 +371,15 @@ Sitzung im Browser. Nur Testobjekte; Endstand jeweils gleich Anfang.
 | L14 / #6 | TEST TEST (649) Deutsch + Mathematik in TEST_A1a zugeteilt (`PATCH /lehrpersonen/649/faecher`) → Abgleich Soll Mo L1 D, Mo L2 M im Probelauf (Plan: 1 neu, 1 unverändert – Mo L1 D bestand schon) → ausgeführt → Zellen gelesen (Ist = Soll) → zweiter Probelauf: nichts zu tun → Aufräumen mit Soll nur D und `loeschen` (M gelöscht) → Fächer entfernt | ✔️ |
 | L7 / #12 | `POST /schueler/650/bezugspersonen` neu «TEST Bezugsperson» (Mutter, informationsberechtigt, nicht abholberechtigt) → gelesen → `PATCH …/bezugspersonen/50` sorgeberechtigt → `DELETE …/bezugspersonen/50` → 650 ohne Bezugsperson; Testperson danach in Escola gelöscht | ✔️ |
 | L9 / #14 | zweite Test-Lehrperson «TEST Zweite» (`POST /personen`, Rolle lehrperson) → beide Deutsch in TEST_A1a → Eintrag Mo L3 mit `lehrperson_ids [649]` → umgeschaltet auf `[738]` → auf `[649, 738]` → Eintrag gelöscht, Fächer entfernt, Testperson gelöscht | ✔️ |
+| WF-01 / #15 | Probelauf «TEST Workflow» (Plan, Schulmail `workflow.test@…`; falsche AHV → 400) → `POST /mitarbeitende` (739: Rolle 13, Eintritt, AHV, Schulmail, `vollstaendig`) → gleiche AHV nochmals → 409. Vorprüfung liest alle aktiven und inaktiven Personen und dauert mehrere Minuten (1.19.6: nur noch einmal) | ✔️ |
+| WF-02 / #15 | 649: Austritt 31.07.2027 gesetzt → `rollen/ausgetreten` → 409 «Rolle „Ausgetreten“ fehlt» (nichts geändert) → fristlos (`sofort_deaktivieren`) → inaktiv → aktivieren → Austritt leeren. **Offen:** Rolle «Ausgetreten» in Escola anlegen | ✔️ |
+| WF-03 / #15 | 739 als KLP TEST_A1a (aktuell + kommend), Deutsch SJ 0 und SJ 1 (`vorlage` fachlehrperson; als KLP mit KLR/SpM/Abs), Fachklasse AG 3, Lektion Di L3 → `einsatz` zeigt alles | ✔️ |
+| WF-05 / #15 | 649 Fachlehrperson Mathematik in TEST_A1a (keine Rechte) | ✔️ |
+| WF-06 / #15 | `ersetzen` 739 → 649 (`klassen_ids [120]`): Probelauf = Ausführung; Fach, KLP-Platz aktuell und Lektion übernommen. Kommendes SJ (KLP, Fächer) bleibt bei der bisherigen LP → separat (`kommend`, `schuljahr: 1`) | ✔️ |
+| WF-04 / #15 | ohne Nachfolge: KLP-Plätze und Fächer (Klasse, kommendes SJ, Arbeitsgruppe) geleert → `einsatz` 739 leer; Ausgangslage TEST_A1a wiederhergestellt (kommende KLP 576) | ✔️ |
+| WF-07 / #15 | «TEST Schuelerin» (740) ohne Klasse angelegt (500 trotz Anlegen → 1.19.7) → Transfer TEST_A1a heute und kommendes SJ (Schullaufbahn bestätigt) → neue Mutter (741) → gleiche Mutter nochmals → 409 mit 741 → 649 als Vater verknüpft → AG 3 ein/aus (1.19.8/1.19.9) → Vater-Verknüpfung entfernt | ✔️ |
+| WF-08 / #15 | 650 H_A1a → TEST_A1a (Transfer heute), AG 3 dazu, Kontrolle `GET /schueler?klasse_id=120` → AG weg, zurück nach H_A1a | ✔️ |
+| WF-09 / #15 | 740: Austritt 09.07.2027 mit Wegzug → Probelauf «Eltern deaktivieren» (Mutter ja, 649 nein – auch Lehrperson) → Austritt zurück (`datum: ""` leert den Wegzug **nicht**, nur mit `wegzugsdatum: ""`, `wegzugsgemeinde: ""`) → Mutter deaktiviert und wieder aktiviert | ✔️ |
+| WF-10 / #15 | 740: Strasse, Zuzugsdatum, Zuzugsgemeinde geschrieben und zurück. Bei `gleiche_adresse` schreibt Escola die Strasse der SuS in die gemeinsame Adresse mit der Mutter (Label «Daten von Mutter …») | ✔️ |
+
+**Gefunden und behoben im Testlauf #15:** Arbeitsgruppen einer SuS in frischer Sitzung (1.19.5, 1.19.8, 1.19.9: `application.php initial=1` → `GET assignments.php` → `mode=2&updateStudent=1`), Klassenliste leer, weil Escola den Unterbereich pro Benutzer merkt (1.19.9: immer `sub_k=4`), `POST /schueler` mit Feldern 500 (1.19.7), WF-01 las den Personen-Index doppelt (1.19.6), `/personen/{id}/rollen` 404 nach SuS-Listen (1.19.10).

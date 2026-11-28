@@ -863,7 +863,13 @@ class EscolaClient:
     def _person_rollen_html(self, pid: int) -> str:
         """Reiter „Rollen“ – die Rollen-Schalter zeigt Escola NUR im Bearbeitungsmodus (live geprüft 15.11.2026)."""
         from . import personen as PP
-        r = self._raw(self.PERS + "show_reiter.php", f"active_person={pid}&pageRequest=154&personCategory=allActive&searchMode=false")
+        q0 = f"active_person={pid}&pageRequest=154&personCategory=allActive&searchMode=false"
+        r = self._raw(self.PERS + "show_reiter.php", q0)
+        if "rollen" not in PP.parse_reiter(r):
+            # Nach SuS-Listen steht die Sitzung in einer anderen Personengruppe; dann findet show_reiter die
+            # Person unter „alle aktiven Personen“ erst, wenn diese Liste geladen ist (#15, live 28.11.2026: 404).
+            self.personen("allActive", refresh=True)
+            r = self._raw(self.PERS + "show_reiter.php", q0)
         if "rollen" not in PP.parse_reiter(r):
             raise KeyError(f"Person {pid} nicht gefunden")
         q = "active_section=rollen&pageRequest=154&personCategory=allActive&searchMode=false"

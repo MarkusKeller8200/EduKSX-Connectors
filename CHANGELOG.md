@@ -14,6 +14,8 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
 - Escola-API 1.19.4: Endpunkte in 14 Themen gruppiert (`escola_api/themen.py`, Test: jeder Endpunkt genau ein Thema)
 
 ### Behoben
+- Escola-API 1.19.10 (#15): `GET /personen/{id}/rollen` 404 nach SuS-Listen – lädt «alle aktiven Personen» und
+  wiederholt einmal. Testlauf WF-01 bis WF-10 über die API in `WORKFLOWS.md` dokumentiert
 - Escola-API 1.19.9 (#15): Klassenliste leer, nachdem im Browser «Arbeitsgruppen» geöffnet war – Escola merkt sich
   den Unterbereich pro Benutzer über Sitzungen hinweg; die Klassenauswahl gibt es nur im Stundenplan, darum immer
   `admin.php?page_request=6&sub_k=4`. Arbeitsgruppen: zusätzlich `application.php` `initial=1` wie die Seite
