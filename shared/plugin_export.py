@@ -339,6 +339,10 @@ def manifest(openapi: dict, info: dict, base_url: str = "") -> dict:
         "x-eduksx": {"quelle": "EduKSX-Connectors", "api": name, "port": plugin.get("port"),
                      "sitzung": sitzung_cfg},
     }
+    gruppen = [{"name": t.get("name"), "beschreibung": t.get("description", "")}
+               for t in openapi.get("tags") or [] if t.get("name")]
+    if gruppen:  # Reihenfolge und Beschreibung der Themen (für Doku und Testplattform)
+        m["x-eduksx"]["gruppen"] = gruppen
     if plugin.get("data_notice"):
         m["data_notice"] = plugin["data_notice"]
     if base_url:

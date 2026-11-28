@@ -888,6 +888,7 @@ Felder abgewiesen werden und dass das Passwort nirgends gespeichert wird.
 
 | Version | Datum | Änderungen |
 |---|---|---|
+| 1.19.4 | 28.11.2026 | Endpunkte thematisch gruppiert (14 Themen mit Beschreibung, `escola_api/themen.py`) – für Swagger, `plugin.json` und die Doku auf GitHub Pages |
 | 1.19.3 | 28.11.2026 | Fehler #59: `POST /schueler` aktiviert vor dem Anlegen die Zielklasse (Escola nimmt sonst die Klasse der Sitzung) und prüft danach die Schullaufbahn (`klasse_geprueft`, bei Abweichung `warnung`) |
 | 1.19.2 | 28.11.2026 | Absenzen live mit Test-Absenz geprüft (#9): flache Ausgabe mit Datum in Schweizer Zeit, `?roh=true` für die Escola-Felder |
 | 1.19.1 | 28.11.2026 | Live geprüft mit Testdaten: App-Status liest den echten Zustand «App (manuell) aktiviert» und neu `app_manuell`, `app_eingeloggt` (#4); Zellen im Stundenplan von Arbeitsgruppen mit `arbeitsgruppe` und LP-Kürzel richtig getrennt (#13) |

@@ -65,14 +65,17 @@ function direktBackend(liste) {
     manifest: async (name) => {
       const p = nachName[name]; if (!p) throw new Error(`Plugin «${name}» unbekannt`);
       const e = oeffentlich(p);
-      let r;
+      let r, fehler;
       try { r = await fetch(e.base_url + "/plugin.json", { headers: kopf(name) }); }
-      catch { throw new Error(`${p.titel} nicht erreichbar unter ${e.base_url} – API lokal starten (start-testplattform) und Adresse prüfen.`); }
-      if (r.status === 401) throw new Error(`${p.titel}: API-Key fehlt oder ist falsch – auf der Startseite eintragen.`);
-      if (!r.ok) throw new Error(`${p.titel}: /plugin.json antwortet mit ${r.status} (API ohne shared/? Lokal aus dem Repo starten).`);
-      const m = await r.json(); (m["x-eduksx"] ||= {}).quelle_beschreibung = "plugin.json";
-      return { plugin: e, manifest: m };
+      catch { fehler = `${p.titel} nicht erreichbar unter ${e.base_url} – API lokal starten (start-testplattform) und Adresse prüfen.`; }
+      if (!fehler && r.status === 401) fehler = `${p.titel}: API-Key fehlt oder ist falsch – auf der Startseite eintragen.`;
+      else if (!fehler && !r.ok) fehler = `${p.titel}: /plugin.json antwortet mit ${r.status} (API ohne shared/? Lokal aus dem Repo starten).`;
+      if (!fehler) { const m = await r.json(); (m["x-eduksx"] ||= {}).quelle_beschreibung = "plugin.json"; return { plugin: e, manifest: m }; }
+      const s = await statischesManifest(name);  // Beschreibung vom Bau der Seite: Doku lesbar, Tester ohne API nicht
+      if (s) return { plugin: e, manifest: s, hinweis: fehler };
+      throw new Error(fehler);
     },
+    statisch: (name) => statischesManifest(name),
     aufruf: async (name, pfad, opt) => {
       const p = nachName[name]; const t0 = performance.now();
       const h = kopf(name, opt.headers || {}); h.delete("X-Testplattform-Bestaetigt");
@@ -89,6 +92,15 @@ function direktBackend(liste) {
     },
     protokoll: async () => [...direktProtokoll].reverse(),
   };
+}
+
+async function statischesManifest(name) {
+  try {
+    const r = await fetch(`manifeste/${encodeURIComponent(name)}.json`, { cache: "no-store" });
+    if (!r.ok) return null;
+    const m = await r.json(); (m["x-eduksx"] ||= {}).quelle_beschreibung = "statisch";
+    return m;
+  } catch { return null; }
 }
 
 async function waehleBackend() {
@@ -183,10 +195,12 @@ function karte(p) {
       el("dt", { text: "API-Key" }), el("dd", { text: p.api_key_gesetzt ? (backend.direkt ? "eingetragen (nur in diesem Tab)" : "hinterlegt (auf dem Server)") : "keiner hinterlegt" }),
       p.status?.version ? [el("dt", { text: "Version laut API" }), el("dd", { text: p.status.version })] : null),
     backend.direkt ? el("details", { open: !p.api_key_gesetzt || !p.erreichbar }, el("summary", { text: "Adresse und API-Key" }), direktEinstellungen(p)) : null,
-    el("a", { href: `#/plugin/${p.name}`, text: `Testseite ${p.titel} öffnen` }));
+    el("p", {}, el("a", { href: `#/plugin/${p.name}`, text: `Testseite ${p.titel} öffnen` }), " · ",
+      el("a", { href: `#/doku/${p.name}`, text: "Dokumentation" })));
 }
 function navigation() {
-  fuelle($("hauptnav"), ...zustand.plugins.map((p) => el("a", { href: `#/plugin/${p.name}`, text: p.titel })));
+  fuelle($("hauptnav"), ...zustand.plugins.map((p) => el("a", { href: `#/plugin/${p.name}`, text: p.titel })),
+    el("a", { href: "#/doku", text: "Dokumentation" }));
 }
 
 async function pluginSeite(name, endpunktId) {
@@ -203,7 +217,7 @@ async function pluginSeite(name, endpunktId) {
   const aktiv = eps.find((e) => e.id === endpunktId);
   const filter = el("input", { type: "search", id: "filter", placeholder: "z. B. kontakte, POST", "aria-describedby": "filter-hilfe" });
   const listeBox = el("div");
-  const zeichneListe = () => fuelle(listeBox, liste(name, eps, filter.value.trim().toLowerCase(), endpunktId));
+  const zeichneListe = () => fuelle(listeBox, liste(name, eps, filter.value.trim().toLowerCase(), endpunktId, m));
   filter.addEventListener("input", zeichneListe); zeichneListe();
   const info = zustand.plugins.find((x) => x.name === name);
   fuelle(main, 
@@ -211,7 +225,8 @@ async function pluginSeite(name, endpunktId) {
       el("span", { class: "pill blau", text: m["x-eduksx"]?.quelle_beschreibung === "plugin.json" ? "Beschreibung: plugin.json" : "Beschreibung aus openapi.json" })),
     m.description ? el("p", { text: m.description }) : null,
     m.data_notice ? el("p", { class: "warn", text: "Datenschutz: " + m.data_notice }) : null,
-    el("p", { class: "leise" }, `${eps.length} Endpunkte · Adresse `, el("span", { class: "pfad", text: p.base_url }), " · ",
+    daten.hinweis ? el("p", { class: "warn", text: daten.hinweis + " Angezeigt wird die Beschreibung vom Bau dieser Seite; Testen geht erst mit laufender API." }) : null,
+    el("p", { class: "leise" }, `${eps.length} Endpunkte · `, el("a", { href: `#/doku/${name}`, text: "Dokumentation" }), " · Adresse ", el("span", { class: "pfad", text: p.base_url }), " · ",
       el("a", { href: p.base_url + "/docs", target: "_blank", rel: "noopener", text: "Swagger der API" }),
       name === "escola" ? [" · ", el("a", { href: p.base_url + "/testseite", target: "_blank", rel: "noopener", text: "Escola-Testseite (Workflows)" })] : null,
       " · ", el("a", { href: "#", onclick: (ev) => { ev.preventDefault(); herunterladen(new Blob([JSON.stringify(m, null, 2)], { type: "application/json" }), `${m.id}-plugin.json`); }, text: "plugin.json herunterladen" }),
@@ -227,12 +242,17 @@ async function pluginSeite(name, endpunktId) {
   if (aktiv) document.querySelector("[data-tester-titel]")?.focus();
 }
 
-function liste(name, eps, f, aktivId) {
-  const gruppen = new Map();
+function gruppieren(eps, m, f = "") {
+  const gruppen = new Map((m?.["x-eduksx"]?.gruppen || []).map((g) => [g.name, []]));
   for (const e of eps) {
     if (f && !`${e.method} ${e.path} ${e.label} ${e.group || ""}`.toLowerCase().includes(f)) continue;
     const g = e.group || "Allgemein"; if (!gruppen.has(g)) gruppen.set(g, []); gruppen.get(g).push(e);
   }
+  return [...gruppen].filter(([, l]) => l.length);
+}
+
+function liste(name, eps, f, aktivId, m) {
+  const gruppen = new Map(gruppieren(eps, m, f));
   if (!gruppen.size) return el("p", { class: "leise", text: "Kein Endpunkt passt." });
   return el("div", {}, [...gruppen].map(([g, liste]) => el("details", { open: true },
     el("summary", {}, g, " ", el("span", { class: "leise", text: `(${liste.length})` })),
@@ -431,6 +451,71 @@ async function antwortZeigen(name, r, box, probe, dauer) {
     vorschau != null ? el("pre", { class: "antwort", tabindex: "0", "aria-label": "Vorschau", text: vorschau }) : null);
 }
 
+// ----------------------------------------------------------------------------------------- Dokumentation
+async function dokuManifest(name) {
+  if (backend.statisch) { const s = await backend.statisch(name); if (s) return s; }  // GitHub Pages: ohne laufende API
+  return (zustand.manifeste[name] ||= await backend.manifest(name)).manifest;
+}
+async function dokuSeite(name) {
+  const main = $("inhalt");
+  if (!zustand.plugins.length) { try { zustand.plugins = await backend.plugins(); navigation(); } catch { /* weiter */ } }
+  if (!name) {
+    fuelle(main, el("h2", { text: "Dokumentation der APIs" }),
+      el("p", { class: "leise", text: "Beschreibung aller Endpunkte, nach Themen gruppiert. Lesbar ohne laufende API." }),
+      el("ul", {}, zustand.plugins.map((p) => el("li", {}, el("a", { href: `#/doku/${p.name}`, text: p.titel }), " ",
+        el("span", { class: "pill", text: p.version }), p.beschreibung ? [" – ", p.beschreibung] : null))));
+    return;
+  }
+  fuelle(main, el("p", { "aria-live": "polite", text: "Lade Dokumentation …" }));
+  let m;
+  try { m = await dokuManifest(name); } catch (e) { fuelle(main, el("p", { class: "fehler", text: e.message })); return; }
+  const eps = m.service?.endpoints || [];
+  const gruppen = gruppieren(eps, m);
+  const info = Object.fromEntries((m["x-eduksx"]?.gruppen || []).map((g) => [g.name, g.beschreibung]));
+  const anker = (g) => "g-" + g.toLowerCase().replace(/[^a-z0-9äöü]+/g, "-");
+  const sprung = (id) => (ev) => { ev.preventDefault(); document.getElementById(id)?.scrollIntoView(); document.getElementById(id)?.focus(); };
+  fuelle(main,
+    el("h2", {}, m.name, " ", el("span", { class: "pill", text: m.version })),
+    m.description ? el("p", { text: m.description }) : null,
+    m.data_notice ? el("p", { class: "warn", text: "Datenschutz: " + m.data_notice }) : null,
+    el("p", { class: "leise" }, `${eps.length} Endpunkte in ${gruppen.length} Themen · `,
+      el("a", { href: `#/plugin/${name}`, text: "Testseite" }), " · Anmeldung: Kopfzeile ", el("code", { text: "X-API-Key" }),
+      m["x-eduksx"]?.sitzung ? [", Escola-Sitzung: ", el("code", { text: m["x-eduksx"].sitzung.header })] : null,
+      " · ✏️ = schreibt (zuerst mit probelauf=true testen)"),
+    el("nav", { class: "karte", "aria-label": "Themen" }, el("strong", { text: "Themen" }),
+      el("ul", { class: "spalten" }, gruppen.map(([g, l]) => el("li", {}, el("a", { href: "#", onclick: sprung(anker(g)), text: g }),
+        " ", el("span", { class: "leise", text: `(${l.length})` }))))),
+    gruppen.map(([g, l]) => el("section", { class: "karte doku", id: anker(g), tabindex: "-1", "aria-labelledby": anker(g) + "-h" },
+      el("h3", { id: anker(g) + "-h", text: g }),
+      info[g] ? el("p", { class: "leise", text: info[g] }) : null,
+      l.map((e) => dokuEndpunkt(name, e)))));
+}
+function notiz(e) {  // Beschreibung ohne die Zeile, die schon als Überschrift steht
+  const z = String(e.note || "").split("\n");
+  if (z.length && z[0].trim().replace(/\.$/, "") === String(e.label || "").trim().replace(/\.$/, "")) z.shift();
+  return z.join("\n").trim();
+}
+function dokuEndpunkt(name, e) {
+  const param = (p) => el("tr", {}, el("td", {}, el("code", { text: p.name }), p.required ? el("span", { class: "leise", text: " *" }) : null),
+    el("td", { text: p.in === "path" ? "Pfad" : p.in === "header" ? "Kopfzeile" : "Abfrage" }),
+    el("td", {}, p.help || "", p.choices ? [" ", el("span", { class: "leise", text: "(" + p.choices.join(", ") + ")" })] : null,
+      p.default != null ? [" ", el("span", { class: "leise", text: "Standard: " + p.default })] : null));
+  const feld = (f) => el("tr", {}, el("td", {}, el("code", { text: f.name }), f.required ? el("span", { class: "leise", text: " *" }) : null),
+    el("td", { text: f.type || "" }), el("td", { text: f.help || "" }));
+  const params = e.params || [];
+  const felder = e.fields || e.form || [];
+  return el("article", { class: "ep" },
+    el("h4", {}, el("span", { class: `m ${e.method}`, text: e.method }), " ", el("span", { class: "pfad", text: e.path }), " ",
+      e.danger ? el("span", { class: "pill gelb", text: "✏️ schreibt" }) : null, " ",
+      e.probelauf ? el("span", { class: "pill blau", text: "Probelauf" }) : null),
+    el("p", {}, el("strong", { text: e.label }), " ", el("a", { href: `#/plugin/${name}/${e.id}`, class: "leise", text: "testen" })),
+    notiz(e) ? el("p", { class: "notiz", text: notiz(e) }) : null,
+    params.length ? el("table", { class: "klein" }, el("thead", {}, el("tr", {}, ["Parameter", "Ort", "Beschreibung"].map((t) => el("th", { scope: "col", text: t })))),
+      el("tbody", {}, params.map(param))) : null,
+    felder.length ? el("table", { class: "klein" }, el("thead", {}, el("tr", {}, ["Feld im Body", "Typ", "Beschreibung"].map((t) => el("th", { scope: "col", text: t })))),
+      el("tbody", {}, felder.map(feld))) : null);
+}
+
 async function protokollSeite() {
   const main = $("inhalt");
   let liste = [];
@@ -447,6 +532,7 @@ async function protokollSeite() {
 function route() {
   const teile = location.hash.replace(/^#\/?/, "").split("/").filter(Boolean).map(decodeURIComponent);
   if (teile[0] === "plugin" && teile[1]) pluginSeite(teile[1], teile[2]);
+  else if (teile[0] === "doku") dokuSeite(teile[1]);
   else if (teile[0] === "protokoll") protokollSeite();
   else start();
 }
