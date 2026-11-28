@@ -35,6 +35,8 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
   jetzt wird die Zielklasse vorher aktiviert und danach in der Schullaufbahn geprüft (`klasse_geprueft`, `warnung`)
 
 ### Geändert
+- Escola (#71): Personengruppe «Ausgetreten» eingerichtet (Schreibrecht und Rollen-Konfiguration für die
+  Administrator:innen); WF-02 Rollenwechsel live geprüft, Einrichtung im README beschrieben
 - Escola-API 1.19.2 (#9): Absenzen live mit einer Test-Absenz geprüft (Testperson in TEST_A1a, danach gelöscht);
   Ausgabe flach mit Datum in Schweizer Zeit, `?roh=true` für die Escola-Felder
 - Escola-API 1.19.1 (#4, #13): mit Testdaten live geprüft – App-Status erkennt «App (manuell) aktiviert» (das

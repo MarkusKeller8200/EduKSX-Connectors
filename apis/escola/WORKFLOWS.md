@@ -14,7 +14,7 @@ Test-Arbeitsgruppe TEST 3).
 | Nr | Workflow | Status | Live | Offen |
 |---|---|---|---|---|
 | WF-01 | Mitarbeiter:in einstellen und erfassen | ✅ | ✔️ 28.11.2026 | – (Postfach M365: IDA/CONNECT) |
-| WF-02 | Mitarbeiter:in tritt auf ein Datum aus | ✅ | ✔️ 28.11.2026 | Stichtag: IDA/CONNECT (L5); Rolle «Ausgetreten» fehlt in Escola |
+| WF-02 | Mitarbeiter:in tritt auf ein Datum aus | ✅ | ✔️ 28.11.2026 | Stichtag: IDA/CONNECT (L5) |
 | WF-03 | Neue Lehrperson ab Datum, mit Klasse oder Fachklasse | ✅ | ✔️ 28.11.2026 | – |
 | WF-04 | Lehrperson verlässt die Schule | ✅ | ✔️ 28.11.2026 | Stichtag (L5) |
 | WF-05 | Lehrperson übernimmt zusätzliche Klasse (KLP oder Fach) | ✅ | ✔️ 28.11.2026 | – |
@@ -372,7 +372,8 @@ Sitzung im Browser. Nur Testobjekte; Endstand jeweils gleich Anfang.
 | L7 / #12 | `POST /schueler/650/bezugspersonen` neu «TEST Bezugsperson» (Mutter, informationsberechtigt, nicht abholberechtigt) → gelesen → `PATCH …/bezugspersonen/50` sorgeberechtigt → `DELETE …/bezugspersonen/50` → 650 ohne Bezugsperson; Testperson danach in Escola gelöscht | ✔️ |
 | L9 / #14 | zweite Test-Lehrperson «TEST Zweite» (`POST /personen`, Rolle lehrperson) → beide Deutsch in TEST_A1a → Eintrag Mo L3 mit `lehrperson_ids [649]` → umgeschaltet auf `[738]` → auf `[649, 738]` → Eintrag gelöscht, Fächer entfernt, Testperson gelöscht | ✔️ |
 | WF-01 / #15 | Probelauf «TEST Workflow» (Plan, Schulmail `workflow.test@…`; falsche AHV → 400) → `POST /mitarbeitende` (739: Rolle 13, Eintritt, AHV, Schulmail, `vollstaendig`) → gleiche AHV nochmals → 409. Vorprüfung liest alle aktiven und inaktiven Personen und dauert mehrere Minuten (1.19.6: nur noch einmal) | ✔️ |
-| WF-02 / #15 | 649: Austritt 31.07.2027 gesetzt → `rollen/ausgetreten` → 409 «Rolle „Ausgetreten“ fehlt» (nichts geändert) → fristlos (`sofort_deaktivieren`) → inaktiv → aktivieren → Austritt leeren. **Offen:** Rolle «Ausgetreten» in Escola anlegen | ✔️ |
+| WF-02 / #15 | 649: Austritt 31.07.2027 gesetzt → `rollen/ausgetreten` → 409 «Rolle „Ausgetreten“ fehlt» (nichts geändert) → fristlos (`sofort_deaktivieren`) → inaktiv → aktivieren → Austritt leeren. | ✔️ |
+| WF-02 / #71 | Rolle «Ausgetreten» (42) angelegt; 649: `rollen/ausgetreten` Probelauf → ausgeführt (nur noch 42) → zurück (13). `austritt` mit `rollen_ausgetreten: true` → Datum + Rolle 42 → Austritt leeren, Rolle 13 zurück | ✔️ |
 | WF-03 / #15 | 739 als KLP TEST_A1a (aktuell + kommend), Deutsch SJ 0 und SJ 1 (`vorlage` fachlehrperson; als KLP mit KLR/SpM/Abs), Fachklasse AG 3, Lektion Di L3 → `einsatz` zeigt alles | ✔️ |
 | WF-05 / #15 | 649 Fachlehrperson Mathematik in TEST_A1a (keine Rechte) | ✔️ |
 | WF-06 / #15 | `ersetzen` 739 → 649 (`klassen_ids [120]`): Probelauf = Ausführung; Fach, KLP-Platz aktuell und Lektion übernommen. Kommendes SJ (KLP, Fächer) bleibt bei der bisherigen LP → separat (`kommend`, `schuljahr: 1`) | ✔️ |
