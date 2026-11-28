@@ -116,20 +116,21 @@ class EscolaClient:
         finally:
             self._post(TT, {**cell, "type": 3})
 
+    KLASSEN_SEITE = "admin.php?page_request=6&sub_k=4"
+
     def status(self) -> dict:
         with self._lock:
-            html = self._get("admin.php?page_request=6")
+            html = self._get(self.KLASSEN_SEITE)
             return {"angemeldet": True, "klassen_im_menue": len(P.parse_klassen(html))}
 
     # ------------------------------------------------------------------ Stammdaten
     def klassen(self, refresh: bool = False) -> list[dict]:
         def load():
             with self._lock:
-                k = P.parse_klassen(self._get("admin.php?page_request=6"))
-                if not k:
-                    # Escola merkt sich den Unterbereich (sub_k) in der Sitzung; steht dort z. B. „Arbeitsgruppen“
-                    # (sub_k=26), fehlt die Klassenauswahl auf der Seite (live 28.11.2026) -> „Klassen“ öffnen
-                    k = P.parse_klassen(self._get("admin.php?page_request=6&sub_k=10"))
+                # Escola merkt sich den zuletzt geöffneten Unterbereich (sub_k) pro Benutzer, auch über Sitzungen
+                # hinweg (live 28.11.2026: nach „Arbeitsgruppen“ im Browser war die Klassenauswahl in der API weg).
+                # Die Auswahl gibt es nur im Stundenplan (sub_k=4) -> immer ausdrücklich öffnen.
+                k = P.parse_klassen(self._get(self.KLASSEN_SEITE))
                 return k
         return self._cached("klassen", load, refresh)
 
@@ -1065,11 +1066,15 @@ class EscolaClient:
                 "lehrpersonen_kuerzel": [k for k in kuerzel.strip().split("/") if k], "zusatz": zusatz}
 
     def _wg_kontext(self, pid: int, schuljahr: int = 0) -> None:
-        """„SuS-Zuordnungen“ so öffnen wie die Oberfläche: Seite laden, dann `mode=2` mit `updateStudent=1`
+        """„SuS-Zuordnungen“ so öffnen wie die Oberfläche: Inhalt der Seite „Arbeitsgruppen“ laden
+        (`application.php` mit `initial=1`), „SuS-Zuordnungen“ laden, dann `mode=2` mit `updateStudent=1`
         (liefert die Schülerliste und setzt die Auswahl in der Sitzung). Ohne diesen Schritt antwortet
         `assignments.php` in einer frischen Sitzung nur mit „Es ist ein Fehler aufgetreten.“ (live 28.11.2026,
         mitgelesen in der Escola-Oberfläche). Nicht `admin.php?page_request=6&sub_k=26` öffnen: Escola merkt
         sich den Unterbereich, danach fehlt die Klassenauswahl (Klassen- und SuS-Listen leer)."""
+        # Seite „Arbeitsgruppen“ lädt ihren Inhalt per JS mit diesem Aufruf (Inline-Skript der Seite, 28.11.2026)
+        self._post(self.WG + "application.php", {"schoolId": next(iter(self.cfg.schuleinheiten), 1), "contentWidth": 900,
+                                                 "initial": 1, "noLabels": 1})
         self._get(self.WG + "assignments.php")
         self._post(self.WG + "assignments.php", {"mode": 2, "student_id": pid, "schoolYear": schuljahr, "updateStudent": 1})
 

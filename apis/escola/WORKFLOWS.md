@@ -1,6 +1,6 @@
 # Escola-API – Workflows (Prüfliste und spätere Testläufe)
 
-Stand API: 1.19.8 · Liste wird laufend ergänzt (zuletzt 28.11.2026: Erkundung L8, L11, L12, L17).
+Stand API: 1.19.9 · Liste wird laufend ergänzt (zuletzt 28.11.2026: Erkundung L8, L11, L12, L17).
 
 Jeder Workflow wird zuerst **theoretisch** gegen die vorhandene API geprüft (reichen die Endpunkte?).
 Später dient er als **Testlauf** auf dem Testsystem (Testpersonen TEST TEST 649, SuS SuS 650, Testklasse TEST_A1a 120,

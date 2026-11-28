@@ -14,6 +14,9 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
 - Escola-API 1.19.4: Endpunkte in 14 Themen gruppiert (`escola_api/themen.py`, Test: jeder Endpunkt genau ein Thema)
 
 ### Behoben
+- Escola-API 1.19.9 (#15): Klassenliste leer, nachdem im Browser «Arbeitsgruppen» geöffnet war – Escola merkt sich
+  den Unterbereich pro Benutzer über Sitzungen hinweg; die Klassenauswahl gibt es nur im Stundenplan, darum immer
+  `admin.php?page_request=6&sub_k=4`. Arbeitsgruppen: zusätzlich `application.php` `initial=1` wie die Seite
 - Escola-API 1.19.8 (#15): Arbeitsgruppen einer SuS – in der Escola-Oberfläche mitgelesen: vor dem Lesen kommt
   `assignments.php` `mode=2&updateStudent=1`; das Öffnen der Seite «Arbeitsgruppen» (1.19.7) half nicht und liess
   Klassen- und SuS-Listen leer, weil Escola sich den Unterbereich merkt – entfernt, Klassenliste mit Rückfall auf `sub_k=10`
