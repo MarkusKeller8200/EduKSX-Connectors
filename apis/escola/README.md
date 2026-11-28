@@ -890,6 +890,7 @@ Felder abgewiesen werden und dass das Passwort nirgends gespeichert wird.
 |---|---|---|
 | 1.19.4 | 28.11.2026 | Endpunkte thematisch gruppiert (14 Themen mit Beschreibung, `escola_api/themen.py`) – für Swagger, `plugin.json` und die Doku auf GitHub Pages |
 | 1.19.5 | 28.11.2026 | `GET /schueler/{id}/arbeitsgruppen` lieferte in einer frischen Sitzung 500: Escola beantwortet `assignments.php` erst, wenn die Seite «SuS-Zuordnungen» geöffnet wurde – wird jetzt vor dem Lesen und Einteilen geöffnet (#15) |
+| 1.19.6 | 28.11.2026 | `POST /mitarbeitende` liest den Personen-Index (alle aktiven und inaktiven Personen, dauert Minuten) nur noch einmal statt zweimal (#15) |
 | 1.19.3 | 28.11.2026 | Fehler #59: `POST /schueler` aktiviert vor dem Anlegen die Zielklasse (Escola nimmt sonst die Klasse der Sitzung) und prüft danach die Schullaufbahn (`klasse_geprueft`, bei Abweichung `warnung`) |
 | 1.19.2 | 28.11.2026 | Absenzen live mit Test-Absenz geprüft (#9): flache Ausgabe mit Datum in Schweizer Zeit, `?roh=true` für die Escola-Felder |
 | 1.19.1 | 28.11.2026 | Live geprüft mit Testdaten: App-Status liest den echten Zustand «App (manuell) aktiviert» und neu `app_manuell`, `app_eingeloggt` (#4); Zellen im Stundenplan von Arbeitsgruppen mit `arbeitsgruppe` und LP-Kürzel richtig getrennt (#13) |
