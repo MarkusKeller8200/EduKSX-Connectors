@@ -225,6 +225,13 @@ def test_pages_bauen_ohne_geheimnisse(tmp_path):
     html = (ziel / "index.html").read_text(encoding="utf-8")
     assert 'src="static/plattform.js"' in html and 'href="/static' not in html
     assert "API_KEY" not in (ziel / "plugins.json").read_text(encoding="utf-8")
+    # Doku ohne laufende API: Beschreibung jeder API statisch, Escola mit Themen in fester Reihenfolge
+    esc = json.loads((ziel / "manifeste" / "escola.json").read_text(encoding="utf-8"))
+    themen = [g["name"] for g in esc["x-eduksx"]["gruppen"]]
+    assert themen[0] == "Anmeldung und System" and "Absenzen" in themen
+    assert {e["group"] for e in esc["service"]["endpoints"]} == set(themen)
+    for datei in (ziel / "manifeste").glob("*.json"):
+        assert "API_KEY=" not in datei.read_text(encoding="utf-8")
 
 
 def test_start_lokal_legt_env_mit_schreiben_aus_an(tmp_path):

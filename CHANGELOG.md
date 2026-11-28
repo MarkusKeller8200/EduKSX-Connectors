@@ -6,6 +6,13 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt
+- Testplattform 0.3.0: Seite «Dokumentation» je API (`#/doku/<api>`) mit Endpunkten nach Themen, Parametern und
+  Body-Feldern; auf GitHub Pages ohne laufende API lesbar (Beschreibung jeder API wird beim Bau als
+  `manifeste/<api>.json` abgelegt; `pages.yml` installiert dafür die Abhängigkeiten der APIs)
+- `plugin.json`: Themen-Reihenfolge und -Beschreibung in `x-eduksx.gruppen`
+- Escola-API 1.19.4: Endpunkte in 14 Themen gruppiert (`escola_api/themen.py`, Test: jeder Endpunkt genau ein Thema)
+
 ### Behoben
 - Escola-API 1.19.3 (#59): `POST /schueler` legte SuS in die Klasse der Escola-Sitzung statt in `klasse_id`;
   jetzt wird die Zielklasse vorher aktiviert und danach in der Schullaufbahn geprüft (`klasse_geprueft`, `warnung`)

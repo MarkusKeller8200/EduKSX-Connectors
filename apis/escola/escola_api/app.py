@@ -1246,6 +1246,8 @@ def create_app(client: EscolaClient | None = None, transport: httpx.BaseTranspor
             "raeume": c.raeume(refresh), "raster": c.raster(refresh), "eintraege": c.eintraege(refresh),
         }
 
+    from .themen import anwenden as _themen_anwenden
+    _themen_anwenden(app)
     _plugin_json_einbinden(app)
     return app
 

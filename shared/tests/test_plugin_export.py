@@ -178,3 +178,13 @@ def test_cors_aus_umgebung():
     assert cors_origins({}) == ["https://markuskeller8200.github.io"]
     assert cors_origins({"EDUKSX_CORS_ORIGINS": ""}) == []
     assert cors_origins({"EDUKSX_CORS_ORIGINS": "https://a.example/, http://127.0.0.1:8090"}) == ["https://a.example", "http://127.0.0.1:8090"]
+
+
+def test_gruppen_aus_openapi_tags():
+    """Themen-Reihenfolge und -Beschreibung (OpenAPI tags) landen in x-eduksx.gruppen (Doku auf GitHub Pages)."""
+    from shared.plugin_export import manifest
+    o = {"openapi": "3.1.0", "info": {"title": "T"}, "tags": [{"name": "B", "description": "zweites"}, {"name": "A"}],
+         "paths": {"/a": {"get": {"tags": ["A"], "summary": "Eins"}}}}
+    m = manifest(o, {"name": "t", "version": "1.0.0"})
+    assert m["x-eduksx"]["gruppen"] == [{"name": "B", "beschreibung": "zweites"}, {"name": "A", "beschreibung": ""}]
+    assert "gruppen" not in manifest({**o, "tags": []}, {"name": "t"})["x-eduksx"]

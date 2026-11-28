@@ -42,6 +42,10 @@ Die Oberfläche gibt es auch auf GitHub Pages: **https://markuskeller8200.github
   Repo-Einstellungen Pages → Source «GitHub Actions» wählen. **Privates Repo: Pages nur mit bezahltem GitHub-Plan.**
 - Lokal ansehen: `python3 testplattform/pages_bauen.py _site` erzeugt die Seite in `_site/`.
 
+
+**Dokumentation:** https://markuskeller8200.github.io/EduKSX-Connectors/#/doku – je API alle Endpunkte nach Themen
+gruppiert (z. B. `#/doku/escola`). Die Beschreibungen entstehen beim Bau aus den APIs selbst (`manifeste/<api>.json`),
+deshalb ist die Doku auch ohne laufende API lesbar. Einmalig nötig: Settings → Pages → Source «GitHub Actions».
 ## Einstellungen
 
 Ohne Einstellungen findet die Plattform alle `apis/*/api.json` und ruft sie unter `http://127.0.0.1:<port>` auf
@@ -101,5 +105,6 @@ API-weite Angaben in `api.json` → `plugin`. `python3 pruefen.py` prüft jede A
 
 | Version | Datum | Änderung |
 |---|---|---|
+| 0.3.0 | 2026-11-28 | Seite «Dokumentation» je API (`#/doku/<api>`): Endpunkte nach Themen, Parameter, Body-Felder; auf GitHub Pages ohne laufende API lesbar (`manifeste/<api>.json` beim Bau) |
 | 0.2.0 | 2026-11-27 | Ein Doppelklick startet alle APIs und die Plattform (#50); Oberfläche auch auf GitHub Pages mit direktem Aufruf der lokal laufenden APIs (#51) |
 | 0.1.0 | 2026-11-27 | Erste Fassung: Plugins aus `apis/*/api.json`, Beschreibung aus `/plugin.json` bzw. `/openapi.json`, Tester mit Probelauf, Bestätigung, Datei-Upload, Escola-Anmeldung mit 2FA, Protokoll (#41, #43, #44–#46) |
