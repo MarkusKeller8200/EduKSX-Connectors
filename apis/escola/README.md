@@ -578,6 +578,11 @@ curl -X POST 'localhost:8080/mitarbeitende?probelauf=true' -H 'X-Escola-Session:
      die bisherige Lehrperson wird ausgetragen (oder einzeln über Fächer-Zuteilung und Klassenlehrpersonen).
    - `POST /personen/{id}/rollen/ausgetreten` – alle zuordenbaren Rollen werden durch **„Ausgetreten“** ersetzt (F-03).
      Fehlt die Rolle in Escola, kommt `409` – die Schule legt sie unter Personen → Personengruppen an.
+     Eingerichtet 28.11.2026 (#71): Personengruppe «Ausgetreten» (ID 42), **nicht** nach Schulhaus aufgeteilt (die API
+     sucht genau diesen Namen), keine Mitarbeitenden, im Messenger ausgeschlossen. Damit die Administrator:innen sie
+     vergeben dürfen, braucht es **beides**: Personen → Zugriff → Schreibrechte (Rolle ergänzt) **und** Personen →
+     Rollen-Konfiguration (Administrator:innen Hinterbirch/Mettmenriet dürfen Personen zu «Ausgetreten» hinzufügen).
+     Fehlt Letzteres, zeigt Escola «Ausgetreten (keine Berechtigung)» und die API meldet die Rolle als nicht änderbar.
      Eingebaute, nicht zuordenbare Rollen (z. B. Admin) bleiben und stehen in `nicht_entfernt`.
    - Sofortiger Austritt: `POST /personen/{id}/austritt` mit `"rollen_ausgetreten": true, "sofort_deaktivieren": true`.
 
