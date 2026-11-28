@@ -54,14 +54,13 @@ class Fake:
             if f["type"] == "9":
                 self.wg[int(f["studentId"])].discard(int(f["workgroupId"]))
                 return httpx.Response(200, text="")
-        if p.endswith("admin.php") and req.url.params.get("sub_k") == "26":
-            self.wg_seite = True
-            return httpx.Response(200, text="<div>Arbeitsgruppen</div>")
         if p.endswith("assignments.php"):
             if req.method == "GET":
-                self.wg_kontext = getattr(self, "wg_seite", False)
                 return httpx.Response(200, text="<div>SuS-Zuordnungen</div>")
-            if not self.wg_kontext:  # wie live: ohne geöffnete Seite nur eine Fehlermeldung
+            if f.get("mode") == "2" and f.get("updateStudent") == "1":  # wie live: setzt die Auswahl in der Sitzung
+                self.wg_kontext = True
+                return httpx.Response(200, json={"students": {}, "workgroups": []})
+            if not self.wg_kontext:  # wie live: ohne Auswahl nur eine Fehlermeldung
                 return httpx.Response(200, text="Es ist ein Fehler aufgetreten.")
             sid = int(f["student_id"])
             if f["mode"] == "2":
@@ -113,6 +112,6 @@ def test_arbeitsgruppen(monkeypatch):
 def test_arbeitsgruppen_ohne_kontext_klare_meldung(monkeypatch):
     fake, api = make(monkeypatch)
     from escola_api.client import EscolaClient
-    monkeypatch.setattr(EscolaClient, "_wg_kontext", lambda self: None)
+    monkeypatch.setattr(EscolaClient, "_wg_kontext", lambda self, pid, sj=0: None)
     r = api.get("/schueler/652/arbeitsgruppen")
     assert r.status_code == 502 and "nicht geliefert" in r.text

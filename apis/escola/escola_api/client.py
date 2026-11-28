@@ -125,7 +125,12 @@ class EscolaClient:
     def klassen(self, refresh: bool = False) -> list[dict]:
         def load():
             with self._lock:
-                return P.parse_klassen(self._get("admin.php?page_request=6"))
+                k = P.parse_klassen(self._get("admin.php?page_request=6"))
+                if not k:
+                    # Escola merkt sich den Unterbereich (sub_k) in der Sitzung; steht dort z. B. „Arbeitsgruppen“
+                    # (sub_k=26), fehlt die Klassenauswahl auf der Seite (live 28.11.2026) -> „Klassen“ öffnen
+                    k = P.parse_klassen(self._get("admin.php?page_request=6&sub_k=10"))
+                return k
         return self._cached("klassen", load, refresh)
 
     def _klassen_nur(self, refresh=False) -> list[dict]:
@@ -1059,17 +1064,19 @@ class EscolaClient:
         return {"arbeitsgruppe_id": ag, **e, "lehrpersonen": lps, "arbeitsgruppe": ag_name,
                 "lehrpersonen_kuerzel": [k for k in kuerzel.strip().split("/") if k], "zusatz": zusatz}
 
-    def _wg_kontext(self) -> None:
-        """Seite „Arbeitsgruppen“ und darin „SuS-Zuordnungen“ öffnen – wie in der Oberfläche. Ohne diese Aufrufe
-        antwortet `assignments.php` (mode 2/3) in einer frischen Sitzung nur mit „Es ist ein Fehler aufgetreten.“;
-        das Öffnen von „SuS-Zuordnungen“ allein genügte live nicht (28.11.2026)."""
-        self._get("admin.php?page_request=6&sub_k=26")
+    def _wg_kontext(self, pid: int, schuljahr: int = 0) -> None:
+        """„SuS-Zuordnungen“ so öffnen wie die Oberfläche: Seite laden, dann `mode=2` mit `updateStudent=1`
+        (liefert die Schülerliste und setzt die Auswahl in der Sitzung). Ohne diesen Schritt antwortet
+        `assignments.php` in einer frischen Sitzung nur mit „Es ist ein Fehler aufgetreten.“ (live 28.11.2026,
+        mitgelesen in der Escola-Oberfläche). Nicht `admin.php?page_request=6&sub_k=26` öffnen: Escola merkt
+        sich den Unterbereich, danach fehlt die Klassenauswahl (Klassen- und SuS-Listen leer)."""
         self._get(self.WG + "assignments.php")
+        self._post(self.WG + "assignments.php", {"mode": 2, "student_id": pid, "schoolYear": schuljahr, "updateStudent": 1})
 
     def schueler_arbeitsgruppen(self, pid: int, schuljahr: int = 0) -> list[dict]:
         import json as _json
         with self._lock:
-            self._wg_kontext()
+            self._wg_kontext(pid, schuljahr)
             r = self._post(self.WG + "assignments.php", {"mode": 2, "student_id": pid, "schoolYear": schuljahr, "updateStudent": 0})
         try:
             data = _json.loads(r)
@@ -1087,7 +1094,7 @@ class EscolaClient:
             raise ValueError(f"Unbekannte Arbeitsgruppe {wg_id}")
         vorher = {w["id"] for w in self.schueler_arbeitsgruppen(pid, schuljahr)}
         with self._lock:
-            self._wg_kontext()
+            self._wg_kontext(pid, schuljahr)
             if dabei and wg_id not in vorher:
                 # Escola speichert „angezeigte“ Gruppen: nur die betroffene Gruppe anzeigen -> andere bleiben unberührt
                 self._raw(self.WG + "assignments.php",
