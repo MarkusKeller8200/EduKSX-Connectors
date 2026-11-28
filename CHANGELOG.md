@@ -6,6 +6,10 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
 
 ## [Unveröffentlicht]
 
+### Behoben
+- Escola-API 1.19.3 (#59): `POST /schueler` legte SuS in die Klasse der Escola-Sitzung statt in `klasse_id`;
+  jetzt wird die Zielklasse vorher aktiviert und danach in der Schullaufbahn geprüft (`klasse_geprueft`, `warnung`)
+
 ### Geändert
 - Escola-API 1.19.2 (#9): Absenzen live mit einer Test-Absenz geprüft (Testperson in TEST_A1a, danach gelöscht);
   Ausgabe flach mit Datum in Schweizer Zeit, `?roh=true` für die Escola-Felder
