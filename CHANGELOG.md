@@ -14,6 +14,10 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/), Versione
 - Escola-API 1.19.4: Endpunkte in 14 Themen gruppiert (`escola_api/themen.py`, Test: jeder Endpunkt genau ein Thema)
 
 ### Behoben
+- Escola-API 1.19.7 (#15): `POST /schueler`/`/personen` mit `felder` meldete 500, obwohl die Person angelegt war
+  (`show_reiter.php` antwortet direkt danach mit 400) – Personenverwaltung wird neu geöffnet und einmal wiederholt;
+  scheitern die Felder trotzdem, kommt 201 mit ID und Fehler. Arbeitsgruppen einer SuS: zusätzlich die Seite
+  «Arbeitsgruppen» öffnen (nur «SuS-Zuordnungen» genügte live nicht)
 - Escola-API 1.19.6 (#15): `POST /mitarbeitende` las vor dem Setzen der Schulmail alle Personen ein zweites Mal
   ein (live über 20 Minuten); jetzt wird der in der Vorprüfung gelesene Index verwendet
 - Escola-API 1.19.5 (#15): `GET /schueler/{id}/arbeitsgruppen` lieferte in einer frischen Sitzung 500

@@ -54,9 +54,12 @@ class Fake:
             if f["type"] == "9":
                 self.wg[int(f["studentId"])].discard(int(f["workgroupId"]))
                 return httpx.Response(200, text="")
+        if p.endswith("admin.php") and req.url.params.get("sub_k") == "26":
+            self.wg_seite = True
+            return httpx.Response(200, text="<div>Arbeitsgruppen</div>")
         if p.endswith("assignments.php"):
             if req.method == "GET":
-                self.wg_kontext = True
+                self.wg_kontext = getattr(self, "wg_seite", False)
                 return httpx.Response(200, text="<div>SuS-Zuordnungen</div>")
             if not self.wg_kontext:  # wie live: ohne geöffnete Seite nur eine Fehlermeldung
                 return httpx.Response(200, text="Es ist ein Fehler aufgetreten.")
