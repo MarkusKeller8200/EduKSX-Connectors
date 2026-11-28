@@ -264,3 +264,22 @@ def test_klassen_wenn_sitzung_im_unterbereich_steht():
         return httpx.Response(200, text="<html><body><div>Arbeitsgruppen</div></body></html>")
     c = EscolaClient(EscolaConfig(base_url="https://x.test/", cookie="PHPSESSID=a"), transport=httpx.MockTransport(fake))
     assert c.klassen(refresh=True)
+
+
+def test_rollen_nach_sus_liste_laden_alle_aktiven():
+    """#15: /personen/{id}/rollen meldete 404, solange die Sitzung in einer SuS-Liste stand."""
+    zustand = {"gruppe": "schueler"}
+
+    def fake(req):
+        form = {k: v[0] for k, v in parse_qs(req.content.decode(), keep_blank_values=True).items()}
+        if req.url.path.endswith("show_persons_of_group.php"):
+            zustand["gruppe"] = form["personCategory"]
+            return httpx.Response(200, text="<table></table>")
+        if req.url.path.endswith("show_reiter.php"):
+            ok = zustand["gruppe"] == "allActive"
+            return httpx.Response(200, text='<ul><li id="li_name">Name</li>' + ('<li id="li_rollen">Rollen</li>' if ok else "") + "</ul>")
+        return httpx.Response(200, text="<div></div>")
+
+    c = EscolaClient(EscolaConfig(base_url="https://x.test/", cookie="PHPSESSID=a"), transport=httpx.MockTransport(fake))
+    c._person_rollen_html(649)
+    assert zustand["gruppe"] == "allActive"
