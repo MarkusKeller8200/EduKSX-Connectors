@@ -54,10 +54,14 @@ class Fake:
             if f["type"] == "9":
                 self.wg[int(f["studentId"])].discard(int(f["workgroupId"]))
                 return httpx.Response(200, text="")
+        if p.endswith("workgroups/application.php"):
+            assert f.get("initial") == "1"
+            self.wg_seite = True
+            return httpx.Response(200, text="<div>Arbeitsgruppen</div>")
         if p.endswith("assignments.php"):
             if req.method == "GET":
                 return httpx.Response(200, text="<div>SuS-Zuordnungen</div>")
-            if f.get("mode") == "2" and f.get("updateStudent") == "1":  # wie live: setzt die Auswahl in der Sitzung
+            if f.get("mode") == "2" and f.get("updateStudent") == "1" and getattr(self, "wg_seite", False):  # wie live: setzt die Auswahl in der Sitzung
                 self.wg_kontext = True
                 return httpx.Response(200, json={"students": {}, "workgroups": []})
             if not self.wg_kontext:  # wie live: ohne Auswahl nur eine Fehlermeldung

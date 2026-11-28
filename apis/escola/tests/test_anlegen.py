@@ -256,10 +256,10 @@ def test_show_reiter_400_nach_anlegen_oeffnet_personenverwaltung():
 
 
 def test_klassen_wenn_sitzung_im_unterbereich_steht():
-    """#15: Steht die Sitzung im Unterbereich „Arbeitsgruppen“, fehlt auf admin.php?page_request=6 die
-    Klassenauswahl – dann „Einstellungen → Klassen“ (sub_k=10) öffnen."""
+    """#15: Escola merkt sich den Unterbereich pro Benutzer; die Klassenauswahl gibt es nur im Stundenplan
+    (sub_k=4, live 28.11.2026) – darum immer ausdrücklich dort lesen."""
     def fake(req):
-        if req.url.params.get("sub_k") == "10":
+        if req.url.params.get("sub_k") == "4":
             return httpx.Response(200, text="<html><body>" + CHOOSER + "</body></html>")
         return httpx.Response(200, text="<html><body><div>Arbeitsgruppen</div></body></html>")
     c = EscolaClient(EscolaConfig(base_url="https://x.test/", cookie="PHPSESSID=a"), transport=httpx.MockTransport(fake))
